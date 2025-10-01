@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect, useMemo } from "react";
 import { Store } from "@/types";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ interface StoreState {
   currentStore: Store | null;
   isLoading: boolean;
   setCurrentStore: (store: Store) => void;
+  canAccessStore: (storeId: string) => boolean;
+  isStoreRestricted: boolean; // True if user has limited store access
 }
 
 const initialState: StoreState = {
@@ -17,6 +19,8 @@ const initialState: StoreState = {
   currentStore: null,
   isLoading: true,
   setCurrentStore: () => {},
+  canAccessStore: () => false,
+  isStoreRestricted: false,
 };
 
 const StoreContext = createContext<StoreState>(initialState);
@@ -26,6 +30,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [stores, setStores] = useState<Store[]>([]);
   const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Determine if user has restricted store access
+  const isStoreRestricted = useMemo(() => {
+    if (!user) return true;
+    // Admin and owner can access all stores
+    if (user.role === 'admin' || user.role === 'owner') return false;
+    // Other roles are restricted to assigned stores
+    return true;
+  }, [user]);
+
+  // Check if user can access a specific store
+  const canAccessStore = useMemo(() => {
+    return (storeId: string): boolean => {
+      if (!user) return false;
+      // Admin and owner can access any store
+      if (user.role === 'admin' || user.role === 'owner') return true;
+      // Other roles must be assigned to the store
+      return user.storeIds?.includes(storeId) || false;
+    };
+  }, [user]);
 
   // Fetch stores when the user is authenticated or their store assignments change
   useEffect(() => {
@@ -53,15 +77,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       // Admin and owner users can see all stores
       if (user.role === 'admin' || user.role === 'owner') {
-        // Fetch all stores for admin/owner users
+        console.log('🔓 [STORE CONTEXT] Loading ALL stores for admin/owner');
         query = query.order('name');
       } else {
         // Regular users (cashier, manager) only see their assigned stores
+        console.log('🔒 [STORE CONTEXT] Restricting to assigned stores for role:', user.role);
         if (user.storeIds && user.storeIds.length > 0) {
           query = query.in('id', user.storeIds).order('name');
         } else {
           // User has no assigned stores
-          console.warn('User has no assigned stores:', user.email);
+          console.warn('⚠️ User has no assigned stores:', user.email);
           setStores([]);
           setCurrentStore(null);
           return;
@@ -76,6 +101,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       if (data && data.length > 0) {
         setStores(data as Store[]);
+        
+        console.log('✅ [STORE CONTEXT] Loaded stores:', {
+          userRole: user.role,
+          storeCount: data.length,
+          isRestricted: isStoreRestricted,
+          storeNames: data.map(s => s.name).join(', ')
+        });
 
         // Set the current store based on user's assigned stores
         if (!currentStore) {
@@ -99,7 +131,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
 
           if (defaultStore) {
-            console.log('Setting default store for user:', user.email, 'to:', defaultStore.name);
+            console.log('📍 [STORE CONTEXT] Setting default store:', defaultStore.name);
             setCurrentStore(defaultStore);
           }
         }
@@ -108,7 +140,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setCurrentStore(null);
       }
     } catch (error) {
-      console.error('Error fetching stores:', error);
+      console.error('❌ [STORE CONTEXT] Error fetching stores:', error);
       toast.error('Failed to fetch stores');
     } finally {
       setIsLoading(false);
@@ -122,6 +154,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         currentStore,
         isLoading,
         setCurrentStore,
+        canAccessStore,
+        isStoreRestricted,
       }}
     >
       {children}
