@@ -22,7 +22,7 @@ interface SalesReportViewProps {
 
 export function SalesReportView({ data, dateRange, isAllStores, storeId }: SalesReportViewProps) {
   // Fetch detailed transactions for the table using the same robust utility
-  const { data: transactions, refetch: refetchTransactions } = useQuery({
+  const { data: transactions, refetch: refetchTransactions, isLoading: isLoadingTransactions } = useQuery({
     queryKey: ['transactions', storeId, dateRange.from, dateRange.to],
     queryFn: async () => {
       if (!dateRange.from || !dateRange.to) return [];
@@ -180,13 +180,28 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
         </CardContent>
       </Card>
 
-      {/* Transaction Details Table */}
-      {transactions && transactions.length > 0 && (
-        <TransactionDetailsTable 
-          transactions={transactions} 
-          onTransactionVoided={refetchTransactions}
-        />
-      )}
+      {/* Transaction Details Table - Always visible for detailed analysis */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Transaction Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingTransactions ? (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground">Loading transaction details...</p>
+            </div>
+          ) : transactions && transactions.length > 0 ? (
+            <TransactionDetailsTable 
+              transactions={transactions} 
+              onTransactionVoided={refetchTransactions}
+            />
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground">No transactions found for the selected period</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
