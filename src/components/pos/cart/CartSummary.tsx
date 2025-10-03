@@ -19,7 +19,7 @@ export function CartSummary({ calculations, seniorDiscounts, otherDiscount }: Ca
       {/* VAT Exemption Display */}
       {calculations.vatExemption > 0 && (
         <div className="flex justify-between text-sm text-blue-600">
-          <span>VAT Exemption (Senior)</span>
+          <span>VAT Exemption ({calculations.numberOfSeniors > 0 ? 'Senior' : otherDiscount?.type === 'pwd' ? 'PWD' : 'Senior'})</span>
           <span>-₱{calculations.vatExemption.toFixed(2)}</span>
         </div>
       )}

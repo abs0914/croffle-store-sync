@@ -116,7 +116,18 @@ export class CartCalculationService {
       const discountSubtotal = grossSubtotal > 0 ? grossSubtotal : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       switch (otherDiscount.type) {
         case 'pwd':
-          otherDiscountAmount = discountSubtotal * this.PWD_DISCOUNT_RATE;
+          // PWD discount: Calculate on VAT-exclusive amount (BIR compliance)
+          // Step 1: Remove VAT from gross price
+          const pwdNetAmount = discountSubtotal / (1 + this.VAT_RATE);
+          
+          // Step 2: Apply 20% discount on VAT-exclusive amount
+          otherDiscountAmount = pwdNetAmount * this.PWD_DISCOUNT_RATE;
+          
+          // Step 3: PWD transactions are VAT-exempt (no VAT collected)
+          vatExemption = discountSubtotal - pwdNetAmount; // Full VAT exemption
+          vatExemptSales = pwdNetAmount; // For BIR reporting
+          vatableSales = 0; // No vatable sales for PWD transactions
+          netAmount = pwdNetAmount; // Update net amount
           break;
         case 'employee':
           otherDiscountAmount = discountSubtotal * this.EMPLOYEE_DISCOUNT_RATE;
