@@ -44,7 +44,7 @@ export function CartSummary({ calculations, seniorDiscounts, otherDiscount }: Ca
       {calculations.otherDiscountAmount > 0 && (
         <div className="flex justify-between text-sm text-green-600">
         <span>
-          Buy 1 Take 1 Discount
+          Discount Applied
           {otherDiscount?.idNumber && ` - ${otherDiscount.idNumber}`}
         </span>
           <span>-₱{calculations.otherDiscountAmount.toFixed(2)}</span>
