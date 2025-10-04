@@ -289,6 +289,11 @@ export default function POS() {
       // Online processing - use current captured items
       console.log("🌐 Processing online transaction with", currentItems.length, "items");
       
+      // ✅ Capture cart values IMMEDIATELY before any async operations
+      const capturedSubtotal = subtotal;
+      const capturedTax = tax;
+      const capturedTotal = total;
+      
       // Convert cart items to the format expected by the transaction handler
       const cartItemsForTransaction = currentItems.map(item => ({
         ...item,
@@ -302,9 +307,9 @@ export default function POS() {
         currentStore, 
         currentShift, 
         cartItemsForTransaction, 
-        subtotal, 
-        tax, 
-        total,
+        capturedSubtotal,  // ✅ Use captured values
+        capturedTax,       // ✅ Use captured values
+        capturedTotal,     // ✅ Use captured values
         paymentMethod,
         amountTendered,
         paymentDetails,

@@ -282,8 +282,7 @@ export function useTransactionHandler(storeId: string) {
       console.log("✅ Transaction created with inventory deduction completed");
       let inventoryStatusText = "Inventory updated";
       
-      // Clear the cart immediately for better UX
-      clearCart();
+      // ✅ Don't clear cart here - will be cleared after printing on invoice page
       
       // Navigate immediately after inventory processing
       console.log("🚀 Navigation to invoice page...");

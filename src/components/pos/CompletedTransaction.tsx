@@ -4,6 +4,7 @@ import ReceiptGenerator from "./ReceiptGenerator";
 import { Transaction, Customer } from "@/types";
 import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { useStore } from "@/contexts/StoreContext";
+import { useCart } from "@/contexts/cart/CartContext";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { CheckCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ export default function CompletedTransaction({
   const {
     currentStore
   } = useStore();
+  const { clearCart } = useCart();
   const [countdown, setCountdown] = useState(3);
   const [showBriefSuccess, setShowBriefSuccess] = useState(false);
   
@@ -84,6 +86,10 @@ export default function CompletedTransaction({
         try {
           console.log('Auto-printing receipt to thermal printer...');
           await printReceipt(transaction, stableCustomer, stableStore, 'Cashier');
+
+          // ✅ Clear cart AFTER successful printing
+          console.log('Receipt printed successfully, clearing cart...');
+          clearCart();
 
           // Show brief success message and start countdown for auto-navigation
           setShowBriefSuccess(true);

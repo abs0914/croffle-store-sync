@@ -304,6 +304,19 @@ class StreamlinedTransactionService {
    * Create the main transaction record
    */
   private async createTransactionRecord(data: StreamlinedTransactionData): Promise<Transaction | null> {
+    // ✅ Guard against invalid transaction data
+    if (data.total <= 0) {
+      throw new Error('Invalid transaction: total amount must be greater than zero');
+    }
+    
+    if (data.subtotal < 0) {
+      throw new Error('Invalid transaction: subtotal cannot be negative');
+    }
+    
+    if (!data.items || data.items.length === 0) {
+      throw new Error('Invalid transaction: must have at least one item');
+    }
+
     const now = new Date();
     const receiptPrefix = format(now, "yyyyMMdd");
     const timestamp = format(now, "HHmmss");
