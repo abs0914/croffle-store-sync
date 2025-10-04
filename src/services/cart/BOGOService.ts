@@ -16,26 +16,9 @@ export interface BOGOResult {
 }
 
 export class BOGOService {
-  private static readonly BOGO_RULES: BOGORule[] = [
-    {
-      targetPrice: 125,
-      categoryPattern: "croffle",
-      discountAmount: 125, // Full price of ₱125 - true BOGO
-      description: "Buy 1 Regular Croffle ₱125, Get 1 Free"
-    },
-    {
-      targetPrice: 65,
-      categoryPattern: "croffle",
-      discountAmount: 65, // Full price of ₱65 - true BOGO
-      description: "Buy 1 Mini Croffle ₱65, Get 1 Free"
-    },
-    {
-      targetPrice: 99,
-      categoryPattern: "croffle",
-      discountAmount: 99, // Full price of ₱99 - true BOGO
-      description: "Buy 1 Overload Croffle ₱99, Get 1 Free"
-    }
-  ];
+  // BOGO promotion disabled - set BOGO_ENABLED to true to re-enable
+  private static readonly BOGO_ENABLED = false;
+  private static readonly BOGO_RULES: BOGORule[] = [];
 
   /**
    * Analyzes cart items and calculates BOGO discounts

@@ -62,8 +62,8 @@ const OptimizedCartView = memo(function OptimizedCartView({
           </Button>
         </div>
         
-        {/* BOGO Eligibility Indicator */}
-        {bogoResult.hasEligibleItems && (
+        {/* BOGO Eligibility Indicator - DISABLED */}
+        {/* {bogoResult.hasEligibleItems && (
           <div className="p-2 bg-croffle-accent/10 border border-croffle-accent/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -75,7 +75,7 @@ const OptimizedCartView = memo(function OptimizedCartView({
               </span>
             </div>
           </div>
-        )}
+        )} */}
         
         {/* Customer Selection */}
         <CustomerLookup 
