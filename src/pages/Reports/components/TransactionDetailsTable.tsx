@@ -17,8 +17,10 @@ import { toast } from "sonner";
 import { hasPermission } from "@/types/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { formatInTimeZone as formatInTZ } from "date-fns-tz";
-import { thermalPrinter, ThermalReceiptData } from "@/services/thermalPrinter/thermalPrinterService";
-import { Capacitor } from "@capacitor/core";
+import { useThermalPrinter } from "@/hooks/useThermalPrinter";
+import { BluetoothPrinterService } from "@/services/printer/BluetoothPrinterService";
+import { Transaction as PosTransaction } from "@/types";
+import { Store } from "@/types/store";
 
 interface Transaction {
   id: string;
@@ -40,6 +42,7 @@ const ITEMS_PER_PAGE = 20;
 
 export function TransactionDetailsTable({ transactions, onTransactionVoided }: TransactionDetailsTableProps) {
   const { user } = useAuth();
+  const { isConnected, connectedPrinter } = useThermalPrinter();
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,110 +124,159 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
   const handleReprintReceipt = async (transaction: Transaction) => {
     setIsReprinting(transaction.id);
     try {
-      // Fetch full transaction details with store and BIR config
+      console.log('🖨️ Reprinting receipt for transaction:', transaction.receipt_number);
+      
+      // Fetch complete transaction details with all relationships
       const { data: txData, error: txError } = await supabase
         .from('transactions')
         .select(`
           *,
           stores:store_id (
+            id,
             name,
-            address
+            address,
+            phone,
+            bir_store_config (
+              tin,
+              business_name,
+              business_address,
+              accreditation_number,
+              permit_number,
+              machine_identification_number,
+              machine_serial_number
+            )
+          ),
+          customers:customer_id (
+            id,
+            name,
+            phone,
+            email,
+            tin
           )
         `)
         .eq('id', transaction.id)
         .single();
 
       if (txError || !txData) {
-        throw new Error('Failed to fetch transaction details');
+        console.error('Failed to fetch transaction:', txError);
+        throw new Error('Failed to fetch complete transaction details');
       }
 
-      // Fetch BIR config separately
-      const { data: birConfig } = await supabase
-        .from('bir_store_config')
-        .select('tin, business_name, business_address')
-        .eq('store_id', txData.store_id)
-        .single();
+      console.log('✅ Transaction data fetched:', txData);
 
+      // Parse items if they're stored as JSON string
       const items = typeof transaction.items === 'string' 
         ? JSON.parse(transaction.items) 
         : transaction.items;
 
+      // Extract store and BIR config
       const storeData = txData.stores as any;
+      const birConfig = storeData?.bir_store_config?.[0] || storeData?.bir_store_config;
 
-      // Transform to thermal receipt format
-      const thermalReceiptData: ThermalReceiptData = {
-        receiptNumber: transaction.receipt_number,
-        businessDate: formatInTZ(new Date(transaction.created_at), 'Asia/Manila', 'yyyy-MM-dd'),
-        transactionTime: formatInTZ(new Date(transaction.created_at), 'Asia/Manila', 'HH:mm:ss'),
-        storeName: birConfig?.business_name || storeData?.name || 'Store',
-        storeAddress: birConfig?.business_address || storeData?.address || 'N/A',
-        storeTin: birConfig?.tin || 'N/A',
-        cashierName: transaction.cashier_name || 'Cashier',
+      // Transform database transaction to POS Transaction type
+      const posTransaction: PosTransaction = {
+        id: txData.id,
+        receiptNumber: txData.receipt_number,
         items: items.map((item: any) => ({
-          description: item.name,
+          productId: item.productId || item.id || '',
+          variationId: item.variationId,
+          name: item.name,
           quantity: item.quantity,
-          unitPrice: item.unitPrice || 0,
-          lineTotal: item.totalPrice || (item.unitPrice * item.quantity),
-          itemDiscount: 0
+          unitPrice: item.unitPrice || item.unit_price || 0,
+          totalPrice: item.totalPrice || item.total_price || (item.unitPrice * item.quantity),
+          category: item.category,
+          customizations: item.customizations || []
         })),
-        grossAmount: transaction.total,
-        discountAmount: 0,
-        netAmount: transaction.total,
-        vatAmount: transaction.total * 0.12 / 1.12,
-        paymentMethod: transaction.payment_method === 'cash' ? 'Cash' : 
-                       transaction.payment_method === 'card' ? 'Card' : 
-                       transaction.payment_method === 'e-wallet' ? 'E-Wallet' : 
-                       transaction.payment_method
+        subtotal: txData.subtotal || txData.total,
+        total: txData.total,
+        tax: txData.tax || 0,
+        discount: txData.discount || txData.discount_amount || 0,
+        discountType: (txData.discount_type as any) || undefined,
+        discountIdNumber: txData.discount_id_number,
+        amountTendered: txData.amount_tendered,
+        change: txData.change,
+        paymentMethod: txData.payment_method as 'cash' | 'card' | 'e-wallet',
+        paymentDetails: (txData.payment_details as any) || undefined,
+        status: txData.status as 'completed' | 'voided',
+        createdAt: txData.created_at,
+        storeId: txData.store_id,
+        userId: txData.user_id,
+        shiftId: txData.shift_id,
+        customerId: txData.customer_id,
+        
+        // Order type info
+        orderType: (txData.order_type as any) || undefined,
+        deliveryPlatform: (txData.delivery_platform as any) || undefined,
+        deliveryOrderNumber: txData.delivery_order_number,
+        
+        // BIR compliance fields - use database field names
+        vat_sales: txData.vat_sales || 0,
+        vat_exempt_sales: txData.vat_exempt_sales || 0,
+        zero_rated_sales: txData.zero_rated_sales || 0,
+        senior_citizen_discount: txData.senior_citizen_discount || txData.senior_discount || 0,
+        pwd_discount: txData.pwd_discount || 0,
+        sequence_number: txData.sequence_number,
+        terminal_id: txData.terminal_id || 'TERMINAL-01',
       };
 
-      // Check if running on native mobile platform
-      const isNative = Capacitor.isNativePlatform();
+      // Transform store data - use only fields that exist in Store type
+      const storeFormatted: Store = {
+        id: storeData.id,
+        name: storeData.name,
+        address: storeData.address,
+        phone: storeData.phone,
+        is_active: true,
+        created_at: '',
+        // BIR fields
+        tin: birConfig?.tin,
+        business_name: birConfig?.business_name,
+        accreditation_number: birConfig?.accreditation_number,
+        permit_number: birConfig?.permit_number,
+        machine_serial_number: birConfig?.machine_serial_number,
+        machine_accreditation_number: birConfig?.machine_identification_number,
+      };
 
-      if (isNative) {
-        // Print to Bluetooth thermal printer
-        const success = await thermalPrinter.printReceipt(thermalReceiptData);
-        if (!success) {
+      // Transform customer data if exists
+      const customerData = txData.customers ? {
+        id: txData.customers.id,
+        name: txData.customers.name,
+        phone: txData.customers.phone,
+        email: txData.customers.email,
+        tin: txData.customers.tin
+      } : undefined;
+
+      console.log('🔄 Transformed data for printer');
+
+      // Print using proper thermal printer service
+      if (isConnected && connectedPrinter) {
+        console.log('🖨️ Printing to connected thermal printer:', connectedPrinter.name);
+        
+        const success = await BluetoothPrinterService.printReceipt(
+          posTransaction,
+          customerData,
+          storeFormatted,
+          txData.cashier_name || 'Cashier',
+          false // Don't auto-open drawer for reprints
+        );
+
+        if (success) {
+          toast.success(`Receipt sent to ${connectedPrinter.name}`);
+          console.log('✅ Receipt printed successfully');
+        } else {
           throw new Error('Failed to print to thermal printer');
         }
       } else {
-        // Web fallback: Show formatted receipt in new window
-        const receiptText = thermalPrinter.formatReceipt(thermalReceiptData);
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(`
-            <html>
-              <head>
-                <title>Receipt - ${transaction.receipt_number}</title>
-                <style>
-                  body {
-                    font-family: 'Courier New', monospace;
-                    white-space: pre;
-                    padding: 20px;
-                    background: #f5f5f5;
-                  }
-                  .receipt {
-                    background: white;
-                    padding: 20px;
-                    max-width: 400px;
-                    margin: 0 auto;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="receipt">${receiptText.replace(/\n/g, '<br>')}</div>
-              </body>
-            </html>
-          `);
-        } else {
-          toast.info('Please allow pop-ups to view the receipt');
-        }
+        // Fallback: Browser print dialog
+        console.log('⚠️ No thermal printer connected, using browser print');
+        toast.info('No thermal printer connected. Opening browser print dialog...');
+        
+        // Use browser print
+        window.print();
       }
 
-      toast.success('Receipt printed successfully');
-    } catch (error) {
-      console.error('Error reprinting receipt:', error);
-      toast.error('Failed to print receipt');
+    } catch (error: any) {
+      console.error('❌ Error reprinting receipt:', error);
+      toast.error(error.message || 'Failed to reprint receipt');
     } finally {
       setIsReprinting(null);
     }
