@@ -160,9 +160,6 @@ export function CheckoutModal({
         return false;
       }
 
-      // Calculate proper subtotal from cart items (before discounts)
-      const calculatedSubtotal = cartItems.reduce((sum, item) => sum + item.finalPrice, 0);
-
       const transactionData = {
         storeId: currentStore.id,
         userId: userId,  // ⭐ Use cached userId
@@ -176,7 +173,7 @@ export function CheckoutModal({
           totalPrice: item.finalPrice,
           variationId: item.selectedVariations?.[0]?.id
         })),
-        subtotal: calculatedSubtotal,  // ✅ Use actual pre-discount subtotal
+        subtotal: total,  // ✅ Use the total prop (pre-discount subtotal)
         tax: 0,
         discount: discount,
         discountType: discountType,
