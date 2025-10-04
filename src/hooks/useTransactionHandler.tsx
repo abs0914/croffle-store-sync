@@ -199,7 +199,7 @@ export function useTransactionHandler(storeId: string) {
     // Adjust payment method for delivery orders
     let finalPaymentMethod = paymentMethod;
     let finalAmountTendered = amountTendered;
-    let finalChange = paymentMethod === 'cash' ? amountTendered - (total - discount) : undefined;
+    let finalChange = paymentMethod === 'cash' ? amountTendered - total : undefined;
     
     // For delivery orders, override payment method to reflect online payment
     if (orderType === 'online_delivery') {
@@ -222,7 +222,7 @@ export function useTransactionHandler(storeId: string) {
       }
       
       // For delivery orders, amount tendered equals total (no cash handling)
-      finalAmountTendered = total - discount;
+      finalAmountTendered = total;
       finalChange = undefined;
       
       console.log(`✅ Delivery payment method set to: ${finalPaymentMethod} via ${paymentDetails?.eWalletProvider}`);
@@ -239,7 +239,7 @@ export function useTransactionHandler(storeId: string) {
       discount,
       discountType,
       discountIdNumber,
-      total: total - discount,
+      total: total,
       amountTendered: finalAmountTendered,
       change: finalChange,
       paymentMethod: finalPaymentMethod,
@@ -307,7 +307,7 @@ export function useTransactionHandler(storeId: string) {
         {
           itemCount: items.length,
           paymentMethod: finalPaymentMethod,
-          total: total - discount,
+          total: total,
           inventorySuccess: true
         }
       );
