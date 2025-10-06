@@ -167,23 +167,23 @@ export async function fetchZReadingForThermal(
           otherDiscounts += tx.discount;
         }
         
-        // Count order types
-        const orderType = tx.order_type || 'dine_in';
+        // Count order types (handle all variations)
+        const orderType = (tx.order_type || 'dine_in').toLowerCase();
         if (orderType === 'dine_in') {
           dineInSales += tx.total || 0;
-        } else if (orderType === 'grab_food') {
+        } else if (orderType === 'grab_food' || orderType === 'grabfood') {
           grabFoodSales += tx.total || 0;
-        } else if (orderType === 'food_panda') {
+        } else if (orderType === 'food_panda' || orderType === 'foodpanda' || orderType === 'online_delivery') {
           foodPandaSales += tx.total || 0;
         }
         
-        // Count payment methods
-        const paymentMethod = tx.payment_method || 'cash';
+        // Count payment methods (handle all variations including hyphenated)
+        const paymentMethod = (tx.payment_method || 'cash').toLowerCase().replace(/[-_\s]/g, '');
         if (paymentMethod === 'cash') {
           cashSales += tx.total || 0;
-        } else if (paymentMethod === 'card') {
+        } else if (paymentMethod === 'card' || paymentMethod === 'creditcard' || paymentMethod === 'debitcard') {
           cardSales += tx.total || 0;
-        } else if (paymentMethod === 'ewallet') {
+        } else if (paymentMethod === 'ewallet' || paymentMethod === 'gcash' || paymentMethod === 'paymaya') {
           ewalletSales += tx.total || 0;
         }
       });
