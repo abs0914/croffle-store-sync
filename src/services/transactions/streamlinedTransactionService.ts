@@ -452,19 +452,81 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Expand items for inventory deduction
+   * Expand items for inventory deduction (OPTIMIZED - Single batched query)
    * Expands combo products into their components
    */
   private async expandItemsForInventory(items: StreamlinedTransactionItem[]): Promise<StreamlinedTransactionItem[]> {
-    const expandedItems: StreamlinedTransactionItem[] = [];
+    // Separate combo items and regular items
+    const comboItems = items.filter(item => item.productId.startsWith('combo-'));
+    const regularItems = items.filter(item => !item.productId.startsWith('combo-'));
     
-    for (const item of items) {
-      if (item.productId.startsWith('combo-')) {
-        console.log(`🔄 Expanding combo for inventory: ${item.name}`);
-        const components = await this.expandComboForInventory(item);
-        expandedItems.push(...components);
-      } else {
-        expandedItems.push(item);
+    if (comboItems.length === 0) {
+      return items; // No combos, return as-is
+    }
+    
+    // Extract all component IDs from all combos in one pass
+    const componentIdMap = new Map<string, StreamlinedTransactionItem>(); // componentId -> original combo item
+    
+    for (const item of comboItems) {
+      const parts = item.productId.split('-');
+      if (parts.length === 11) {
+        const componentIds = [
+          `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}-${parts[5]}`,
+          `${parts[6]}-${parts[7]}-${parts[8]}-${parts[9]}-${parts[10]}`
+        ];
+        
+        componentIds.forEach(id => componentIdMap.set(id, item));
+      }
+    }
+    
+    const allComponentIds = Array.from(componentIdMap.keys());
+    
+    if (allComponentIds.length === 0) {
+      console.warn('⚠️ No valid component IDs found in combo items');
+      return items;
+    }
+    
+    // ⚡ SINGLE BATCHED QUERY for all component products
+    console.log(`⚡ Fetching ${allComponentIds.length} component products in single query`);
+    const { data: products } = await supabase
+      .from('product_catalog')
+      .select('id, product_name')
+      .in('id', allComponentIds);
+    
+    if (!products || products.length === 0) {
+      console.warn('⚠️ No products found for combo components');
+      return items;
+    }
+    
+    // Create a product lookup map
+    const productMap = new Map(products.map(p => [p.id, p]));
+    
+    // Expand each combo using the cached product data
+    const expandedItems: StreamlinedTransactionItem[] = [...regularItems];
+    
+    for (const item of comboItems) {
+      const parts = item.productId.split('-');
+      if (parts.length === 11) {
+        const componentIds = [
+          `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}-${parts[5]}`,
+          `${parts[6]}-${parts[7]}-${parts[8]}-${parts[9]}-${parts[10]}`
+        ];
+        
+        const components = componentIds
+          .map(id => productMap.get(id))
+          .filter((p): p is NonNullable<typeof p> => p !== undefined)
+          .map(product => ({
+            productId: product.id,
+            name: product.product_name,
+            quantity: item.quantity,
+            unitPrice: 0,
+            totalPrice: 0
+          }));
+        
+        if (components.length > 0) {
+          expandedItems.push(...components);
+          console.log(`✅ Expanded combo: ${item.name} → ${components.map(c => c.name).join(', ')}`);
+        }
       }
     }
     
@@ -473,57 +535,8 @@ class StreamlinedTransactionService {
 
   /**
    * Expand combo product for inventory processing
+   * @deprecated - Use expandItemsForInventory() for batched processing
    */
-  private async expandComboForInventory(item: StreamlinedTransactionItem): Promise<StreamlinedTransactionItem[]> {
-    try {
-      // Extract component IDs from combo ID: "combo-{uuid1}-{uuid2}"
-      const parts = item.productId.split('-');
-      if (parts.length !== 11) {
-        console.warn(`Invalid combo ID format: ${item.productId}`);
-        return [item]; // Return original item as fallback
-      }
-
-      // Reconstruct the two UUIDs
-      const componentIds = [
-        `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}-${parts[5]}`, // First UUID
-        `${parts[6]}-${parts[7]}-${parts[8]}-${parts[9]}-${parts[10]}` // Second UUID
-      ];
-
-      // Validate UUIDs
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(componentIds[0]) || !uuidRegex.test(componentIds[1])) {
-        console.warn(`Invalid UUID format in combo: ${item.productId}`);
-        return [item];
-      }
-      
-      // Fetch component products
-      const { data: products } = await supabase
-        .from('product_catalog')
-        .select('id, product_name')
-        .in('id', componentIds);
-
-      if (!products || products.length === 0) {
-        console.warn(`No products found for combo components: ${componentIds.join(', ')}`);
-        return [item];
-      }
-
-      // Create expanded items
-      const expandedItems: StreamlinedTransactionItem[] = products.map(product => ({
-        productId: product.id,
-        name: product.product_name,
-        quantity: item.quantity,
-        unitPrice: 0, // Price doesn't matter for inventory
-        totalPrice: 0
-      }));
-
-      console.log(`✅ Expanded combo into ${expandedItems.length} components: ${expandedItems.map(i => i.name).join(', ')}`);
-      return expandedItems;
-
-    } catch (error) {
-      console.error('❌ Failed to expand combo for inventory:', error);
-      return [item]; // Return original item as fallback
-    }
-  }
 
   /**
    * Expand combo product for transaction processing
