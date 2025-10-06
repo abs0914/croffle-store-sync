@@ -106,52 +106,88 @@ export async function simplifiedMixMatchDeduction(
 
     console.log(`✅ Will deduct ${deductionsToApply.length} ingredients (${deductionsToApply.filter(d => d.ingredient_category === 'base').length} base + ${deductionsToApply.filter(d => d.ingredient_category === 'choice').length} choices + ${deductionsToApply.filter(d => d.ingredient_category === 'packaging').length} packaging)`);
 
-    // Step 4: Apply deductions using batch update
-    for (const deduction of deductionsToApply) {
-      const deductQuantity = deduction.quantity_per_unit * quantity;
-      
-      try {
-        // Deduct from inventory_stock
-        const { data: inventoryItem, error: fetchError } = await supabase
-          .from('inventory_stock')
-          .select('stock_quantity, item')
-          .eq('id', deduction.inventory_stock_id)
-          .single();
+    // Step 4: Fetch current stock for all ingredients (single batch query)
+    const stockIds = deductionsToApply.map(d => d.inventory_stock_id);
+    const { data: stockItems, error: stockError } = await supabase
+      .from('inventory_stock')
+      .select('id, stock_quantity, item')
+      .in('id', stockIds);
 
-        if (fetchError || !inventoryItem) {
+    if (stockError || !stockItems) {
+      console.error('❌ Failed to fetch stock items:', stockError);
+      result.errors.push('Failed to fetch inventory stock');
+      result.success = false;
+      return result;
+    }
+
+    // Create lookup map
+    const stockMap = new Map(stockItems.map(item => [item.id, item]));
+
+    // Step 5: Prepare batch updates and audit records
+    const updates = deductionsToApply
+      .map(deduction => {
+        const deductQuantity = deduction.quantity_per_unit * quantity;
+        const inventoryItem = stockMap.get(deduction.inventory_stock_id);
+
+        if (!inventoryItem) {
           console.warn(`⚠️ Inventory item not found: ${deduction.ingredient_name}`);
           result.skippedCount++;
-          continue;
+          return null;
         }
 
         const newStock = inventoryItem.stock_quantity - deductQuantity;
         
-        const { error: updateError } = await supabase
-          .from('inventory_stock')
-          .update({ stock_quantity: newStock })
-          .eq('id', deduction.inventory_stock_id);
-
-        if (updateError) {
-          console.error(`❌ Failed to deduct ${deduction.ingredient_name}:`, updateError);
-          result.errors.push(`Failed to deduct ${deduction.ingredient_name}`);
-          continue;
-        }
-
-        // Create audit trail
-        await SimplifiedInventoryAuditService.deductWithAudit(
-          deduction.inventory_stock_id,
+        return {
+          id: deduction.inventory_stock_id,
+          newStock,
           deductQuantity,
-          transactionId,
-          deduction.ingredient_name
-        );
+          ingredientName: deduction.ingredient_name,
+          previousStock: inventoryItem.stock_quantity
+        };
+      })
+      .filter(update => update !== null);
 
-        result.deductedCount++;
-        console.log(`✅ Deducted ${deductQuantity} of ${deduction.ingredient_name} (${inventoryItem.stock_quantity} → ${newStock})`);
-      } catch (error) {
-        console.error(`❌ Error deducting ${deduction.ingredient_name}:`, error);
-        result.errors.push(`Error deducting ${deduction.ingredient_name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Step 6: Execute batch stock updates in parallel
+    const updatePromises = updates.map(update => 
+      supabase
+        .from('inventory_stock')
+        .update({ stock_quantity: update.newStock })
+        .eq('id', update.id)
+    );
+
+    const updateResults = await Promise.allSettled(updatePromises);
+    
+    // Step 7: Process update results and create audit records
+    const auditPromises = [];
+    for (let i = 0; i < updateResults.length; i++) {
+      const updateResult = updateResults[i];
+      const update = updates[i];
+
+      if (updateResult.status === 'rejected' || updateResult.value.error) {
+        const error = updateResult.status === 'rejected' 
+          ? updateResult.reason 
+          : updateResult.value.error;
+        console.error(`❌ Failed to deduct ${update.ingredientName}:`, error);
+        result.errors.push(`Failed to deduct ${update.ingredientName}`);
+        continue;
       }
+
+      // Queue audit record creation
+      auditPromises.push(
+        SimplifiedInventoryAuditService.deductWithAudit(
+          update.id,
+          update.deductQuantity,
+          transactionId,
+          update.ingredientName
+        )
+      );
+
+      result.deductedCount++;
+      console.log(`✅ Deducted ${update.deductQuantity} of ${update.ingredientName} (${update.previousStock} → ${update.newStock})`);
     }
+
+    // Wait for all audit records (non-blocking)
+    await Promise.allSettled(auditPromises);
 
     result.skippedCount = deductions.length - deductionsToApply.length;
     
@@ -167,9 +203,24 @@ export async function simplifiedMixMatchDeduction(
 }
 
 /**
+ * In-memory cache for Mix & Match product detection
+ * Cache duration: 5 minutes
+ */
+const mixMatchCache = new Map<string, { result: boolean; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
  * Check if a product is a Mix & Match product based on pre-computed deductions
+ * Uses in-memory cache to avoid repeated queries
  */
 export async function isMixMatchProduct(storeId: string, productName: string): Promise<boolean> {
+  const cacheKey = `${storeId}:${productName}`;
+  const cached = mixMatchCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.result;
+  }
+
   const { data, error } = await supabase
     .from('mix_match_ingredient_deductions')
     .select('id')
@@ -178,5 +229,51 @@ export async function isMixMatchProduct(storeId: string, productName: string): P
     .eq('is_active', true)
     .limit(1);
 
-  return !error && data && data.length > 0;
+  const result = !error && data && data.length > 0;
+  mixMatchCache.set(cacheKey, { result, timestamp: Date.now() });
+  
+  return result;
+}
+
+/**
+ * Batch check multiple products for Mix & Match status in a single query
+ * Returns a map of productName -> isMixMatch
+ */
+export async function batchCheckMixMatchProducts(
+  storeId: string, 
+  productNames: string[]
+): Promise<Record<string, boolean>> {
+  if (productNames.length === 0) return {};
+  
+  console.log(`🔍 Batch checking ${productNames.length} products for Mix & Match status`);
+  
+  const { data, error } = await supabase
+    .from('mix_match_ingredient_deductions')
+    .select('product_name')
+    .eq('store_id', storeId)
+    .eq('is_active', true)
+    .in('product_name', productNames);
+
+  if (error) {
+    console.error('❌ Error batch checking Mix & Match products:', error);
+    return {};
+  }
+
+  // Build map of results
+  const mixMatchSet = new Set(data?.map(d => d.product_name) || []);
+  const result: Record<string, boolean> = {};
+  
+  for (const productName of productNames) {
+    result[productName] = mixMatchSet.has(productName);
+    
+    // Update cache
+    const cacheKey = `${storeId}:${productName}`;
+    mixMatchCache.set(cacheKey, { 
+      result: result[productName], 
+      timestamp: Date.now() 
+    });
+  }
+  
+  console.log(`✅ Batch check complete: ${mixMatchSet.size} Mix & Match products found`);
+  return result;
 }

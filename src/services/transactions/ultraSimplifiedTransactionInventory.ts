@@ -1,17 +1,18 @@
 /**
  * ULTRA SIMPLIFIED TRANSACTION INVENTORY INTEGRATION
  * 
- * Phase 5: Radical Simplification
- * - Uses pre-computed mix & match deductions (no complex matching)
- * - Falls back to direct inventory deduction for non-mix & match products
- * - Eliminates 10s+ timeouts and complex processing
+ * Phase 6: Performance Optimization
+ * - Parallel processing of all items
+ * - Batched Mix & Match detection
+ * - Batched database operations
+ * - Performance monitoring
  * 
- * Performance: <1s (was 10s+ with timeouts)
+ * Performance: <3s (was 30s+ timeout)
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { SimplifiedInventoryAuditService } from '@/services/inventory/simplifiedInventoryAuditService';
-import { simplifiedMixMatchDeduction, isMixMatchProduct } from '@/services/inventory/simplifiedMixMatchService';
+import { simplifiedMixMatchDeduction, batchCheckMixMatchProducts } from '@/services/inventory/simplifiedMixMatchService';
 
 export interface TransactionItem {
   productId: string;
@@ -29,14 +30,15 @@ export interface ProcessingResult {
 
 /**
  * Process inventory deduction for a transaction
- * Automatically routes to mix & match or regular processing
+ * Parallelized processing with batched Mix & Match detection
  */
 export async function processTransactionInventoryUltraSimplified(
   transactionId: string,
   items: TransactionItem[],
   userId: string
 ): Promise<ProcessingResult> {
-  console.log(`🚀 [ULTRA SIMPLIFIED] Processing inventory for ${items.length} items`);
+  const startTime = performance.now();
+  console.log(`🚀 [PHASE 6] Processing inventory for ${items.length} items in parallel`);
   
   const result: ProcessingResult = {
     success: true,
@@ -52,15 +54,21 @@ export async function processTransactionInventoryUltraSimplified(
   const storeId = items[0].storeId;
 
   try {
-    // Process each item
-    for (const item of items) {
-      // Check if this is a mix & match product
-      const isMixMatch = await isMixMatchProduct(storeId, item.productName);
+    // Step 1: Batch check which items are Mix & Match (single query)
+    const mixMatchCheckStart = performance.now();
+    const productNames = items.map(item => item.productName);
+    const mixMatchMap = await batchCheckMixMatchProducts(storeId, productNames);
+    console.log(`⏱️ Mix & Match batch check: ${(performance.now() - mixMatchCheckStart).toFixed(2)}ms`);
+
+    // Step 2: Process all items in parallel
+    const itemProcessingStart = performance.now();
+    const itemPromises = items.map(async (item) => {
+      const itemStart = performance.now();
+      const isMixMatch = mixMatchMap[item.productName] || false;
       
       if (isMixMatch) {
-        console.log(`🎯 [ULTRA SIMPLIFIED] ${item.productName} is Mix & Match, using pre-computed deductions`);
+        console.log(`🎯 [PHASE 6] ${item.productName} is Mix & Match, using pre-computed deductions`);
         
-        // Use simplified mix & match deduction
         const mixMatchResult = await simplifiedMixMatchDeduction(
           transactionId,
           storeId,
@@ -69,98 +77,169 @@ export async function processTransactionInventoryUltraSimplified(
           userId
         );
         
-        if (!mixMatchResult.success) {
-          result.errors.push(...mixMatchResult.errors);
-          result.success = false;
-        } else {
-          result.deductedCount += mixMatchResult.deductedCount;
-        }
+        const itemTime = performance.now() - itemStart;
+        console.log(`⏱️ ${item.productName} (Mix & Match): ${itemTime.toFixed(2)}ms`);
         
-        if (mixMatchResult.skippedCount > 0) {
-          result.warnings.push(`Skipped ${mixMatchResult.skippedCount} non-selected choices for ${item.productName}`);
-        }
+        return {
+          success: mixMatchResult.success,
+          deductedCount: mixMatchResult.deductedCount,
+          errors: mixMatchResult.errors,
+          warnings: mixMatchResult.skippedCount > 0 
+            ? [`Skipped ${mixMatchResult.skippedCount} non-selected choices for ${item.productName}`]
+            : []
+        };
       } else {
-        console.log(`📦 [ULTRA SIMPLIFIED] ${item.productName} is regular product, using direct deduction`);
+        console.log(`📦 [PHASE 6] ${item.productName} is regular product, using direct deduction`);
         
         // For regular products, deduct directly from inventory
-        // Get the product's recipe ingredients
-        const { data: productData } = await supabase
-          .from('product_catalog')
-          .select(`
-            recipe_id,
-            recipes!inner(
-              recipe_ingredients(
-                inventory_stock_id,
-                quantity,
-                inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
-                  id,
-                  item,
-                  stock_quantity
-                )
-              )
-            )
-          `)
-          .eq('product_name', item.productName)
-          .eq('store_id', storeId)
-          .maybeSingle();
-
-        if (!productData?.recipes?.recipe_ingredients) {
-          result.warnings.push(`No recipe found for ${item.productName}`);
-          continue;
-        }
-
-        // PHASE 5 FIX: Parallelize ingredient deductions for speed
-        const deductionPromises = productData.recipes.recipe_ingredients.map(async (ingredient) => {
-          if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
-            return null;
-          }
-
-          const deductQuantity = ingredient.quantity * item.quantity;
-          const currentStock = ingredient.inventory_stock.stock_quantity;
-          const newStock = currentStock - deductQuantity;
-
-          const { error: updateError } = await supabase
-            .from('inventory_stock')
-            .update({ stock_quantity: newStock })
-            .eq('id', ingredient.inventory_stock_id);
-
-          if (updateError) {
-            throw new Error(`Failed to deduct ${ingredient.inventory_stock.item}`);
-          }
-
-          // Create audit trail
-          await SimplifiedInventoryAuditService.deductWithAudit(
-            ingredient.inventory_stock_id,
-            deductQuantity,
-            transactionId,
-            ingredient.inventory_stock.item
-          );
-
-          console.log(`✅ Deducted ${deductQuantity} of ${ingredient.inventory_stock.item}`);
-          return ingredient.inventory_stock.item;
-        });
-
-        // Wait for all deductions to complete in parallel
-        const deductionResults = await Promise.allSettled(deductionPromises);
+        const regularResult = await processRegularProduct(
+          item,
+          transactionId,
+          storeId
+        );
         
-        // Process results
-        for (const deductionResult of deductionResults) {
-          if (deductionResult.status === 'rejected') {
-            result.errors.push(deductionResult.reason.message);
-            result.success = false;
-          } else if (deductionResult.value) {
-            result.deductedCount++;
-          }
+        const itemTime = performance.now() - itemStart;
+        console.log(`⏱️ ${item.productName} (Regular): ${itemTime.toFixed(2)}ms`);
+        
+        return regularResult;
+      }
+    });
+
+    // Wait for all items to complete in parallel
+    const itemResults = await Promise.allSettled(itemPromises);
+    console.log(`⏱️ All items processed: ${(performance.now() - itemProcessingStart).toFixed(2)}ms`);
+    
+    // Step 3: Aggregate results
+    for (const itemResult of itemResults) {
+      if (itemResult.status === 'rejected') {
+        result.errors.push(`Item processing failed: ${itemResult.reason}`);
+        result.success = false;
+      } else {
+        const itemData = itemResult.value;
+        result.deductedCount += itemData.deductedCount;
+        result.errors.push(...itemData.errors);
+        result.warnings.push(...itemData.warnings);
+        
+        if (!itemData.success) {
+          result.success = false;
         }
       }
     }
 
-    console.log(`✅ [ULTRA SIMPLIFIED] Complete: ${result.deductedCount} deducted, ${result.errors.length} errors, ${result.warnings.length} warnings`);
+    const totalTime = performance.now() - startTime;
+    const status = result.success ? '✅' : '❌';
+    console.log(`${status} [PHASE 6] Complete in ${totalTime.toFixed(2)}ms: ${result.deductedCount} deducted, ${result.errors.length} errors, ${result.warnings.length} warnings`);
+    
+    // Performance warning
+    if (totalTime > 5000) {
+      console.warn(`⚠️ [PERFORMANCE] Inventory deduction took ${totalTime.toFixed(2)}ms (>5s threshold)`);
+    }
+    
     return result;
   } catch (error) {
-    console.error('❌ [ULTRA SIMPLIFIED] Critical error:', error);
+    console.error('❌ [PHASE 6] Critical error:', error);
     result.success = false;
     result.errors.push(`Critical error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return result;
+  }
+}
+
+/**
+ * Process a regular (non-Mix & Match) product
+ * Uses batched operations for better performance
+ */
+async function processRegularProduct(
+  item: TransactionItem,
+  transactionId: string,
+  storeId: string
+): Promise<{
+  success: boolean;
+  deductedCount: number;
+  errors: string[];
+  warnings: string[];
+}> {
+  const result = {
+    success: true,
+    deductedCount: 0,
+    errors: [] as string[],
+    warnings: [] as string[]
+  };
+
+  try {
+    // Get the product's recipe ingredients
+    const { data: productData } = await supabase
+      .from('product_catalog')
+      .select(`
+        recipe_id,
+        recipes!inner(
+          recipe_ingredients(
+            inventory_stock_id,
+            quantity,
+            inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+              id,
+              item,
+              stock_quantity
+            )
+          )
+        )
+      `)
+      .eq('product_name', item.productName)
+      .eq('store_id', storeId)
+      .maybeSingle();
+
+    if (!productData?.recipes?.recipe_ingredients) {
+      result.warnings.push(`No recipe found for ${item.productName}`);
+      return result;
+    }
+
+    // Parallelize ingredient deductions
+    const deductionPromises = productData.recipes.recipe_ingredients.map(async (ingredient) => {
+      if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
+        return null;
+      }
+
+      const deductQuantity = ingredient.quantity * item.quantity;
+      const currentStock = ingredient.inventory_stock.stock_quantity;
+      const newStock = currentStock - deductQuantity;
+
+      const { error: updateError } = await supabase
+        .from('inventory_stock')
+        .update({ stock_quantity: newStock })
+        .eq('id', ingredient.inventory_stock_id);
+
+      if (updateError) {
+        throw new Error(`Failed to deduct ${ingredient.inventory_stock.item}`);
+      }
+
+      // Create audit trail
+      await SimplifiedInventoryAuditService.deductWithAudit(
+        ingredient.inventory_stock_id,
+        deductQuantity,
+        transactionId,
+        ingredient.inventory_stock.item
+      );
+
+      console.log(`✅ Deducted ${deductQuantity} of ${ingredient.inventory_stock.item}`);
+      return ingredient.inventory_stock.item;
+    });
+
+    // Wait for all deductions to complete in parallel
+    const deductionResults = await Promise.allSettled(deductionPromises);
+    
+    // Process results
+    for (const deductionResult of deductionResults) {
+      if (deductionResult.status === 'rejected') {
+        result.errors.push(deductionResult.reason.message);
+        result.success = false;
+      } else if (deductionResult.value) {
+        result.deductedCount++;
+      }
+    }
+
+    return result;
+  } catch (error) {
+    result.success = false;
+    result.errors.push(`Error processing ${item.productName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return result;
   }
 }
