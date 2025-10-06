@@ -377,6 +377,24 @@ export class PrinterTypeManager {
     report += formatter.formatLine(formatter.bold('NET SALES:'), formatter.bold(formatter.formatCurrencyWithSymbol(zReadingData.netSales || 0)), width);
     report += formatter.horizontalLine(width);
     
+    // Order Type Breakdown
+    if (zReadingData.orderTypeBreakdown) {
+      report += formatter.bold('ORDER TYPE BREAKDOWN') + '\n';
+      report += formatter.formatLine('  Dine In:', formatter.formatCurrencyWithSymbol(zReadingData.orderTypeBreakdown.dineIn || 0), width);
+      report += formatter.formatLine('  Grab Food:', formatter.formatCurrencyWithSymbol(zReadingData.orderTypeBreakdown.grabFood || 0), width);
+      report += formatter.formatLine('  Food Panda:', formatter.formatCurrencyWithSymbol(zReadingData.orderTypeBreakdown.foodPanda || 0), width);
+      report += formatter.horizontalLine(width);
+    }
+    
+    // Payment Method Breakdown
+    if (zReadingData.paymentMethodBreakdown) {
+      report += formatter.bold('PAYMENT METHOD BREAKDOWN') + '\n';
+      report += formatter.formatLine('  Cash:', formatter.formatCurrencyWithSymbol(zReadingData.paymentMethodBreakdown.cash || 0), width);
+      report += formatter.formatLine('  Card:', formatter.formatCurrencyWithSymbol(zReadingData.paymentMethodBreakdown.card || 0), width);
+      report += formatter.formatLine('  E-Wallet:', formatter.formatCurrencyWithSymbol(zReadingData.paymentMethodBreakdown.ewallet || 0), width);
+      report += formatter.horizontalLine(width);
+    }
+    
     // Cash Count
     report += formatter.bold('CASH COUNT') + '\n';
     report += formatter.formatLine('BEG CASH:', formatter.formatCurrencyWithSymbol(zReadingData.beginningCash || 0), width);

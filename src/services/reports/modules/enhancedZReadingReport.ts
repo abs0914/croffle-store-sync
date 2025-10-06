@@ -15,6 +15,20 @@ export interface BIRZReadingData extends BIRXReadingData {
   
   // Additional Z-Reading fields
   totalRefunds: number;
+  
+  // Order Type Breakdown
+  orderTypeBreakdown?: {
+    dineIn: number;
+    grabFood: number;
+    foodPanda: number;
+  };
+  
+  // Payment Method Breakdown
+  paymentMethodBreakdown?: {
+    cash: number;
+    card: number;
+    ewallet: number;
+  };
 }
 
 export async function generateBIRZReading(

@@ -139,6 +139,13 @@ export async function fetchZReadingForThermal(
       let otherDiscounts = 0;
       let netSales = 0;
       let cashSales = 0;
+      
+      // Order type and payment method breakdowns
+      let dineInSales = 0;
+      let grabFoodSales = 0;
+      let foodPandaSales = 0;
+      let cardSales = 0;
+      let ewalletSales = 0;
 
       transactions.forEach(tx => {
         grossSales += tx.subtotal || 0;
@@ -160,9 +167,24 @@ export async function fetchZReadingForThermal(
           otherDiscounts += tx.discount;
         }
         
-        // Count cash sales
-        if (tx.payment_method === 'cash') {
+        // Count order types
+        const orderType = tx.order_type || 'dine_in';
+        if (orderType === 'dine_in') {
+          dineInSales += tx.total || 0;
+        } else if (orderType === 'grab_food') {
+          grabFoodSales += tx.total || 0;
+        } else if (orderType === 'food_panda') {
+          foodPandaSales += tx.total || 0;
+        }
+        
+        // Count payment methods
+        const paymentMethod = tx.payment_method || 'cash';
+        if (paymentMethod === 'cash') {
           cashSales += tx.total || 0;
+        } else if (paymentMethod === 'card') {
+          cardSales += tx.total || 0;
+        } else if (paymentMethod === 'ewallet') {
+          ewalletSales += tx.total || 0;
         }
       });
 
@@ -227,6 +249,20 @@ export async function fetchZReadingForThermal(
         naacDiscount,
         spDiscount,
         otherDiscounts,
+        
+        // Order Type Breakdown
+        orderTypeBreakdown: {
+          dineIn: dineInSales,
+          grabFood: grabFoodSales,
+          foodPanda: foodPandaSales,
+        },
+        
+        // Payment Method Breakdown
+        paymentMethodBreakdown: {
+          cash: cashSales,
+          card: cardSales,
+          ewallet: ewalletSales,
+        },
         
         // Cash Info
         beginningCash,
