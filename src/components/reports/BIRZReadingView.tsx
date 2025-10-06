@@ -161,6 +161,62 @@ export function BIRZReadingView({ data }: BIRZReadingViewProps) {
           </div>
         </div>
 
+        {/* Order Type Breakdown */}
+        {(data.orderTypeBreakdown) && (
+          <>
+            <div className="border-t border-dashed border-gray-400 my-2"></div>
+            <div className="mb-4">
+              <div className="font-bold underline">ORDER TYPE BREAKDOWN</div>
+              {data.orderTypeBreakdown.dineIn > 0 && (
+                <div className="flex justify-between">
+                  <span>Dine In:</span>
+                  <span>{formatCurrency(data.orderTypeBreakdown.dineIn)}</span>
+                </div>
+              )}
+              {data.orderTypeBreakdown.grabFood > 0 && (
+                <div className="flex justify-between">
+                  <span>Grab Food:</span>
+                  <span>{formatCurrency(data.orderTypeBreakdown.grabFood)}</span>
+                </div>
+              )}
+              {data.orderTypeBreakdown.foodPanda > 0 && (
+                <div className="flex justify-between">
+                  <span>Food Panda:</span>
+                  <span>{formatCurrency(data.orderTypeBreakdown.foodPanda)}</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Payment Method Breakdown */}
+        {(data.paymentMethodBreakdown) && (
+          <>
+            <div className="border-t border-dashed border-gray-400 my-2"></div>
+            <div className="mb-4">
+              <div className="font-bold underline">PAYMENT METHOD BREAKDOWN</div>
+              {data.paymentMethodBreakdown.cash > 0 && (
+                <div className="flex justify-between">
+                  <span>Cash:</span>
+                  <span>{formatCurrency(data.paymentMethodBreakdown.cash)}</span>
+                </div>
+              )}
+              {data.paymentMethodBreakdown.card > 0 && (
+                <div className="flex justify-between">
+                  <span>Card:</span>
+                  <span>{formatCurrency(data.paymentMethodBreakdown.card)}</span>
+                </div>
+              )}
+              {data.paymentMethodBreakdown.ewallet > 0 && (
+                <div className="flex justify-between">
+                  <span>E-Wallet:</span>
+                  <span>{formatCurrency(data.paymentMethodBreakdown.ewallet)}</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         <div className="border-t border-dashed border-gray-400 my-2"></div>
 
         {/* Cash Count */}
