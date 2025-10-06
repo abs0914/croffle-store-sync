@@ -236,7 +236,16 @@ export function EditableCartItem({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onUpdateQuantity(index, quantity + 1)}
+                onClick={() => {
+                  console.log("➕ EditableCartItem: Plus button clicked", {
+                    index,
+                    currentQuantity: quantity,
+                    newQuantity: quantity + 1,
+                    productName: item.product?.name,
+                    callingFunction: "onUpdateQuantity"
+                  });
+                  onUpdateQuantity(index, quantity + 1);
+                }}
                 disabled={hasStockIssue}
               >
                 <Plus className="h-3 w-3" />

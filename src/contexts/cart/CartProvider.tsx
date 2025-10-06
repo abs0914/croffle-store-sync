@@ -156,7 +156,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     // Simplified matching logic to fix duplicate items bug
-    const existingItemIndex = items.findIndex(item => {
+    const existingItemIndex = items.findIndex((item, idx) => {
+      console.log(`🔍 CartProvider: Checking item ${idx} for duplicate`, {
+        checkingProductId: item.productId,
+        targetProductId: product.id,
+        productMatch: item.productId === product.id,
+        checkingVariationId: item.variationId,
+        targetVariationId: variation?.id,
+        variationIdType: typeof item.variationId,
+        checkingCustomization: item.customization ? "present" : "absent",
+        targetCustomization: customization ? "present" : "absent"
+      });
+      
       // Handle customized products (Mix & Match, Recipe customizations)
       if (customization) {
         // Mix & Match croffle - compare by selection signature
@@ -168,14 +179,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
                  a.croffleType === b.croffleType && 
                  a.toppingIds === b.toppingIds && 
                  a.sauceIds === b.sauceIds && 
-                 (item.variationId || null) === (variation?.id || null);
+                 (item.variationId ?? null) === (variation?.id ?? null);
         }
         // Recipe customization - compare selected_choices
         if (item.customization?.selected_choices || customization.selected_choices) {
           return item.productId === product.id &&
                  item.customization &&
                  JSON.stringify(item.customization.selected_choices || []) === JSON.stringify(customization.selected_choices || []) &&
-                 (item.variationId || null) === (variation?.id || null);
+                 (item.variationId ?? null) === (variation?.id ?? null);
         }
         return false;
       }
@@ -183,21 +194,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Products with variations - match on productId AND variationId
       if (variation) {
         return item.productId === product.id && 
-               item.variationId === variation.id && 
+               (item.variationId ?? null) === (variation.id ?? null) && 
                !item.customization;
       }
       
       // Simple products - match on productId only, no variation or customization
       return item.productId === product.id && 
-             !item.variationId && 
+             (item.variationId ?? null) === null && 
              !item.customization;
     });
 
-    console.log("CartContext: Existing item search complete:", {
+    console.log("🔍 CartProvider: Duplicate search result", {
       existingItemIndex,
-      productId: product.id,
-      productName: product.name,
-      hasVariation: !!variation,
+      willUpdate: existingItemIndex !== -1,
+      willCreateNew: existingItemIndex === -1,
+      searchedProductId: product.id,
+      searchedProductName: product.name,
+      searchedVariationId: variation?.id ?? null,
       hasCustomization: !!customization,
       currentItemsCount: items.length
     });
@@ -225,13 +238,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         },
         quantity,
         price: itemPrice,
-        customization: customization || undefined,
+        variationId: variation?.id ?? undefined,
+        variation: variation ?? undefined,
+        customization: customization ?? undefined,
       };
-
-      if (variation) {
-        newItem.variationId = variation.id;
-        newItem.variation = variation;
-      }
 
       console.log("🛒 CartContext: New cart item created:", newItem);
 
@@ -279,14 +289,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const updateQuantity = (itemIndex: number, quantity: number) => {
-    if (quantity < 1) return;
+    console.log("🔢 CartProvider: updateQuantity called", {
+      itemIndex,
+      requestedQuantity: quantity,
+      currentItemsCount: items.length,
+      targetItem: items[itemIndex] ? {
+        productId: items[itemIndex].productId,
+        name: items[itemIndex].product?.name,
+        currentQuantity: items[itemIndex].quantity,
+        variationId: items[itemIndex].variationId,
+        hasCustomization: !!items[itemIndex].customization
+      } : "INDEX OUT OF BOUNDS"
+    });
+
+    if (quantity < 1) {
+      console.warn("⚠️ CartProvider: Quantity cannot be less than 1");
+      return;
+    }
+
+    if (itemIndex < 0 || itemIndex >= items.length) {
+      console.error("❌ CartProvider: Invalid item index", { itemIndex, itemsLength: items.length });
+      return;
+    }
 
     const newItems = [...items];
+    const oldQuantity = newItems[itemIndex].quantity;
     newItems[itemIndex].quantity = quantity;
     setItems(newItems);
-    console.log("CartContext: Updated quantity for item", {
+    
+    console.log("✅ CartProvider: Quantity updated successfully", {
       product: newItems[itemIndex].product.name,
-      newQuantity: quantity
+      oldQuantity,
+      newQuantity: quantity,
+      itemIndex
     });
   };
 
