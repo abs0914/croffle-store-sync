@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CartItem } from "@/types/productVariations";
+import { CartItem } from "@/types";
 import { PaymentProcessor } from "./payment/PaymentProcessor";
 import ReceiptGenerator from "./ReceiptGenerator";
 import { useStore } from "@/contexts/StoreContext";
@@ -104,11 +104,11 @@ export function CheckoutModal({
     try {
       const itemsToValidate = cartItems.map(item => ({
         productId: item.product.id,
-        name: item.product.product_name,
+        name: item.product.name,
         quantity: item.quantity,
-        unitPrice: item.finalPrice / item.quantity,
-        totalPrice: item.finalPrice,
-        variationId: item.selectedVariations?.[0]?.id
+        unitPrice: item.price,
+        totalPrice: item.price * item.quantity,
+        variationId: item.variation?.id
       }));
 
       const validation = await streamlinedTransactionService.validateBeforePayment(
@@ -167,11 +167,11 @@ export function CheckoutModal({
         customerId: customerId || undefined,
         items: cartItems.map(item => ({
           productId: item.product.id,
-          name: item.product.product_name,
+          name: item.product.name,
           quantity: item.quantity,
-          unitPrice: item.finalPrice / item.quantity,
-          totalPrice: item.finalPrice,
-          variationId: item.selectedVariations?.[0]?.id
+          unitPrice: item.price,
+          totalPrice: item.price * item.quantity,
+          variationId: item.variation?.id
         })),
         subtotal: total,  // ✅ Use the total prop (pre-discount subtotal)
         tax: 0,
@@ -252,8 +252,8 @@ export function CheckoutModal({
               <div className="space-y-2 text-sm">
                 {cartItems.map((item, index) => (
                   <div key={index} className="flex justify-between">
-                    <span>{item.quantity}x {item.product.product_name}</span>
-                    <span>₱{item.finalPrice.toFixed(2)}</span>
+                    <span>{item.quantity}x {item.product.name}</span>
+                    <span>₱{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
                 <hr />
