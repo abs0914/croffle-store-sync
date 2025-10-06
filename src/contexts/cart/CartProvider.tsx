@@ -218,7 +218,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (existingItemIndex !== -1) {
       console.log("🛒 CartContext: Updated existing item quantity");
       const newItems = [...items];
-      newItems[existingItemIndex].quantity += quantity;
+      newItems[existingItemIndex] = {
+        ...newItems[existingItemIndex],
+        quantity: newItems[existingItemIndex].quantity + quantity
+      };
       console.log("🛒 CartContext: About to setItems for existing item", { beforeCount: items.length, afterCount: newItems.length });
       setItems(newItems);
 
@@ -314,7 +317,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const newItems = [...items];
     const oldQuantity = newItems[itemIndex].quantity;
-    newItems[itemIndex].quantity = quantity;
+    newItems[itemIndex] = {
+      ...newItems[itemIndex],
+      quantity: quantity
+    };
     setItems(newItems);
     
     console.log("✅ CartProvider: Quantity updated successfully", {
@@ -329,7 +335,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (price < 0) return;
 
     const newItems = [...items];
-    newItems[itemIndex].price = price;
+    newItems[itemIndex] = {
+      ...newItems[itemIndex],
+      price: price
+    };
     setItems(newItems);
     console.log("CartContext: Updated price for item", {
       product: newItems[itemIndex].product.name,

@@ -53,11 +53,12 @@ const MemoizedCartItem = memo(function MemoizedCartItem({
     />
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison for optimal re-rendering
+  // Custom comparison for optimal re-rendering - compare primitive values
   return (
-    prevProps.item === nextProps.item &&
     prevProps.item.quantity === nextProps.item.quantity &&
     prevProps.item.price === nextProps.item.price &&
+    prevProps.item.productId === nextProps.item.productId &&
+    prevProps.item.variationId === nextProps.item.variationId &&
     prevProps.orderType === nextProps.orderType &&
     prevProps.deliveryPlatform === nextProps.deliveryPlatform
   );
