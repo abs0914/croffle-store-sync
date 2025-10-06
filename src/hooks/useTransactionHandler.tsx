@@ -170,7 +170,10 @@ export function useTransactionHandler(storeId: string) {
     },
     orderType?: string,
     deliveryPlatform?: string,
-    deliveryOrderNumber?: string
+    deliveryOrderNumber?: string,
+    seniorDiscountsParam?: SeniorDiscount[],
+    otherDiscountParam?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string },
+    vatExemption?: number
   ) => {
     if (!currentStore || !currentShift) {
       toast.error("No active store or shift found");
@@ -246,7 +249,11 @@ export function useTransactionHandler(storeId: string) {
       paymentDetails,
       orderType: orderType as any,
       deliveryPlatform: deliveryPlatform as any,
-      deliveryOrderNumber: deliveryOrderNumber
+      deliveryOrderNumber: deliveryOrderNumber,
+      // Include detailed discount information
+      seniorDiscounts: seniorDiscountsParam || seniorDiscounts,
+      otherDiscount: otherDiscountParam || otherDiscount,
+      vatExemption: vatExemption
     };
     
     // Use streamlined transaction service

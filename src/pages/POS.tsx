@@ -355,7 +355,10 @@ export default function POS() {
         paymentDetails,
         orderType,
         deliveryPlatform,
-        deliveryOrderNumber
+        deliveryOrderNumber,
+        seniorDiscounts,        // ✅ Pass senior discounts detail
+        otherDiscount,          // ✅ Pass other discount detail
+        calculations?.vatExemption  // ✅ Pass VAT exemption amount
       );
 
       return success;

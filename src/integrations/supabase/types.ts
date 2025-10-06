@@ -7154,6 +7154,7 @@ export type Database = {
           order_notes: string | null
           order_status: string | null
           order_type: string | null
+          other_discount_detail: Json | null
           payment_details: Json | null
           payment_method: string
           promo_details: string | null
@@ -7163,6 +7164,7 @@ export type Database = {
           senior_citizen_discount: number | null
           senior_discount: number | null
           senior_discounts: Json | null
+          senior_discounts_detail: Json | null
           sequence_number: number | null
           shift_id: string
           status: string
@@ -7174,6 +7176,7 @@ export type Database = {
           user_id: string
           vat_amount: number | null
           vat_exempt_sales: number | null
+          vat_exemption_amount: number | null
           vat_sales: number | null
           zero_rated_sales: number | null
         }
@@ -7198,6 +7201,7 @@ export type Database = {
           order_notes?: string | null
           order_status?: string | null
           order_type?: string | null
+          other_discount_detail?: Json | null
           payment_details?: Json | null
           payment_method: string
           promo_details?: string | null
@@ -7207,6 +7211,7 @@ export type Database = {
           senior_citizen_discount?: number | null
           senior_discount?: number | null
           senior_discounts?: Json | null
+          senior_discounts_detail?: Json | null
           sequence_number?: number | null
           shift_id: string
           status?: string
@@ -7218,6 +7223,7 @@ export type Database = {
           user_id: string
           vat_amount?: number | null
           vat_exempt_sales?: number | null
+          vat_exemption_amount?: number | null
           vat_sales?: number | null
           zero_rated_sales?: number | null
         }
@@ -7242,6 +7248,7 @@ export type Database = {
           order_notes?: string | null
           order_status?: string | null
           order_type?: string | null
+          other_discount_detail?: Json | null
           payment_details?: Json | null
           payment_method?: string
           promo_details?: string | null
@@ -7251,6 +7258,7 @@ export type Database = {
           senior_citizen_discount?: number | null
           senior_discount?: number | null
           senior_discounts?: Json | null
+          senior_discounts_detail?: Json | null
           sequence_number?: number | null
           shift_id?: string
           status?: string
@@ -7262,6 +7270,7 @@ export type Database = {
           user_id?: string
           vat_amount?: number | null
           vat_exempt_sales?: number | null
+          vat_exemption_amount?: number | null
           vat_sales?: number | null
           zero_rated_sales?: number | null
         }

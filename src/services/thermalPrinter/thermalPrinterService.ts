@@ -124,8 +124,42 @@ export class ThermalPrinterService {
     receipt += ESC_POS.ALIGN_LEFT;
     receipt += this.formatTotalLine('GROSS AMOUNT:', data.grossAmount);
     
+    // Detailed discount breakdown
     if (data.discountAmount > 0) {
-      receipt += this.formatTotalLine('DISCOUNT:', -data.discountAmount);
+      // Check if transaction has detailed discounts (from new format)
+      const transaction = (data as any).transaction;
+      
+      if (transaction?.senior_discounts_detail && transaction.senior_discounts_detail.length > 0) {
+        receipt += 'SENIOR DISCOUNTS:\n';
+        transaction.senior_discounts_detail.forEach((senior: any) => {
+          receipt += `  ${senior.name} (${senior.idNumber})\n`;
+          receipt += this.formatTotalLine('', -senior.discountAmount);
+        });
+      }
+      
+      if (transaction?.vat_exemption_amount && transaction.vat_exemption_amount > 0) {
+        receipt += this.formatTotalLine('VAT EXEMPTION:', -transaction.vat_exemption_amount);
+      }
+      
+      if (transaction?.other_discount_detail) {
+        const detail = transaction.other_discount_detail;
+        let label = 'DISCOUNT';
+        if (detail.type === 'pwd') label = 'PWD DISCOUNT';
+        else if (detail.type === 'employee') label = 'EMPLOYEE DISCOUNT';
+        else if (detail.type === 'loyalty') label = 'LOYALTY DISCOUNT';
+        
+        if (detail.idNumber) {
+          receipt += `${label} (${detail.idNumber})\n`;
+          receipt += this.formatTotalLine('', -detail.amount);
+        } else {
+          receipt += this.formatTotalLine(label + ':', -detail.amount);
+        }
+      }
+      
+      // Legacy fallback for old transactions
+      if (!transaction?.senior_discounts_detail && !transaction?.other_discount_detail) {
+        receipt += this.formatTotalLine('DISCOUNT:', -data.discountAmount);
+      }
     }
     
     receipt += ESC_POS.SEPARATOR;

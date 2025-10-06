@@ -46,6 +46,20 @@ export interface StreamlinedTransactionData {
   orderType?: 'dine_in' | 'takeout' | 'delivery';
   deliveryPlatform?: string;
   deliveryOrderNumber?: string;
+  // Detailed discount information
+  seniorDiscounts?: Array<{
+    id: string;
+    idNumber: string;
+    name: string;
+    discountAmount: number;
+  }>;
+  otherDiscount?: {
+    type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo';
+    amount: number;
+    idNumber?: string;
+    justification?: string;
+  };
+  vatExemption?: number;
 }
 
 export interface TransactionValidationResult {
@@ -362,7 +376,11 @@ class StreamlinedTransactionService {
       senior_citizen_discount: data.discountType === 'senior' ? discountAmount : 0,
       pwd_discount: data.discountType === 'pwd' ? discountAmount : 0,
       sequence_number: parseInt(timestamp),
-      terminal_id: 'TERMINAL-01'
+      terminal_id: 'TERMINAL-01',
+      // Store detailed discount information
+      senior_discounts_detail: data.seniorDiscounts ? JSON.stringify(data.seniorDiscounts) : null,
+      other_discount_detail: data.otherDiscount ? JSON.stringify(data.otherDiscount) : null,
+      vat_exemption_amount: data.vatExemption || 0
     };
 
     const { data: dbTransaction, error } = await supabase

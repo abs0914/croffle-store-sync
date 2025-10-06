@@ -243,7 +243,44 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
             </div>
             
             {/* BIR-compliant discount breakdown */}
-            {transaction.discount > 0 && (
+            {/* Multiple Senior Citizens */}
+            {transaction.senior_discounts_detail && transaction.senior_discounts_detail.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-semibold">Senior Citizen Discounts:</div>
+                {transaction.senior_discounts_detail.map((senior, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-green-600">
+                    <span className="ml-2">{senior.name} ({senior.idNumber})</span>
+                    <span>-{formatCurrency(senior.discountAmount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* VAT Exemption */}
+            {transaction.vat_exemption_amount && transaction.vat_exemption_amount > 0 && (
+              <div className="flex justify-between text-xs text-blue-600">
+                <span>VAT Exemption:</span>
+                <span>-{formatCurrency(transaction.vat_exemption_amount)}</span>
+              </div>
+            )}
+
+            {/* Other Discounts (PWD, Employee, etc.) */}
+            {transaction.other_discount_detail && (
+              <div className="flex justify-between text-xs text-green-600">
+                <span>
+                  {transaction.other_discount_detail.type === 'pwd' && 'PWD Discount'}
+                  {transaction.other_discount_detail.type === 'employee' && 'Employee Discount'}
+                  {transaction.other_discount_detail.type === 'loyalty' && 'Loyalty Discount'}
+                  {transaction.other_discount_detail.type === 'promo' && 'Promo Discount'}
+                  {transaction.other_discount_detail.type === 'complimentary' && 'Complimentary'}
+                  {transaction.other_discount_detail.idNumber && ` (${transaction.other_discount_detail.idNumber})`}:
+                </span>
+                <span>-{formatCurrency(transaction.other_discount_detail.amount)}</span>
+              </div>
+            )}
+
+            {/* Legacy fallback for old transactions without detailed breakdown */}
+            {transaction.discount > 0 && !transaction.senior_discounts_detail && !transaction.other_discount_detail && (
               <>
                 {transaction.discountType === 'senior' && (
                   <div className="flex justify-between text-green-600">
