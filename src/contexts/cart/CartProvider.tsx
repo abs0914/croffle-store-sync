@@ -61,6 +61,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Memoize calculations to prevent spam - only recalculate when dependencies change
   const calculations = useMemo(() => {
+    // 🔍 DIAGNOSTIC: Log complete items array structure before calculation
+    console.log("🔍 DIAGNOSTIC - CartProvider: Items BEFORE calculation", {
+      itemsCount: items.length,
+      completeItems: items.map(i => ({
+        productId: i.productId,
+        productName: i.product?.name,
+        price: i.price,
+        quantity: i.quantity,
+        hasPrice: i.price !== undefined && i.price !== null,
+        priceType: typeof i.price,
+        variationId: i.variationId,
+        hasCustomization: !!i.customization
+      }))
+    });
+
     const calculationResult = CartCalculationService.calculateCartTotals(
       items,
       seniorDiscounts,
@@ -68,11 +83,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       totalDiners
     );
     
-    console.log("🧮 CartProvider: Cart calculation", {
+    console.log("🧮 CartProvider: Cart calculation RESULT", {
       itemsCount: items.length,
       seniorDiscountsCount: seniorDiscounts.length,
       totalDiners,
-      finalTotal: calculationResult.finalTotal
+      grossSubtotal: calculationResult.grossSubtotal,
+      finalTotal: calculationResult.finalTotal,
+      adjustedVAT: calculationResult.adjustedVAT
     });
     
     return calculationResult;
@@ -197,6 +214,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.log("🛒 CartContext: setItems callback - Previous items:", prevItems.length);
         const updatedItems = [...prevItems, newItem];
         console.log("🛒 CartContext: setItems callback - Updated items array:", updatedItems.length);
+        
+        // 🔍 DIAGNOSTIC: Log complete structure of items after addition
+        console.log("🔍 DIAGNOSTIC - CartProvider: Items AFTER addItem", {
+          itemsCount: updatedItems.length,
+          completeItems: updatedItems.map(i => ({
+            productId: i.productId,
+            productName: i.product?.name,
+            price: i.price,
+            quantity: i.quantity,
+            hasPrice: i.price !== undefined && i.price !== null,
+            priceType: typeof i.price,
+            variationId: i.variationId
+          }))
+        });
+        
         return updatedItems;
       });
 

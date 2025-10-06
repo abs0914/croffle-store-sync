@@ -231,7 +231,13 @@ export default function POS() {
     console.log('🛒 PAYMENT START: Using cart items', {
       itemCount: currentItems.length,
       source: cartItems && cartItems.length > 0 ? 'parameter' : 'context',
-      items: currentItems.map(i => ({ id: i.productId, name: i.product?.name, qty: i.quantity }))
+      items: currentItems.map(i => ({ 
+        id: i.productId, 
+        name: i.product?.name, 
+        qty: i.quantity,
+        price: i.price,  // 🔍 DIAGNOSTIC: Add price logging
+        hasPrice: i.price !== undefined && i.price !== null
+      }))
     });
     
     if (currentItems.length === 0) {

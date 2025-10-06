@@ -112,7 +112,13 @@ const CartView = memo(function CartView({
     const currentCartItems = [...cartItems];
     console.log('🛒 CART VIEW: Captured cart items for payment', {
       itemCount: currentCartItems.length,
-      items: currentCartItems.map(i => ({ id: i.productId, name: i.product?.name, qty: i.quantity }))
+      items: currentCartItems.map(i => ({ 
+        id: i.productId, 
+        name: i.product?.name, 
+        qty: i.quantity,
+        price: i.price,  // 🔍 DIAGNOSTIC: Add price logging
+        hasPrice: i.price !== undefined && i.price !== null
+      }))
     });
     
     // CRITICAL: Prevent empty cart transactions
