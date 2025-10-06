@@ -56,8 +56,8 @@ export class CartCalculationService {
     otherDiscount?: OtherDiscount | null,
     totalDiners: number = 1
   ): CartCalculations {
-    // Validate all items have valid prices
-    const invalidItems = items.filter(i => !i.price || i.price <= 0 || !i.quantity || i.quantity <= 0);
+    // Validate all items have valid prices (allow zero for free items)
+    const invalidItems = items.filter(i => i.price == null || i.price < 0 || !i.quantity || i.quantity <= 0);
     if (invalidItems.length > 0) {
       console.error("❌ CartCalculationService: Items without valid prices/quantities:", invalidItems);
       return this.getEmptyCalculations();

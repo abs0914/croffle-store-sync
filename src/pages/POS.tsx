@@ -319,7 +319,7 @@ export default function POS() {
       
       // 🚨 VALIDATION: Check if captured values are valid
       if (capturedTotal === 0 && currentItems.length > 0) {
-        const hasItemsWithPrices = currentItems.every(i => i.price && i.price > 0);
+        const hasItemsWithPrices = currentItems.every(i => i.price != null && i.price >= 0);
         
         console.error("❌ CRITICAL: Total is 0 despite having items in cart!", {
           itemCount: currentItems.length,
