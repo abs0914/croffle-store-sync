@@ -182,6 +182,10 @@ class StreamlinedTransactionService {
       // Inventory deduction and BIR logging run simultaneously for 60-70% speed improvement
       console.log('🚀 [PHASE 3] Starting parallel operations (inventory + BIR)');
       
+      // CRITICAL FIX: Expand combo items BEFORE inventory deduction
+      const expandedItems = await this.expandItemsForInventory(transactionData.items);
+      console.log(`🔄 COMBO EXPANSION: ${transactionData.items.length} items → ${expandedItems.length} expanded items`);
+      
       // Create optimistic update state for UI responsiveness
       parallelTransactionProcessor.createOptimisticUpdate(transaction.id);
       
@@ -195,7 +199,7 @@ class StreamlinedTransactionService {
               return await this.processInventoryDeduction(
                 transaction.id,
                 transactionData.storeId,
-                transactionData.items,
+                expandedItems, // ✅ Pass expanded items
                 transactionData.userId,
                 cartItems
               );
@@ -444,6 +448,80 @@ class StreamlinedTransactionService {
     } catch (error) {
       console.error('❌ Failed to insert transaction items:', error);
       throw new Error('Failed to save transaction items');
+    }
+  }
+
+  /**
+   * Expand items for inventory deduction
+   * Expands combo products into their components
+   */
+  private async expandItemsForInventory(items: StreamlinedTransactionItem[]): Promise<StreamlinedTransactionItem[]> {
+    const expandedItems: StreamlinedTransactionItem[] = [];
+    
+    for (const item of items) {
+      if (item.productId.startsWith('combo-')) {
+        console.log(`🔄 Expanding combo for inventory: ${item.name}`);
+        const components = await this.expandComboForInventory(item);
+        expandedItems.push(...components);
+      } else {
+        expandedItems.push(item);
+      }
+    }
+    
+    return expandedItems;
+  }
+
+  /**
+   * Expand combo product for inventory processing
+   */
+  private async expandComboForInventory(item: StreamlinedTransactionItem): Promise<StreamlinedTransactionItem[]> {
+    try {
+      // Extract component IDs from combo ID: "combo-{uuid1}-{uuid2}"
+      const parts = item.productId.split('-');
+      if (parts.length !== 11) {
+        console.warn(`Invalid combo ID format: ${item.productId}`);
+        return [item]; // Return original item as fallback
+      }
+
+      // Reconstruct the two UUIDs
+      const componentIds = [
+        `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}-${parts[5]}`, // First UUID
+        `${parts[6]}-${parts[7]}-${parts[8]}-${parts[9]}-${parts[10]}` // Second UUID
+      ];
+
+      // Validate UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(componentIds[0]) || !uuidRegex.test(componentIds[1])) {
+        console.warn(`Invalid UUID format in combo: ${item.productId}`);
+        return [item];
+      }
+      
+      // Fetch component products
+      const { data: products } = await supabase
+        .from('product_catalog')
+        .select('id, product_name')
+        .in('id', componentIds);
+
+      if (!products || products.length === 0) {
+        console.warn(`No products found for combo components: ${componentIds.join(', ')}`);
+        return [item];
+      }
+
+      // Create expanded items
+      const expandedItems: StreamlinedTransactionItem[] = products.map(product => ({
+        productId: product.id,
+        name: product.product_name,
+        quantity: item.quantity,
+        unitPrice: 0, // Price doesn't matter for inventory
+        totalPrice: 0
+      }));
+
+      console.log(`✅ Expanded combo into ${expandedItems.length} components: ${expandedItems.map(i => i.name).join(', ')}`);
+      return expandedItems;
+
+    } catch (error) {
+      console.error('❌ Failed to expand combo for inventory:', error);
+      return [item]; // Return original item as fallback
     }
   }
 
