@@ -12,6 +12,7 @@ import Ingredients from "@/pages/Inventory/Ingredients";
 import InventoryHistory from "@/pages/Inventory/InventoryHistory";
 import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
 import { CrossStoreMappingFixer } from "@/components/inventory/CrossStoreMappingFixer";
+import SystemHealthMonitoring from "@/pages/Admin/SystemHealthMonitoring";
 // InventoryConversion removed in favor of direct recipe management
 
 export function AdminInventoryRoutes() {
@@ -87,6 +88,13 @@ export function AdminInventoryRoutes() {
         <AdminProtectedRoute>
           <AdminLayout>
             <CrossStoreMappingFixer />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/system-health" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <SystemHealthMonitoring />
           </AdminLayout>
         </AdminProtectedRoute>
       } />

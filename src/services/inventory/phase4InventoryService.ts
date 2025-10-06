@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logBlockedAttempt } from "./crossStoreMonitoringService";
 
 interface InventoryDeductionItem {
   productId: string;
@@ -198,6 +199,16 @@ export class SimplifiedInventoryService {
               recipeStore: item.storeId,
               inventoryStore: inventoryStock.store_id
             });
+            
+            // Log blocked attempt for monitoring
+            await logBlockedAttempt(
+              item.productName,
+              item.storeId,
+              ingredientName,
+              inventoryStock.store_id,
+              undefined // No transaction ID yet during validation
+            );
+            
             errors.push(`Cannot use ${ingredientName} from another store's inventory`);
             continue;
           }
@@ -504,6 +515,16 @@ export class SimplifiedInventoryService {
             recipeStore: item.storeId,
             inventoryStore: inventoryStock.store_id
           });
+          
+          // Log blocked attempt for monitoring
+          await logBlockedAttempt(
+            item.productName,
+            item.storeId,
+            ingredientName,
+            inventoryStock.store_id,
+            transactionId
+          );
+          
           errors.push(`Cannot deduct ${ingredientName} from another store's inventory`);
           continue;
         }
