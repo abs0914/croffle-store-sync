@@ -56,6 +56,13 @@ export class CartCalculationService {
     otherDiscount?: OtherDiscount | null,
     totalDiners: number = 1
   ): CartCalculations {
+    // Validate all items have valid prices
+    const invalidItems = items.filter(i => !i.price || i.price <= 0 || !i.quantity || i.quantity <= 0);
+    if (invalidItems.length > 0) {
+      console.error("❌ CartCalculationService: Items without valid prices/quantities:", invalidItems);
+      return this.getEmptyCalculations();
+    }
+    
     console.log("🧮 CartCalculationService: Starting calculation", {
       itemsCount: items.length,
       items: items.map(i => ({ 
@@ -63,8 +70,7 @@ export class CartCalculationService {
         name: i.product?.name,
         price: i.price, 
         qty: i.quantity, 
-        total: i.price * i.quantity,
-        hasPrice: i.price !== undefined && i.price !== null
+        total: i.price * i.quantity
       })),
       seniorDiscountsCount: seniorDiscounts.length,
       otherDiscount,
@@ -73,14 +79,7 @@ export class CartCalculationService {
     
     // Basic calculations - amounts are VAT-inclusive (standard POS behavior)
     const grossSubtotal = items.reduce((sum, item) => {
-      const itemTotal = (item.price || 0) * (item.quantity || 0);
-      console.log("🧮 Item calculation:", { 
-        productId: item.productId, 
-        price: item.price, 
-        quantity: item.quantity, 
-        itemTotal,
-        sum: sum + itemTotal 
-      });
+      const itemTotal = item.price * item.quantity;
       return sum + itemTotal;
     }, 0);
     
@@ -235,6 +234,25 @@ export class CartCalculationService {
       totalSeniorDiscount,
       totalVATExemption,
       perSeniorPays
+    };
+  }
+
+  static getEmptyCalculations(): CartCalculations {
+    return {
+      grossSubtotal: 0,
+      netAmount: 0,
+      standardVAT: 0,
+      vatExemption: 0,
+      adjustedVAT: 0,
+      seniorDiscountAmount: 0,
+      otherDiscountAmount: 0,
+      totalDiscountAmount: 0,
+      finalTotal: 0,
+      vatableSales: 0,
+      vatExemptSales: 0,
+      zeroRatedSales: 0,
+      totalDiners: 1,
+      numberOfSeniors: 0
     };
   }
 }

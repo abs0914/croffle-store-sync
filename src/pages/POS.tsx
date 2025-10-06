@@ -314,15 +314,24 @@ export default function POS() {
       
       // 🚨 VALIDATION: Check if captured values are valid
       if (capturedTotal === 0 && currentItems.length > 0) {
+        const hasItemsWithPrices = currentItems.every(i => i.price && i.price > 0);
+        
         console.error("❌ CRITICAL: Total is 0 despite having items in cart!", {
           itemCount: currentItems.length,
+          hasItemsWithPrices,
+          itemsDetails: currentItems.map(i => ({ name: i.product?.name, price: i.price, qty: i.quantity })),
           calculations,
           capturedSubtotal,
           capturedTax,
           capturedTotal
         });
-        toast.error("Error: Unable to calculate order total. Please try again.");
-        return false;
+        
+        toast.error(
+          hasItemsWithPrices 
+            ? "Unable to calculate order total. Please refresh and try again."
+            : "Some items are missing prices. Please remove them and try again."
+        );
+        return false; // Block transaction
       }
       
       // Convert cart items to the format expected by the transaction handler

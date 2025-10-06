@@ -61,30 +61,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Memoize calculations to prevent spam - only recalculate when dependencies change
   const calculations = useMemo(() => {
-    // 🔍 DIAGNOSTIC: Log complete items array structure before calculation
-    console.log("🔍 DIAGNOSTIC - CartProvider: Items BEFORE calculation", {
-      itemsCount: items.length,
-      completeItems: items.map(i => ({
-        productId: i.productId,
-        productName: i.product?.name,
-        price: i.price,
-        quantity: i.quantity,
-        hasPrice: i.price !== undefined && i.price !== null,
-        priceType: typeof i.price,
-        variationId: i.variationId,
-        hasCustomization: !!i.customization
-      }))
-    });
+    // Return empty calculations if no items
+    if (items.length === 0) {
+      return CartCalculationService.getEmptyCalculations();
+    }
+    
+    // Validate that all items have proper structure with prices
+    const validItems = items.filter(i => i.price !== undefined && i.price !== null && i.quantity > 0);
+    if (validItems.length !== items.length) {
+      console.error("❌ CartProvider: Some items missing price or quantity!", {
+        totalItems: items.length,
+        validItems: validItems.length,
+        invalidItems: items.filter(i => !i.price || i.quantity <= 0).map(i => ({
+          productId: i.productId,
+          name: i.product?.name,
+          price: i.price,
+          quantity: i.quantity
+        }))
+      });
+    }
 
     const calculationResult = CartCalculationService.calculateCartTotals(
-      items,
+      validItems,
       seniorDiscounts,
       otherDiscount,
       totalDiners
     );
     
     console.log("🧮 CartProvider: Cart calculation RESULT", {
-      itemsCount: items.length,
+      itemsCount: validItems.length,
       seniorDiscountsCount: seniorDiscounts.length,
       totalDiners,
       grossSubtotal: calculationResult.grossSubtotal,
@@ -150,48 +155,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
       };
     };
 
+    // Simplified matching logic to fix duplicate items bug
     const existingItemIndex = items.findIndex(item => {
-      // 🔍 Debug: Log comparison for each item
-      const isMatch = (() => {
-        if (customization) {
-          // Handle Mix & Match croffle uniqueness by selection signature
-          if (customization.type === 'mix_match_croffle') {
-            const a = normalizeMixMatch(item.customization);
-            const b = normalizeMixMatch(customization);
-            return item.productId === product.id && a && b && a.croffleType === b.croffleType && a.toppingIds === b.toppingIds && a.sauceIds === b.sauceIds && (item.variationId || null) === (variation?.id || null);
-          }
-          // Legacy recipe customization: compare selected_choices if present; otherwise treat as unique
-          if (item.customization?.selected_choices || customization.selected_choices) {
-            return item.productId === product.id &&
-                   item.customization &&
-                   JSON.stringify(item.customization.selected_choices || []) === JSON.stringify(customization.selected_choices || []) &&
-                   (item.variationId || null) === (variation?.id || null);
-          }
-          return false;
+      // Handle customized products (Mix & Match, Recipe customizations)
+      if (customization) {
+        // Mix & Match croffle - compare by selection signature
+        if (customization.type === 'mix_match_croffle') {
+          const a = normalizeMixMatch(item.customization);
+          const b = normalizeMixMatch(customization);
+          return item.productId === product.id && 
+                 a && b && 
+                 a.croffleType === b.croffleType && 
+                 a.toppingIds === b.toppingIds && 
+                 a.sauceIds === b.sauceIds && 
+                 (item.variationId || null) === (variation?.id || null);
         }
-        if (variation) {
-          const match = item.productId === product.id && item.variationId === variation.id && !item.customization;
-          console.log("🔍 Comparing with variation:", { 
-            itemProductId: item.productId, 
-            productId: product.id, 
-            itemVariationId: item.variationId, 
-            variationId: variation.id,
-            match 
-          });
-          return match;
+        // Recipe customization - compare selected_choices
+        if (item.customization?.selected_choices || customization.selected_choices) {
+          return item.productId === product.id &&
+                 item.customization &&
+                 JSON.stringify(item.customization.selected_choices || []) === JSON.stringify(customization.selected_choices || []) &&
+                 (item.variationId || null) === (variation?.id || null);
         }
-        const match = item.productId === product.id && !item.variationId && !item.customization;
-        console.log("🔍 Comparing basic product:", { 
-          itemProductId: item.productId, 
-          productId: product.id, 
-          itemVariationId: item.variationId,
-          itemCustomization: !!item.customization,
-          match 
-        });
-        return match;
-      })();
+        return false;
+      }
       
-      return isMatch;
+      // Products with variations - match on productId AND variationId
+      if (variation) {
+        return item.productId === product.id && 
+               item.variationId === variation.id && 
+               !item.customization;
+      }
+      
+      // Simple products - match on productId only, no variation or customization
+      return item.productId === product.id && 
+             !item.variationId && 
+             !item.customization;
     });
 
     console.log("CartContext: Existing item search complete:", {
