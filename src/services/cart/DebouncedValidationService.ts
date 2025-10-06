@@ -152,6 +152,15 @@ class DebouncedValidationService {
           batchedData
         );
 
+        // 🔍 DIAGNOSTIC: Log availability calculation for debugging
+        console.log('🔍 [VALIDATION] Item availability check', {
+          productId: item.productId,
+          productName: item.product?.name,
+          requestedQty: item.quantity,
+          availableQty: availability.quantity,
+          status: availability.status
+        });
+
         const itemErrors: string[] = [];
         const itemWarnings: string[] = [];
         let itemValid = true;
@@ -201,7 +210,9 @@ class DebouncedValidationService {
         duration: `${duration?.toFixed(2)}ms`,
         isValid: allValid,
         errorsCount: globalErrors.length,
-        warningsCount: globalWarnings.length
+        warningsCount: globalWarnings.length,
+        errors: globalErrors,  // 🔍 DIAGNOSTIC: Show actual errors
+        warnings: globalWarnings  // 🔍 DIAGNOSTIC: Show actual warnings
       });
 
       request.resolve(result);
