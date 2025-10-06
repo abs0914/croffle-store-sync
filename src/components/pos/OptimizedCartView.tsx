@@ -5,7 +5,7 @@ import { Customer } from "@/types";
 import { CustomerLookup } from "@/components/pos/customer";
 import DiscountSelector from "./DiscountSelector";
 import { CartItemsList, CartSummary } from "./cart";
-import { useCartState, useCartActions, useCartCalculations } from "@/contexts/OptimizedCartContext";
+import { useCart } from "@/contexts/cart/CartContext";
 import { useMemoizedBOGO } from "@/hooks/pos/useMemoizedBOGO";
 
 interface OptimizedCartViewProps {
@@ -38,9 +38,10 @@ const OptimizedCartView = memo(function OptimizedCartView({
   handlePaymentComplete,
   isShiftActive
 }: OptimizedCartViewProps) {
-  const { items } = useCartState();
-  const { removeItem, updateQuantity, clearCart } = useCartActions();
-  const { subtotal, tax, total } = useCartCalculations();
+  const { items, removeItem, updateQuantity, clearCart, calculations } = useCart();
+  const subtotal = calculations?.netAmount || 0;
+  const tax = calculations?.adjustedVAT || 0;
+  const total = calculations?.finalTotal || 0;
   
   // Check for BOGO eligibility (memoized to prevent excessive calculations)
   const bogoResult = useMemoizedBOGO(items);
