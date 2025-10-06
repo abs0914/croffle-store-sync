@@ -58,14 +58,31 @@ export class CartCalculationService {
   ): CartCalculations {
     console.log("🧮 CartCalculationService: Starting calculation", {
       itemsCount: items.length,
-      items: items.map(i => ({ price: i.price, qty: i.quantity, total: i.price * i.quantity })),
+      items: items.map(i => ({ 
+        productId: i.productId,
+        name: i.product?.name,
+        price: i.price, 
+        qty: i.quantity, 
+        total: i.price * i.quantity,
+        hasPrice: i.price !== undefined && i.price !== null
+      })),
       seniorDiscountsCount: seniorDiscounts.length,
       otherDiscount,
       totalDiners
     });
     
     // Basic calculations - amounts are VAT-inclusive (standard POS behavior)
-    const grossSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const grossSubtotal = items.reduce((sum, item) => {
+      const itemTotal = (item.price || 0) * (item.quantity || 0);
+      console.log("🧮 Item calculation:", { 
+        productId: item.productId, 
+        price: item.price, 
+        quantity: item.quantity, 
+        itemTotal,
+        sum: sum + itemTotal 
+      });
+      return sum + itemTotal;
+    }, 0);
     
     console.log("🧮 CartCalculationService: Gross subtotal calculated", grossSubtotal);
     
