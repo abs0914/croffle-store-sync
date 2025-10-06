@@ -22,7 +22,7 @@ interface CartViewProps {
     amount: number;
     idNumber?: string;
   }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string, cartItems?: CartItem[]) => Promise<boolean>;
+  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string, cartItems?: CartItem[], cartCalculations?: any) => Promise<boolean>;
   isShiftActive: boolean;
 }
 const CartView = memo(function CartView({
@@ -108,17 +108,24 @@ const CartView = memo(function CartView({
       return false;
     }
     
-    // CRITICAL: Capture cart items here before any async operations
+    // CRITICAL: Capture cart items AND calculations here before any async operations
     const currentCartItems = [...cartItems];
+    const currentCalculations = { ...calculations };
     console.log('🛒 CART VIEW: Captured cart items for payment', {
       itemCount: currentCartItems.length,
       items: currentCartItems.map(i => ({ 
         id: i.productId, 
         name: i.product?.name, 
         qty: i.quantity,
-        price: i.price,  // 🔍 DIAGNOSTIC: Add price logging
+        price: i.price,
         hasPrice: i.price !== undefined && i.price !== null
-      }))
+      })),
+      calculations: {
+        grossSubtotal: currentCalculations.grossSubtotal,
+        finalTotal: currentCalculations.finalTotal,
+        adjustedVAT: currentCalculations.adjustedVAT,
+        netAmount: currentCalculations.netAmount
+      }
     });
     
     // CRITICAL: Prevent empty cart transactions
@@ -137,7 +144,7 @@ const CartView = memo(function CartView({
         return false;
       }
 
-      // Proceed with payment - PASS cartItems as parameter
+      // Proceed with payment - PASS cartItems AND calculations as parameters
       const success = await handlePaymentComplete(
         paymentMethod, 
         amountTendered, 
@@ -145,7 +152,8 @@ const CartView = memo(function CartView({
         orderType, 
         deliveryPlatform, 
         deliveryOrderNumber,
-        currentCartItems // Pass cart items explicitly
+        currentCartItems, // Pass cart items explicitly
+        currentCalculations // Pass calculations explicitly
       );
       if (success) {
         setIsPaymentDialogOpen(false);

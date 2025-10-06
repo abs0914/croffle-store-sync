@@ -41,7 +41,9 @@ interface POSContentProps {
     },
     orderType?: string,
     deliveryPlatform?: string,
-    deliveryOrderNumber?: string
+    deliveryOrderNumber?: string,
+    cartItems?: any[],
+    cartCalculations?: any
   ) => Promise<boolean>;
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation, customization?: any) => void;
   storeId?: string;

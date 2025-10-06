@@ -194,7 +194,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Products with variations - match on productId AND variationId
       if (variation) {
         return item.productId === product.id && 
-               (item.variationId ?? null) === (variation.id ?? null) && 
+               (item.variationId ?? null) === (variation?.id ?? null) && 
                !item.customization;
       }
       
@@ -238,7 +238,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         },
         quantity,
         price: itemPrice,
-        variationId: variation?.id ?? undefined,
+        variationId: variation?.id ?? null,
         variation: variation ?? undefined,
         customization: customization ?? undefined,
       };

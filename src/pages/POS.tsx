@@ -214,7 +214,8 @@ export default function POS() {
     orderType?: string,
     deliveryPlatform?: string,
     deliveryOrderNumber?: string,
-    cartItems?: any[] // Accept cart items as parameter
+    cartItems?: any[], // Accept cart items as parameter
+    cartCalculations?: any // Accept calculations as parameter
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
@@ -295,22 +296,26 @@ export default function POS() {
       // Online processing - use current captured items
       console.log("🌐 Processing online transaction with", currentItems.length, "items");
       
+      // ✅ Use calculations passed from CartView, fallback to context if not provided
+      const effectiveCalculations = cartCalculations || calculations;
+      
       // 🔍 DIAGNOSTIC: Log calculations object to debug zero total issue
       console.log("🔍 DIAGNOSTIC - POS.tsx: Calculations before payment", {
-        calculationsObject: calculations,
-        netAmount: calculations?.netAmount,
-        adjustedVAT: calculations?.adjustedVAT,
-        finalTotal: calculations?.finalTotal,
-        grossSubtotal: calculations?.grossSubtotal,
-        isCalculationsDefined: !!calculations,
+        calculationsSource: cartCalculations ? 'parameter' : 'context',
+        calculationsObject: effectiveCalculations,
+        netAmount: effectiveCalculations?.netAmount,
+        adjustedVAT: effectiveCalculations?.adjustedVAT,
+        finalTotal: effectiveCalculations?.finalTotal,
+        grossSubtotal: effectiveCalculations?.grossSubtotal,
+        isCalculationsDefined: !!effectiveCalculations,
         itemsCount: currentItems.length,
         itemsWithPrices: currentItems.map(i => ({ name: i.product?.name, price: i.price, qty: i.quantity }))
       });
       
-      // ✅ Capture cart values IMMEDIATELY before any async operations
-      const capturedSubtotal = calculations?.netAmount || 0;
-      const capturedTax = calculations?.adjustedVAT || 0;
-      const capturedTotal = calculations?.finalTotal || 0;
+      // ✅ Capture cart values from effective calculations
+      const capturedSubtotal = effectiveCalculations?.netAmount || 0;
+      const capturedTax = effectiveCalculations?.adjustedVAT || 0;
+      const capturedTotal = effectiveCalculations?.finalTotal || 0;
       
       // 🚨 VALIDATION: Check if captured values are valid
       if (capturedTotal === 0 && currentItems.length > 0) {
@@ -337,8 +342,8 @@ export default function POS() {
             type: otherDiscount.type, 
             amount: otherDiscount.amount 
           } : null,
-          totalDiners: calculations?.totalDiners || 1,
-          vatExemption: calculations?.vatExemption || 0
+          totalDiners: effectiveCalculations?.totalDiners || 1,
+          vatExemption: effectiveCalculations?.vatExemption || 0
         });
         
         toast.error(
@@ -373,7 +378,7 @@ export default function POS() {
         deliveryOrderNumber,
         seniorDiscounts,        // ✅ Pass senior discounts detail
         otherDiscount,          // ✅ Pass other discount detail
-        calculations?.vatExemption  // ✅ Pass VAT exemption amount
+        effectiveCalculations?.vatExemption  // ✅ Pass VAT exemption amount
       );
 
       return success;
