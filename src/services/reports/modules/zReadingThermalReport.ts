@@ -278,8 +278,8 @@ export async function fetchZReadingForThermal(
         accumulatedNetSales: (cumulativeSales?.grand_total_sales || 0) + netSales,
         accumulatedVat: vatAmount,
       };
-    } catch (error) {
-      return handleReportError("Z-Reading Thermal", error);
-    }
-  }, 'Z-Reading thermal generation');
+    }, 'Z-Reading thermal generation');
+  } catch (error) {
+    return handleReportError("Z-Reading Thermal", error);
+  }
 }
