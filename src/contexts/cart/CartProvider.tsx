@@ -151,30 +151,57 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     const existingItemIndex = items.findIndex(item => {
-      if (customization) {
-        // Handle Mix & Match croffle uniqueness by selection signature
-        if (customization.type === 'mix_match_croffle') {
-          const a = normalizeMixMatch(item.customization);
-          const b = normalizeMixMatch(customization);
-          return item.productId === product.id && a && b && a.croffleType === b.croffleType && a.toppingIds === b.toppingIds && a.sauceIds === b.sauceIds && (item.variationId || null) === (variation?.id || null);
+      // 🔍 Debug: Log comparison for each item
+      const isMatch = (() => {
+        if (customization) {
+          // Handle Mix & Match croffle uniqueness by selection signature
+          if (customization.type === 'mix_match_croffle') {
+            const a = normalizeMixMatch(item.customization);
+            const b = normalizeMixMatch(customization);
+            return item.productId === product.id && a && b && a.croffleType === b.croffleType && a.toppingIds === b.toppingIds && a.sauceIds === b.sauceIds && (item.variationId || null) === (variation?.id || null);
+          }
+          // Legacy recipe customization: compare selected_choices if present; otherwise treat as unique
+          if (item.customization?.selected_choices || customization.selected_choices) {
+            return item.productId === product.id &&
+                   item.customization &&
+                   JSON.stringify(item.customization.selected_choices || []) === JSON.stringify(customization.selected_choices || []) &&
+                   (item.variationId || null) === (variation?.id || null);
+          }
+          return false;
         }
-        // Legacy recipe customization: compare selected_choices if present; otherwise treat as unique
-        if (item.customization?.selected_choices || customization.selected_choices) {
-          return item.productId === product.id &&
-                 item.customization &&
-                 JSON.stringify(item.customization.selected_choices || []) === JSON.stringify(customization.selected_choices || []) &&
-                 (item.variationId || null) === (variation?.id || null);
+        if (variation) {
+          const match = item.productId === product.id && item.variationId === variation.id && !item.customization;
+          console.log("🔍 Comparing with variation:", { 
+            itemProductId: item.productId, 
+            productId: product.id, 
+            itemVariationId: item.variationId, 
+            variationId: variation.id,
+            match 
+          });
+          return match;
         }
-        return false;
-      }
-      if (variation) {
-        return item.productId === product.id && item.variationId === variation.id && !item.customization;
-      }
-      return item.productId === product.id && !item.variationId && !item.customization;
+        const match = item.productId === product.id && !item.variationId && !item.customization;
+        console.log("🔍 Comparing basic product:", { 
+          itemProductId: item.productId, 
+          productId: product.id, 
+          itemVariationId: item.variationId,
+          itemCustomization: !!item.customization,
+          match 
+        });
+        return match;
+      })();
+      
+      return isMatch;
     });
 
-    console.log("CartContext: Existing item index:", existingItemIndex);
-    console.log("CartContext: Current items before addition:", items);
+    console.log("CartContext: Existing item search complete:", {
+      existingItemIndex,
+      productId: product.id,
+      productName: product.name,
+      hasVariation: !!variation,
+      hasCustomization: !!customization,
+      currentItemsCount: items.length
+    });
 
     if (existingItemIndex !== -1) {
       console.log("🛒 CartContext: Updated existing item quantity");

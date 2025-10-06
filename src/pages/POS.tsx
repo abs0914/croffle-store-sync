@@ -295,10 +295,35 @@ export default function POS() {
       // Online processing - use current captured items
       console.log("🌐 Processing online transaction with", currentItems.length, "items");
       
+      // 🔍 DIAGNOSTIC: Log calculations object to debug zero total issue
+      console.log("🔍 DIAGNOSTIC - POS.tsx: Calculations before payment", {
+        calculationsObject: calculations,
+        netAmount: calculations?.netAmount,
+        adjustedVAT: calculations?.adjustedVAT,
+        finalTotal: calculations?.finalTotal,
+        grossSubtotal: calculations?.grossSubtotal,
+        isCalculationsDefined: !!calculations,
+        itemsCount: currentItems.length,
+        itemsWithPrices: currentItems.map(i => ({ name: i.product?.name, price: i.price, qty: i.quantity }))
+      });
+      
       // ✅ Capture cart values IMMEDIATELY before any async operations
-      const capturedSubtotal = calculations.netAmount;
-      const capturedTax = calculations.adjustedVAT;
-      const capturedTotal = calculations.finalTotal;
+      const capturedSubtotal = calculations?.netAmount || 0;
+      const capturedTax = calculations?.adjustedVAT || 0;
+      const capturedTotal = calculations?.finalTotal || 0;
+      
+      // 🚨 VALIDATION: Check if captured values are valid
+      if (capturedTotal === 0 && currentItems.length > 0) {
+        console.error("❌ CRITICAL: Total is 0 despite having items in cart!", {
+          itemCount: currentItems.length,
+          calculations,
+          capturedSubtotal,
+          capturedTax,
+          capturedTotal
+        });
+        toast.error("Error: Unable to calculate order total. Please try again.");
+        return false;
+      }
       
       // Convert cart items to the format expected by the transaction handler
       const cartItemsForTransaction = currentItems.map(item => ({
