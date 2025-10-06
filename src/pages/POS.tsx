@@ -63,7 +63,7 @@ export default function POS() {
   const { user } = useAuth();
   const { currentStore } = useStore();
   const { currentShift } = useShift();
-  const { items, subtotal, tax, total, addItem, clearCart, orderType, deliveryPlatform, deliveryOrderNumber } = useCart();
+  const { items, calculations, addItem, clearCart, orderType, deliveryPlatform, deliveryOrderNumber } = useCart();
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [lastCompletedTransaction, setLastCompletedTransaction] = useState<any>(null);
   const [lastTransactionCustomer, setLastTransactionCustomer] = useState<any>(null);
@@ -264,14 +264,14 @@ export default function POS() {
             unitPrice: item.price,
             totalPrice: item.price * item.quantity
           })),
-          subtotal,
-          tax,
-          discount,
+          subtotal: calculations.netAmount,
+          tax: calculations.adjustedVAT,
+          discount: calculations.totalDiscountAmount,
           discountType,
           discountIdNumber,
-          total: total - discount,
+          total: calculations.finalTotal,
           amountTendered,
-          change: paymentMethod === 'cash' ? amountTendered - (total - discount) : undefined,
+          change: paymentMethod === 'cash' ? amountTendered - calculations.finalTotal : undefined,
           paymentMethod,
           paymentDetails,
           orderType: orderType || 'dine_in',
@@ -296,9 +296,9 @@ export default function POS() {
       console.log("🌐 Processing online transaction with", currentItems.length, "items");
       
       // ✅ Capture cart values IMMEDIATELY before any async operations
-      const capturedSubtotal = subtotal;
-      const capturedTax = tax;
-      const capturedTotal = total;
+      const capturedSubtotal = calculations.netAmount;
+      const capturedTax = calculations.adjustedVAT;
+      const capturedTotal = calculations.finalTotal;
       
       // Convert cart items to the format expected by the transaction handler
       const cartItemsForTransaction = currentItems.map(item => ({
