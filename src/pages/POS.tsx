@@ -319,11 +319,26 @@ export default function POS() {
         console.error("❌ CRITICAL: Total is 0 despite having items in cart!", {
           itemCount: currentItems.length,
           hasItemsWithPrices,
-          itemsDetails: currentItems.map(i => ({ name: i.product?.name, price: i.price, qty: i.quantity })),
+          itemsDetails: currentItems.map(i => ({ 
+            name: i.product?.name, 
+            price: i.price, 
+            qty: i.quantity,
+            total: i.price * i.quantity
+          })),
           calculations,
           capturedSubtotal,
           capturedTax,
-          capturedTotal
+          capturedTotal,
+          seniorDiscounts: seniorDiscounts.map(d => ({ 
+            name: d.name, 
+            amount: d.discountAmount 
+          })),
+          otherDiscount: otherDiscount ? { 
+            type: otherDiscount.type, 
+            amount: otherDiscount.amount 
+          } : null,
+          totalDiners: calculations?.totalDiners || 1,
+          vatExemption: calculations?.vatExemption || 0
         });
         
         toast.error(

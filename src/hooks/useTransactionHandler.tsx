@@ -231,6 +231,29 @@ export function useTransactionHandler(storeId: string) {
       console.log(`✅ Delivery payment method set to: ${finalPaymentMethod} via ${paymentDetails?.eWalletProvider}`);
     }
     
+    // ✅ Calculate discount values from the actual discount data being used
+    const activeSeniorDiscounts = seniorDiscountsParam || seniorDiscounts;
+    const activeOtherDiscount = otherDiscountParam || otherDiscount;
+    
+    const calculatedTotalDiscount = (
+      activeSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0) +
+      (activeOtherDiscount?.amount || 0)
+    );
+
+    // Determine the discount type based on what discounts are present
+    const determinedDiscountType = (() => {
+      if (activeSeniorDiscounts.length > 0) return 'senior';
+      if (activeOtherDiscount) return activeOtherDiscount.type;
+      return undefined;
+    })();
+
+    // Get the first ID number for backwards compatibility
+    const determinedIdNumber = (() => {
+      if (activeSeniorDiscounts.length > 0) return activeSeniorDiscounts[0].idNumber;
+      if (activeOtherDiscount?.idNumber) return activeOtherDiscount.idNumber;
+      return undefined;
+    })();
+    
     const streamlinedData: StreamlinedTransactionData = {
       storeId: currentStore.id,
       userId: userId,  // ⭐ Use cached userId
@@ -239,9 +262,9 @@ export function useTransactionHandler(storeId: string) {
       items: transactionItems,
       subtotal,
       tax,
-      discount,
-      discountType,
-      discountIdNumber,
+      discount: calculatedTotalDiscount,  // ✅ Use calculated value
+      discountType: determinedDiscountType,  // ✅ Use determined type
+      discountIdNumber: determinedIdNumber,  // ✅ Use determined ID
       total: total,
       amountTendered: finalAmountTendered,
       change: finalChange,
@@ -251,8 +274,8 @@ export function useTransactionHandler(storeId: string) {
       deliveryPlatform: deliveryPlatform as any,
       deliveryOrderNumber: deliveryOrderNumber,
       // Include detailed discount information
-      seniorDiscounts: seniorDiscountsParam || seniorDiscounts,
-      otherDiscount: otherDiscountParam || otherDiscount,
+      seniorDiscounts: activeSeniorDiscounts,
+      otherDiscount: activeOtherDiscount,
       vatExemption: vatExemption
     };
     
