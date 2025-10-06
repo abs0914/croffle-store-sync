@@ -191,10 +191,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return false;
       }
       
-      // Products with variations - match on productId AND variationId
-      if (variation) {
+      // Products with variations - match on productId AND variationId (check variation.id exists)
+      if (variation?.id) {
         return item.productId === product.id && 
-               (item.variationId ?? null) === (variation?.id ?? null) && 
+               (item.variationId ?? null) === variation.id && 
                !item.customization;
       }
       
