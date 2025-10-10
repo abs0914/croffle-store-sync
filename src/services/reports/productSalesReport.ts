@@ -83,6 +83,7 @@ export async function fetchProductSalesReport(
           name
         )
       `)
+      .eq('store_id', storeId)
       .in('id', Array.from(productIds));
 
     if (productsError) {
