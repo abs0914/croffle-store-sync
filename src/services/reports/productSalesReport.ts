@@ -36,16 +36,41 @@ export async function fetchProductSalesReport(
 
     console.log(`📦 Processing ${transactions.length} transactions for product sales`);
 
-    // Collect all unique product IDs
+    // Helper function to extract base product ID from combo format
+    const extractBaseProductId = (productId: string): string | null => {
+      if (productId.startsWith('combo-')) {
+        // Format: "combo-uuid-uuid" where first uuid is base product
+        const parts = productId.split('-');
+        if (parts.length >= 6) {
+          // Reconstruct the first UUID (parts 1-5)
+          return parts.slice(1, 6).join('-');
+        }
+      }
+      return null;
+    };
+
+    // Collect all unique product IDs (including base IDs from combos)
     const productIds = new Set<string>();
+    const comboMapping = new Map<string, string>(); // Maps combo ID to base ID
+    
     transactions.forEach(tx => {
       const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
       items.forEach((item: any) => {
         if (item.productId) {
           productIds.add(item.productId);
+          
+          // If it's a combo, also add the base product ID
+          const baseId = extractBaseProductId(item.productId);
+          if (baseId) {
+            productIds.add(baseId);
+            comboMapping.set(item.productId, baseId);
+            console.log(`🔗 Found combo product: ${item.productId} -> base: ${baseId}`);
+          }
         }
       });
     });
+
+    console.log(`🔍 Found ${productIds.size} unique product IDs (including ${comboMapping.size} combos)`);
 
     // Fetch product details with categories
     const { data: products, error: productsError } = await supabase
@@ -64,7 +89,7 @@ export async function fetchProductSalesReport(
       console.error("❌ Error fetching product details:", productsError);
     }
 
-    // Create product lookup map
+    // Create product lookup map (includes both direct products and base products for combos)
     const productLookup = new Map<string, { name: string; categoryName: string }>();
     products?.forEach(product => {
       productLookup.set(product.id, {
@@ -72,6 +97,8 @@ export async function fetchProductSalesReport(
         categoryName: product.categories?.name || 'Uncategorized'
       });
     });
+
+    console.log(`📋 Loaded ${productLookup.size} products with categories`);
 
     // Aggregate product sales data
     const productMap = new Map<string, {
@@ -94,12 +121,25 @@ export async function fetchProductSalesReport(
       
       items.forEach((item: any) => {
         const productId = item.productId;
-        const productDetails = productLookup.get(productId);
+        
+        // Try to get product details - first try direct ID, then base ID if combo
+        let productDetails = productLookup.get(productId);
+        if (!productDetails && comboMapping.has(productId)) {
+          const baseId = comboMapping.get(productId)!;
+          productDetails = productLookup.get(baseId);
+          console.log(`🔄 Using base product category for combo: ${productId} -> ${baseId}`);
+        }
+        
         const productName = productDetails?.name || item.name;
         const categoryName = productDetails?.categoryName || 'Uncategorized';
         const quantity = item.quantity;
         const totalPrice = item.totalPrice;
         const unitPrice = item.unitPrice || item.price;
+
+        // Log uncategorized products for debugging
+        if (categoryName === 'Uncategorized') {
+          console.warn(`⚠️ Uncategorized product: ${productName} (ID: ${productId})`);
+        }
 
         // Aggregate by product
         if (productMap.has(productId)) {

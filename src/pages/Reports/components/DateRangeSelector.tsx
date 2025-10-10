@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,8 +18,6 @@ interface DateRangeSelectorProps {
 }
 
 export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateRangeSelectorProps) {
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
   // Set appropriate default dates based on report type
   useEffect(() => {
     console.log('🗓️ DateRangeSelector useEffect triggered:', { reportType, currentDateRange: dateRange });
@@ -59,7 +57,6 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     const today = new Date();
     console.log('📅 Selected Today:', today);
     setDateRange({ from: today, to: today });
-    setIsCalendarOpen(false);
   };
 
   const selectYesterday = () => {
@@ -68,7 +65,6 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     yesterday.setDate(yesterday.getDate() - 1);
     console.log('📅 Selected Yesterday:', yesterday);
     setDateRange({ from: yesterday, to: yesterday });
-    setIsCalendarOpen(false);
   };
 
   const selectThisWeek = () => {
@@ -79,7 +75,6 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     firstDayOfWeek.setDate(diff);
     console.log('📅 Selected This Week:', { from: firstDayOfWeek, to: today });
     setDateRange({ from: firstDayOfWeek, to: today });
-    setIsCalendarOpen(false);
   };
 
   const selectThisMonth = () => {
@@ -87,33 +82,6 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     console.log('📅 Selected This Month:', { from: firstDayOfMonth, to: today });
     setDateRange({ from: firstDayOfMonth, to: today });
-    setIsCalendarOpen(false);
-  };
-
-  // Show date format based on report type
-  const formatDateRange = () => {
-    // Safety check for undefined dateRange
-    if (!dateRange) {
-      return "Select date range";
-    }
-    
-    if (
-      reportType === 'x_reading' || 
-      reportType === 'z_reading' ||
-      reportType === 'daily_shift'
-    ) {
-      // Single date format
-      return dateRange.from ? format(dateRange.from, 'PPP') : "Select date";
-    } else {
-      // Date range format
-      if (dateRange.from && dateRange.to) {
-        if (format(dateRange.from, 'PP') === format(dateRange.to, 'PP')) {
-          return format(dateRange.from, 'PPP');
-        }
-        return `${format(dateRange.from, 'PP')} - ${format(dateRange.to, 'PP')}`;
-      }
-      return "Select date range";
-    }
   };
 
   const isDateRangeSelectable = ![
@@ -122,73 +90,132 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
   ].includes(reportType);
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-      <div>
-        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              id="date"
-              variant={"outline"}
-              className={cn(
-                "w-[280px] justify-start text-left font-normal",
-                !dateRange && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formatDateRange()}
+    <div className="flex flex-col gap-4">
+      {isDateRangeSelectable ? (
+        <>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {/* Start Date Picker */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-foreground">Start Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[200px] justify-start text-left font-normal",
+                      !dateRange?.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? format(dateRange.from, 'PP') : "Pick start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateRange?.from}
+                    onSelect={(date) => {
+                      console.log('📅 Start date selected:', date);
+                      if (date) {
+                        // If end date is before new start date, adjust it
+                        const newEndDate = dateRange?.to && dateRange.to < date ? date : dateRange?.to;
+                        setDateRange({ from: date, to: newEndDate });
+                      }
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* End Date Picker */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-foreground">End Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[200px] justify-start text-left font-normal",
+                      !dateRange?.to && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.to ? format(dateRange.to, 'PP') : "Pick end date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateRange?.to}
+                    onSelect={(date) => {
+                      console.log('📅 End date selected:', date);
+                      if (date) {
+                        setDateRange({ 
+                          from: dateRange?.from, 
+                          to: date 
+                        });
+                      }
+                    }}
+                    disabled={(date) => {
+                      // Disable dates before the start date
+                      return dateRange?.from ? date < dateRange.from : false;
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Quick Selection Buttons */}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={selectToday}>
+              Today
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            {isDateRangeSelectable ? (
+            <Button size="sm" variant="outline" onClick={selectYesterday}>
+              Yesterday
+            </Button>
+            <Button size="sm" variant="outline" onClick={selectThisWeek}>
+              This Week
+            </Button>
+            <Button size="sm" variant="outline" onClick={selectThisMonth}>
+              This Month
+            </Button>
+          </div>
+        </>
+      ) : (
+        // Single date picker for X/Z reading and daily shift
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-foreground">Date</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[200px] justify-start text-left font-normal",
+                  !dateRange?.from && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? format(dateRange.from, 'PPP') : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={(range) => {
-                  console.log('📅 Calendar range selected:', range);
-                  if (range && range.from) {
-                    setDateRange({
-                      from: range.from,
-                      to: range.to || range.from
-                    });
-                  }
-                }}
-                numberOfMonths={2}
-                className={cn("p-3 pointer-events-auto")}
-              />
-            ) : (
-              <Calendar
-                initialFocus
                 mode="single"
-                defaultMonth={dateRange?.from}
                 selected={dateRange?.from}
                 onSelect={(date) => {
-                  console.log('📅 Calendar single date selected:', date);
+                  console.log('📅 Single date selected:', date);
                   setDateRange({ from: date, to: date });
                 }}
-                numberOfMonths={1}
+                initialFocus
                 className={cn("p-3 pointer-events-auto")}
               />
-            )}
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {isDateRangeSelectable && (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={selectToday}>
-            Today
-          </Button>
-          <Button size="sm" variant="outline" onClick={selectYesterday}>
-            Yesterday
-          </Button>
-          <Button size="sm" variant="outline" onClick={selectThisWeek}>
-            This Week
-          </Button>
-          <Button size="sm" variant="outline" onClick={selectThisMonth}>
-            This Month
-          </Button>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
     </div>
