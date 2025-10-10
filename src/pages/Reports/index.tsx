@@ -14,7 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 
-export type ReportType = 'sales' | 'expense' | 'profit_loss' | 'x_reading' | 'z_reading' | 'bir_ejournal' | 'bir_backup' | 'void_report' | 'cashier' | 'daily_shift' | 'inventory_status';
+export type ReportType = 'sales' | 'expense' | 'profit_loss' | 'product_sales' | 'x_reading' | 'z_reading' | 'bir_ejournal' | 'bir_backup' | 'void_report' | 'cashier' | 'daily_shift' | 'inventory_status';
 
 export default function Reports() {
   const { currentStore, isLoading: storeLoading } = useStore();

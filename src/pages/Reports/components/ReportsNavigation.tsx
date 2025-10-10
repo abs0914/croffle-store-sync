@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database } from "lucide-react";
+import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database, ShoppingBag } from "lucide-react";
 import { ReportType } from "..";
 import { useAuth } from "@/contexts/auth";
 
@@ -18,6 +18,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     { id: 'sales' as ReportType, name: 'Sales Report', icon: <FileBarChart className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
     { id: 'expense' as ReportType, name: 'Expense Report', icon: <Receipt className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'profit_loss' as ReportType, name: 'Profit & Loss', icon: <FileSpreadsheet className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'product_sales' as ReportType, name: 'Product Sales', icon: <ShoppingBag className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'cashier' as ReportType, name: 'Cashier Performance', icon: <UserRound className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
 
     // Separator for Cashier Reports (only visible to cashiers)
