@@ -36,6 +36,43 @@ export async function fetchProductSalesReport(
 
     console.log(`📦 Processing ${transactions.length} transactions for product sales`);
 
+    // Collect all unique product IDs
+    const productIds = new Set<string>();
+    transactions.forEach(tx => {
+      const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
+      items.forEach((item: any) => {
+        if (item.productId) {
+          productIds.add(item.productId);
+        }
+      });
+    });
+
+    // Fetch product details with categories
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        category_id,
+        categories (
+          name
+        )
+      `)
+      .in('id', Array.from(productIds));
+
+    if (productsError) {
+      console.error("❌ Error fetching product details:", productsError);
+    }
+
+    // Create product lookup map
+    const productLookup = new Map<string, { name: string; categoryName: string }>();
+    products?.forEach(product => {
+      productLookup.set(product.id, {
+        name: product.name,
+        categoryName: product.categories?.name || 'Uncategorized'
+      });
+    });
+
     // Aggregate product sales data
     const productMap = new Map<string, {
       productId: string;
@@ -57,11 +94,12 @@ export async function fetchProductSalesReport(
       
       items.forEach((item: any) => {
         const productId = item.productId;
-        const productName = item.name;
-        const categoryName = item.category || 'Uncategorized';
+        const productDetails = productLookup.get(productId);
+        const productName = productDetails?.name || item.name;
+        const categoryName = productDetails?.categoryName || 'Uncategorized';
         const quantity = item.quantity;
         const totalPrice = item.totalPrice;
-        const unitPrice = item.price;
+        const unitPrice = item.unitPrice || item.price;
 
         // Aggregate by product
         if (productMap.has(productId)) {
@@ -96,7 +134,7 @@ export async function fetchProductSalesReport(
     });
 
     // Convert maps to arrays and calculate metrics
-    const products = Array.from(productMap.values())
+    const productSalesData = Array.from(productMap.values())
       .map(product => ({
         ...product,
         averagePrice: product.totalRevenue / product.totalQuantity
@@ -111,15 +149,15 @@ export async function fetchProductSalesReport(
       }))
       .sort((a, b) => b.totalSales - a.totalSales);
 
-    const totalProducts = products.length;
-    const totalUnits = products.reduce((sum, p) => sum + p.totalQuantity, 0);
-    const totalRevenue = products.reduce((sum, p) => sum + p.totalRevenue, 0);
+    const totalProducts = productSalesData.length;
+    const totalUnits = productSalesData.reduce((sum, p) => sum + p.totalQuantity, 0);
+    const totalRevenue = productSalesData.reduce((sum, p) => sum + p.totalRevenue, 0);
     const averageRevenuePerProduct = totalProducts > 0 ? totalRevenue / totalProducts : 0;
 
     console.log(`📊 Product sales summary: ${totalProducts} products, ${totalUnits} units, ₱${totalRevenue.toFixed(2)}`);
 
     return {
-      products,
+      products: productSalesData,
       totalProducts,
       totalUnits,
       totalRevenue,
