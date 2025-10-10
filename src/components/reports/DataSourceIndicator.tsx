@@ -1,10 +1,8 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Database, TestTube } from "lucide-react";
 import { DataSource } from "@/services/reports/utils/dataSourceUtils";
 import { formatDateTime } from "@/utils/format";
-
 interface DataSourceIndicatorProps {
   dataSource: DataSource;
   generatedAt?: string;
@@ -15,22 +13,18 @@ interface DataSourceIndicatorProps {
   };
   showFullAlert?: boolean;
 }
-
-export function DataSourceIndicator({ 
-  dataSource, 
-  generatedAt, 
+export function DataSourceIndicator({
+  dataSource,
+  generatedAt,
   debugInfo,
-  showFullAlert = false 
+  showFullAlert = false
 }: DataSourceIndicatorProps) {
-  const isDevelopment = window.location.hostname === 'localhost' ||
-                        window.location.hostname.includes('staging') ||
-                        window.location.hostname.includes('.lovable.app');
+  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname.includes('staging') || window.location.hostname.includes('.lovable.app');
 
   // Don't show sample data indicators in production
   if (!isDevelopment && dataSource === 'sample') {
     return null;
   }
-
   const getDataSourceInfo = () => {
     switch (dataSource) {
       case 'real':
@@ -62,51 +56,13 @@ export function DataSourceIndicator({
         };
     }
   };
-
   const info = getDataSourceInfo();
   const Icon = info.icon;
-
   if (showFullAlert) {
-    return (
-      <Alert className={`${info.bgColor} ${info.color}`}>
-        <Icon className="h-4 w-4" />
-        <AlertDescription>
-          <div className="flex items-center justify-between">
-            <span>{info.description}</span>
-            <Badge variant={info.variant} className="ml-2">
-              {info.label}
-            </Badge>
-          </div>
-          {generatedAt && (
-            <div className="text-xs mt-1 opacity-75">
-              Generated: {formatDateTime(generatedAt)}
-            </div>
-          )}
-          {debugInfo && isDevelopment && (
-            <details className="text-xs mt-2 opacity-75">
-              <summary className="cursor-pointer">Debug Info</summary>
-              <div className="mt-1 pl-2">
-                {debugInfo.recordCount !== undefined && (
-                  <div>Records found: {debugInfo.recordCount}</div>
-                )}
-                {debugInfo.fallbackReason && (
-                  <div>Fallback reason: {debugInfo.fallbackReason}</div>
-                )}
-                {debugInfo.queryAttempts && (
-                  <div>Query attempts: {debugInfo.queryAttempts.length}</div>
-                )}
-              </div>
-            </details>
-          )}
-        </AlertDescription>
-      </Alert>
-    );
+    return;
   }
-
-  return (
-    <Badge variant={info.variant} className="flex items-center gap-1">
+  return <Badge variant={info.variant} className="flex items-center gap-1">
       <Icon className="h-3 w-3" />
       {info.label}
-    </Badge>
-  );
+    </Badge>;
 }
