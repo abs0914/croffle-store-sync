@@ -74,10 +74,10 @@ export async function fetchProductSalesReport(
 
     // Fetch product details with categories
     const { data: products, error: productsError } = await supabase
-      .from('products')
+      .from('product_catalog')
       .select(`
         id,
-        name,
+        product_name,
         category_id,
         categories (
           name
@@ -93,7 +93,7 @@ export async function fetchProductSalesReport(
     const productLookup = new Map<string, { name: string; categoryName: string }>();
     products?.forEach(product => {
       productLookup.set(product.id, {
-        name: product.name,
+        name: product.product_name,
         categoryName: product.categories?.name || 'Uncategorized'
       });
     });
