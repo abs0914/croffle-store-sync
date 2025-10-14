@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Croffle Store POS - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .offline-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .offline-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .offline-message {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .offline-features {
+            text-align: left;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .offline-features h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .offline-features ul {
+            list-style: none;
+        }
+
+        .offline-features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            opacity: 0.9;
+        }
+
+        .offline-features li::before {
+            content: "✓";
+            color: #4ade80;
+            font-weight: bold;
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .retry-button {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+        }
+
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .retry-button:active {
+            transform: translateY(0);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator.online {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.online .status-dot {
+            background: #22c55e;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer-text {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            📱
+        </div>
+        
+        <h1 class="offline-title">You're Offline</h1>
+        
+        <p class="offline-message">
+            Don't worry! Croffle Store POS works offline. You can continue processing transactions, 
+            and everything will sync automatically when your connection is restored.
+        </p>
+
+        <div class="offline-features">
+            <h3>Available Offline Features:</h3>
+            <ul>
+                <li>Process cash and card transactions</li>
+                <li>Print receipts via Bluetooth</li>
+                <li>Access cached product catalog</li>
+                <li>View inventory levels</li>
+                <li>Generate sales reports</li>
+                <li>Automatic sync when online</li>
+            </ul>
+        </div>
+
+        <button class="retry-button" onclick="checkConnection()">
+            <span class="button-text">Check Connection</span>
+            <div class="loading-spinner"></div>
+        </button>
+
+        <div class="status-indicator" id="status-indicator">
+            <div class="status-dot"></div>
+            <span id="status-text">Offline</span>
+        </div>
+
+        <p class="footer-text">
+            Croffle Store POS - Reliable offline POS system
+        </p>
+    </div>
+
+    <script>
+        let isChecking = false;
+
+        // Check initial connection status
+        updateConnectionStatus();
+
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            updateConnectionStatus();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+
+        window.addEventListener('offline', updateConnectionStatus);
+
+        function updateConnectionStatus() {
+            const indicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            if (navigator.onLine) {
+                indicator.classList.add('online');
+                statusText.textContent = 'Connection restored!';
+            } else {
+                indicator.classList.remove('online');
+                statusText.textContent = 'Offline';
+            }
+        }
+
+        async function checkConnection() {
+            if (isChecking) return;
+            
+            isChecking = true;
+            const button = document.querySelector('.retry-button');
+            const buttonText = document.querySelector('.button-text');
+            const spinner = document.querySelector('.loading-spinner');
+            
+            // Show loading state
+            buttonText.style.display = 'none';
+            spinner.style.display = 'block';
+            button.disabled = true;
+            
+            try {
+                // Try to fetch a small resource to test connectivity
+                const response = await fetch('/?t=' + Date.now(), {
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    // Connection restored
+                    updateConnectionStatus();
+                    buttonText.textContent = 'Redirecting...';
+                    buttonText.style.display = 'block';
+                    spinner.style.display = 'none';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 500);
+                } else {
+                    throw new Error('Connection test failed');
+                }
+            } catch (error) {
+                // Still offline
+                console.log('Still offline:', error);
+                updateConnectionStatus();
+            } finally {
+                if (!navigator.onLine) {
+                    // Reset button state if still offline
+                    setTimeout(() => {
+                        buttonText.textContent = 'Check Connection';
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        button.disabled = false;
+                        isChecking = false;
+                    }, 1000);
+                }
+            }
+        }
+
+        // Auto-retry connection check every 30 seconds
+        setInterval(() => {
+            if (!navigator.onLine && !isChecking) {
+                checkConnection();
+            }
+        }, 30000);
+
+        // Service Worker communication
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                const { type, data } = event.data;
+                
+                if (type === 'SYNC_STATUS_UPDATE') {
+                    console.log('Sync status update:', data);
+                    // Could show sync progress here
+                }
+            });
+        }
+    </script>
+</body>
+</html>

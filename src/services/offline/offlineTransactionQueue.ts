@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { PlatformStorageManager } from './storage/PlatformStorageManager';
 
 export interface OfflineTransaction {
   id: string;

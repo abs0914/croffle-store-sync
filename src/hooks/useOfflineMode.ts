@@ -3,6 +3,7 @@ import { useNetworkStatus } from './useNetworkStatus';
 import { offlineTransactionQueue } from '../services/offline/offlineTransactionQueue';
 import { offlineProductCache } from '../services/offline/offlineProductCache';
 import { offlineSyncService, SyncResult } from '../services/offline/offlineSyncService';
+import { OfflinePOSManager, OfflinePOSStatus } from '../services/offline/OfflinePOSManager';
 import { toast } from 'sonner';
 
 export interface OfflineModeStatus {
@@ -13,6 +14,13 @@ export interface OfflineModeStatus {
   lastSyncTime: number | null;
   isSyncing: boolean;
   cacheAge: number | null; // in minutes
+
+  // Enhanced status from new system
+  enhancedStatus?: OfflinePOSStatus;
+  networkQuality?: string;
+  failedTransactions?: number;
+  activeConflicts?: number;
+  printerConnected?: boolean;
 }
 
 export function useOfflineMode(storeId: string | null) {
@@ -26,6 +34,8 @@ export function useOfflineMode(storeId: string | null) {
     isSyncing: false,
     cacheAge: null
   });
+
+  const [offlinePOSManager] = useState(() => OfflinePOSManager.getInstance());
 
   // Update offline status
   const updateOfflineStatus = () => {
@@ -56,6 +66,42 @@ export function useOfflineMode(storeId: string | null) {
     }));
   };
 
+  // Initialize enhanced offline system
+  useEffect(() => {
+    const initializeEnhancedOfflineSystem = async () => {
+      try {
+        await offlinePOSManager.initialize({
+          enableAutoSync: true,
+          syncInterval: 60000,
+          enablePrintQueue: true,
+          enableConflictResolution: true
+        });
+
+        // Listen for status updates
+        offlinePOSManager.addStatusListener((enhancedStatus) => {
+          setOfflineStatus(prev => ({
+            ...prev,
+            enhancedStatus,
+            networkQuality: enhancedStatus.networkQuality,
+            failedTransactions: enhancedStatus.failedTransactions,
+            activeConflicts: enhancedStatus.activeConflicts,
+            printerConnected: enhancedStatus.printerConnected,
+            isSyncing: enhancedStatus.isSyncing,
+            pendingTransactions: enhancedStatus.pendingTransactions
+          }));
+        });
+
+        console.log('✅ Enhanced offline system initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize enhanced offline system:', error);
+      }
+    };
+
+    if (storeId) {
+      initializeEnhancedOfflineSystem();
+    }
+  }, [storeId]);
+
   // Listen for network changes
   useEffect(() => {
     updateOfflineStatus();
@@ -63,7 +109,12 @@ export function useOfflineMode(storeId: string | null) {
     // Auto-sync when reconnecting
     if (networkStatus.justReconnected && storeId) {
       console.log('🌐 Network reconnected, starting auto-sync...');
-      offlineSyncService.autoSyncOnReconnect();
+      // Use enhanced sync manager if available
+      if (offlinePOSManager) {
+        offlinePOSManager.triggerSync('immediate').catch(console.error);
+      } else {
+        offlineSyncService.autoSyncOnReconnect();
+      }
     }
   }, [networkStatus, storeId]);
 
@@ -94,13 +145,30 @@ export function useOfflineMode(storeId: string | null) {
   }, [storeId]);
 
   // Process offline transaction
-  const processOfflineTransaction = (transactionData: any): string | null => {
+  const processOfflineTransaction = async (transactionData: any): Promise<string | null> => {
     if (!storeId) {
       toast.error('No store selected for offline transaction');
       return null;
     }
 
     try {
+      // Try enhanced offline system first
+      if (offlinePOSManager && offlineStatus.enhancedStatus?.isInitialized) {
+        console.log('🚀 Using enhanced offline transaction processing...');
+        const transactionId = await offlinePOSManager.processOfflineTransaction({
+          ...transactionData,
+          storeId,
+          shouldPrint: true
+        });
+
+        // Update status after processing
+        updateOfflineStatus();
+        return transactionId;
+      }
+
+      // Fallback to legacy system
+      console.log('📦 Using legacy offline transaction processing...');
+
       // Reserve inventory offline
       let allItemsReserved = true;
       for (const item of transactionData.items) {
@@ -110,7 +178,7 @@ export function useOfflineMode(storeId: string | null) {
           item.variationId,
           item.quantity
         );
-        
+
         if (!reserved) {
           allItemsReserved = false;
           break;
@@ -158,8 +226,28 @@ export function useOfflineMode(storeId: string | null) {
       };
     }
 
+    // Try enhanced sync manager first
+    if (offlinePOSManager && offlineStatus.enhancedStatus?.isInitialized) {
+      console.log('🚀 Using enhanced sync manager...');
+      try {
+        await offlinePOSManager.triggerSync('immediate');
+        // Return a compatible result format
+        return {
+          success: true,
+          syncedTransactions: offlineStatus.enhancedStatus.pendingTransactions || 0,
+          failedTransactions: offlineStatus.enhancedStatus.failedTransactions || 0,
+          syncedInventoryChanges: 0,
+          errors: []
+        };
+      } catch (error) {
+        console.error('Enhanced sync failed, falling back to legacy:', error);
+      }
+    }
+
+    // Fallback to legacy sync
+    console.log('📦 Using legacy sync service...');
     setOfflineStatus(prev => ({ ...prev, isSyncing: true }));
-    
+
     try {
       const result = await offlineSyncService.syncAll();
       return result;
