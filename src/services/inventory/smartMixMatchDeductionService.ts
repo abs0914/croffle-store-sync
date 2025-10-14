@@ -736,13 +736,9 @@ function parseMixMatchProduct(productName: string): {
   const customizationMatch = actualProductName.match(/\s+(with|and)\s+(.+)$/i);
   const customizationText = customizationMatch ? customizationMatch[2] : '';
   
-  console.log(`🔍 PARSING DEBUG: Using actual product name "${actualProductName}" for customization parsing`);
-  console.log(`🔍 CUSTOMIZATION TEXT: "${customizationText}"`);
-  
   // Common Mix & Match choices and their variations
-  // IMPORTANT: Order matters - more specific patterns should come FIRST to avoid conflicts
   const choicePatterns = [
-    { choice: 'Chocolate Sauce', patterns: ['chocolate sauce', 'chocolate syrup', 'choco sauce', 'chocolate'] }, // Added generic 'chocolate' back for POS compatibility
+    { choice: 'Chocolate Sauce', patterns: ['chocolate sauce', 'chocolate syrup', 'choco sauce', 'chocolate'] },
     { choice: 'Caramel Sauce', patterns: ['caramel sauce', 'caramel syrup', 'caramel'] },
     { choice: 'Choco Flakes', patterns: ['choco flakes', 'chocolate flakes', 'choco flake'] },
     { choice: 'Whipped Cream', patterns: ['whipped cream', 'whip cream', 'cream'] },
@@ -752,26 +748,18 @@ function parseMixMatchProduct(productName: string): {
     { choice: 'Tiramisu', patterns: ['tiramisu'] },
     { choice: 'Blueberry', patterns: ['blueberry', 'blueberries'] }
   ];
-
-  console.log(`🔍 PARSING DEBUG: Starting pattern matching for "${customizationText}"`);
   
   for (const { choice, patterns } of choicePatterns) {
-    console.log(`🔍 PARSING DEBUG: Testing choice "${choice}" with patterns [${patterns.join(', ')}]`);
-    
-    const matchingPattern = patterns.find(pattern => {
-      const matches = customizationText.toLowerCase().includes(pattern);
-      console.log(`  - Pattern "${pattern}": ${matches ? '✅ MATCH' : '❌ NO MATCH'}`);
-      return matches;
-    });
+    const matchingPattern = patterns.find(pattern => 
+      customizationText.toLowerCase().includes(pattern)
+    );
     
     if (matchingPattern) {
       selectedChoices.push(choice);
-      console.log(`🎯 CHOICE DETECTED: "${matchingPattern}" → "${choice}"`);
     }
   }
 
-  console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → actual: "${actualProductName}", base: "${baseName}", type: ${productType}, selections: [${selectedChoices.join(', ')}]`);
-  console.log(`🔍 CUSTOMIZATION TEXT USED: "${customizationText}"`);
+  console.log(`🔍 Parsed: "${baseName}" + [${selectedChoices.join(', ')}]`);
   
   return { isMixMatch: true, selectedChoices, productType, baseName };
 }
@@ -914,21 +902,17 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
     'cappuccino': ['cappuccino', 'iced cappuccino', 'hot cappuccino']
   };
   
-  // Enhanced variation matching with bidirectional checks
+  // Enhanced variation matching with bidirectional checks (reduced logging)
   for (const [key, patterns] of Object.entries(variations)) {
-    console.log(`🔍 MATCHING DEBUG: Testing variation "${key}" for choice "${choice}"`);
-    
     // Check if choice matches the key or any pattern
     const choiceMatchesKey = choice.includes(key) || patterns.some(pattern => choice.includes(pattern));
     
     if (choiceMatchesKey) {
-      console.log(`  - Choice matches variation "${key}": ✅`);
-      
       // Check if ingredient matches the key or any pattern
       const ingredientMatchesVariation = ingredient.includes(key) || patterns.some(pattern => ingredient.includes(pattern));
       
       if (ingredientMatchesVariation) {
-        console.log(`✅ MATCHING: Variation match found - ${key}`);
+        console.log(`✅ MATCH: "${ingredient}" ↔ "${choice}" via "${key}"`);
         return true;
       }
     }
@@ -937,18 +921,17 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
     const ingredientMatchesKey = ingredient.includes(key) || patterns.some(pattern => ingredient.includes(pattern));
     
     if (ingredientMatchesKey) {
-      console.log(`  - Ingredient matches variation "${key}": ✅`);
       
       const choiceMatchesVariation = choice.includes(key) || patterns.some(pattern => choice.includes(pattern));
       
       if (choiceMatchesVariation) {
-        console.log(`✅ MATCHING: Reverse variation match found - ${key}`);
+        console.log(`✅ MATCH: "${ingredient}" ↔ "${choice}" via "${key}"`);
         return true;
       }
     }
   }
   
-  console.log(`❌ MATCHING: No match found`);
+  // No match found - log only in debug mode
   return false;
 }
 
@@ -964,8 +947,6 @@ function getAdjustedQuantityForMixMatch(
   const originalQuantity = ingredient.quantity;
   const ingredientName = ingredient.inventory_stock?.item?.toLowerCase() || '';
   const groupName = ingredient.ingredient_group_name || 'base';
-
-  console.log(`🔍 QUANTITY ADJUSTMENT DEBUG: Ingredient "${ingredient.inventory_stock?.item}", Product Type: ${productType}, Original: ${originalQuantity}, Group: ${groupName}`);
 
   // Only adjust for Mix & Match choice ingredients
   if (productType === 'croffle_overload') {

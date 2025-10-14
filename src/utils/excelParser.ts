@@ -270,7 +270,7 @@ export const generateExcelTemplate = (): Uint8Array => {
  */
 export const downloadExcelTemplate = () => {
   const excelData = generateExcelTemplate();
-  const blob = new Blob([excelData], { 
+  const blob = new Blob([excelData as BlobPart], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
   });
   

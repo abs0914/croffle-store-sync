@@ -13,7 +13,7 @@ interface ComboDataValidationResult {
   resetError: () => void;
 }
 
-const CROFFLE_CATEGORIES = ["Classic", "Glaze", "Fruity", "Premium", "Mini Croffle"];
+const CROFFLE_CATEGORIES = ["Classic", "Plain", "Fruity", "Premium", "Mini Croffle"];
 
 export function useComboDataValidation(
   products: Product[], 
@@ -34,13 +34,16 @@ export function useComboDataValidation(
     return hasProducts && hasCategories && hasActiveProducts && hasActiveCategories;
   }, [products, categories]);
 
-  // Enhanced validation with retry logic
+  // Enhanced validation with retry logic - MEMOIZED for performance
   const hasAnyValidProducts = useMemo(() => {
     if (!isDataLoaded) return false;
     
+    // Early return if no data
+    if (!products?.length || !categories?.length) return false;
+    
     const validCategories = CROFFLE_CATEGORIES.filter(catName => {
       if (catName === "Mini Croffle") {
-        const hasMiniByName = products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
+        const hasMiniByName = products.some(p => p.name?.toLowerCase().includes("mini") && p.is_active);
         if (hasMiniByName) return true;
         
         const mixMatchCategory = categories.find(c => c.name === "Mix & Match" && c.is_active);
@@ -50,18 +53,17 @@ export function useComboDataValidation(
       return category && products.some(p => p.category_id === category.id && p.is_active);
     });
     
-    console.log('Valid categories found:', validCategories);
     return validCategories.length > 0;
   }, [products, categories, isDataLoaded]);
 
-  // Category products validation function
+  // Category products validation function - MEMOIZED with early returns
   const getCategoryProducts = useCallback((categoryName: string): Product[] => {
+    // Early returns for invalid input
+    if (!categoryName || !products?.length || !categories?.length) {
+      return [];
+    }
+    
     try {
-      // Validate inputs
-      if (!categoryName || !Array.isArray(products) || !Array.isArray(categories)) {
-        console.warn('Invalid input data for getCategoryProducts');
-        return [];
-      }
       
       // Special case for Mini Croffle with improved matching
       if (categoryName === "Mini Croffle") {
@@ -108,12 +110,16 @@ export function useComboDataValidation(
     }
   }, [products, categories]);
 
-  // Data readiness check with retry mechanism
+  // Data readiness check with retry mechanism - OPTIMIZED with early returns
   useEffect(() => {
+    // Early return if data not loaded
     if (!isDataLoaded || !hasAnyValidProducts) {
-      setIsDataReady(false);
+      if (isDataReady) setIsDataReady(false);
       return;
     }
+
+    // Skip if already ready
+    if (isDataReady && retryCount === 0) return;
 
     // Validate that we can get products for at least one category
     const canGetProducts = CROFFLE_CATEGORIES.some(catName => {
@@ -121,7 +127,6 @@ export function useComboDataValidation(
         const categoryProducts = getCategoryProducts(catName);
         return categoryProducts.length > 0;
       } catch (error) {
-        console.error(`Error getting products for category ${catName}:`, error);
         return false;
       }
     });
@@ -129,18 +134,17 @@ export function useComboDataValidation(
     if (canGetProducts) {
       setIsDataReady(true);
       setDataError(null);
-      setRetryCount(0);
+      if (retryCount !== 0) setRetryCount(0);
     } else {
       setIsDataReady(false);
       if (retryCount < 3) {
-        console.log(`Data validation failed, retry ${retryCount + 1}/3`);
         const timeout = setTimeout(() => setRetryCount(prev => prev + 1), 1000);
         return () => clearTimeout(timeout);
-      } else {
+      } else if (!dataError) {
         setDataError("Unable to load product data after multiple attempts");
       }
     }
-  }, [products, categories, isDataLoaded, hasAnyValidProducts, retryCount, getCategoryProducts]);
+  }, [isDataLoaded, hasAnyValidProducts, retryCount, getCategoryProducts, isDataReady, dataError]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);

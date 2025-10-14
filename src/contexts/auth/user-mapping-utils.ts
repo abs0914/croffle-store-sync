@@ -5,6 +5,10 @@ import { mapUserRole } from "./role-utils";
 import { handleSpecialCases } from "./special-cases-utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
+// Memoization cache for user mappings to prevent repeated database calls
+const userMappingCache = new Map<string, { user: AppUser; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 interface AppUserData {
   role: string;
   store_ids: string[];
@@ -14,11 +18,17 @@ interface AppUserData {
 }
 
 /**
- * Maps Supabase user to our app's User type
+ * Maps Supabase user to our app's User type with caching
  */
 export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUser> => {
   if (!supabaseUser) {
     throw new Error('No Supabase user provided');
+  }
+  
+  // Check cache first to prevent repeated database calls
+  const cached = userMappingCache.get(supabaseUser.id);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.user;
   }
   
   // Get email to determine initial role mapping
@@ -26,15 +36,10 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
   let role = mapUserRole(email);
   let storeIds: string[] = [];
   
-  console.log('🔐 Mapping Supabase user:', supabaseUser.email);
-  console.log('🔐 Initial role from mapUserRole:', role);
-  
   try {
     // Try to get user info from the app_users table using RPC function
     const { data, error } = await supabase
       .rpc('get_current_user_info', { user_email: email });
-
-    console.log('🔐 Database query result:', { data, error });
 
     if (error) { 
       console.error('🔐 Error fetching user info from database:', error);
@@ -43,22 +48,12 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
     // If user exists in app_users, use that data
     if (data && data.length > 0) {
       const appUserData = data[0] as AppUserData;
-      console.log('🔐 Found existing app_user record:', {
-        email: appUserData.email,
-        role: appUserData.role,
-        roleType: typeof appUserData.role,
-        store_ids: appUserData.store_ids
-      });
       
       // Fix role assignment - ensure it's properly typed
       const dbRole = appUserData.role;
-      console.log('🔐 Database role before assignment:', dbRole);
       
       role = dbRole as UserRole;
       storeIds = appUserData.store_ids || [];
-      
-      console.log('🔐 Role after assignment:', role);
-      console.log('🔐 StoreIds after assignment:', storeIds);
       
       // Use the name from app_users if available
       const name = `${appUserData.first_name} ${appUserData.last_name}`.trim();
@@ -72,7 +67,11 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
         avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
       };
       
-      console.log('🔐 Final user object being returned:', finalUser);
+      // Cache the user mapping
+      userMappingCache.set(supabaseUser.id, {
+        user: finalUser,
+        timestamp: Date.now()
+      });
       
       return finalUser;
     }
@@ -86,7 +85,7 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
   storeIds = specialCaseResult.storeIds;
 
   // Return the user with the determined role and store access
-  return {
+  const finalUser = {
     id: supabaseUser.id,
     email: supabaseUser.email || '',
     name: supabaseUser.user_metadata?.name || (supabaseUser.email || '').split('@')[0],
@@ -94,4 +93,19 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
     storeIds: storeIds,
     avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
   };
+  
+  // Cache the user mapping
+  userMappingCache.set(supabaseUser.id, {
+    user: finalUser,
+    timestamp: Date.now()
+  });
+  
+  return finalUser;
+};
+
+/**
+ * Clear the user mapping cache (call on logout)
+ */
+export const clearUserMappingCache = () => {
+  userMappingCache.clear();
 };

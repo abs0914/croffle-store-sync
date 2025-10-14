@@ -139,6 +139,13 @@ export async function fetchZReadingForThermal(
       let otherDiscounts = 0;
       let netSales = 0;
       let cashSales = 0;
+      
+      // Order type and payment method breakdowns
+      let dineInSales = 0;
+      let grabFoodSales = 0;
+      let foodPandaSales = 0;
+      let cardSales = 0;
+      let ewalletSales = 0;
 
       transactions.forEach(tx => {
         grossSales += tx.subtotal || 0;
@@ -160,9 +167,24 @@ export async function fetchZReadingForThermal(
           otherDiscounts += tx.discount;
         }
         
-        // Count cash sales
-        if (tx.payment_method === 'cash') {
+        // Count order types (handle all variations)
+        const orderType = (tx.order_type || 'dine_in').toLowerCase();
+        if (orderType === 'dine_in') {
+          dineInSales += tx.total || 0;
+        } else if (orderType === 'grab_food' || orderType === 'grabfood') {
+          grabFoodSales += tx.total || 0;
+        } else if (orderType === 'food_panda' || orderType === 'foodpanda' || orderType === 'online_delivery') {
+          foodPandaSales += tx.total || 0;
+        }
+        
+        // Count payment methods (handle all variations including hyphenated)
+        const paymentMethod = (tx.payment_method || 'cash').toLowerCase().replace(/[-_\s]/g, '');
+        if (paymentMethod === 'cash') {
           cashSales += tx.total || 0;
+        } else if (paymentMethod === 'card' || paymentMethod === 'creditcard' || paymentMethod === 'debitcard') {
+          cardSales += tx.total || 0;
+        } else if (paymentMethod === 'ewallet' || paymentMethod === 'gcash' || paymentMethod === 'paymaya') {
+          ewalletSales += tx.total || 0;
         }
       });
 
@@ -227,6 +249,20 @@ export async function fetchZReadingForThermal(
         naacDiscount,
         spDiscount,
         otherDiscounts,
+        
+        // Order Type Breakdown
+        orderTypeBreakdown: {
+          dineIn: dineInSales,
+          grabFood: grabFoodSales,
+          foodPanda: foodPandaSales,
+        },
+        
+        // Payment Method Breakdown
+        paymentMethodBreakdown: {
+          cash: cashSales,
+          card: cardSales,
+          ewallet: ewalletSales,
+        },
         
         // Cash Info
         beginningCash,

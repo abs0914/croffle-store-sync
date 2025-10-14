@@ -3,6 +3,7 @@ import { ReportType } from "..";
 import { SalesReportView } from "./reports/SalesReportView";
 import { ExpenseReportView } from "./reports/ExpenseReportView";
 import { ProfitLossReportView } from "./reports/ProfitLossReportView";
+import { ProductSalesReportView } from "./reports/ProductSalesReportView";
 import { XReadingView } from "./reports/XReadingView";
 import { ZReadingView } from "./reports/ZReadingView";
 import { BIREJournalView } from "./reports/BIREJournalView";
@@ -39,6 +40,8 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
       return <ExpenseReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={storeId} selectedStoreId={effectiveStoreId} />;
     case 'profit_loss':
       return <ProfitLossReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
+    case 'product_sales':
+      return <ProductSalesReportView data={data} storeId={effectiveStoreId} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'x_reading':
       return <XReadingThermalWrapper storeId={effectiveStoreId} date={dateRange.from} />;
     case 'z_reading':

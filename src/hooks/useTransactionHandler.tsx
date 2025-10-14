@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCart } from "@/contexts/cart/CartContext";
+import { useAuthSession } from "@/contexts/AuthSessionContext";
 import { Customer, Transaction } from "@/types";
 import { streamlinedTransactionService, StreamlinedTransactionData } from "@/services/transactions/streamlinedTransactionService";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ export interface SeniorDiscount {
 
 export function useTransactionHandler(storeId: string) {
   const navigate = useNavigate();
+  const { userId } = useAuthSession();  // ⭐ Use cached userId
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
@@ -168,10 +170,18 @@ export function useTransactionHandler(storeId: string) {
     },
     orderType?: string,
     deliveryPlatform?: string,
-    deliveryOrderNumber?: string
+    deliveryOrderNumber?: string,
+    seniorDiscountsParam?: SeniorDiscount[],
+    otherDiscountParam?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string },
+    vatExemption?: number
   ) => {
     if (!currentStore || !currentShift) {
       toast.error("No active store or shift found");
+      return false;
+    }
+
+    if (!userId) {
+      toast.error("Authentication required");
       return false;
     }
     
@@ -192,7 +202,7 @@ export function useTransactionHandler(storeId: string) {
     // Adjust payment method for delivery orders
     let finalPaymentMethod = paymentMethod;
     let finalAmountTendered = amountTendered;
-    let finalChange = paymentMethod === 'cash' ? amountTendered - (total - discount) : undefined;
+    let finalChange = paymentMethod === 'cash' ? amountTendered - total : undefined;
     
     // For delivery orders, override payment method to reflect online payment
     if (orderType === 'online_delivery') {
@@ -215,31 +225,58 @@ export function useTransactionHandler(storeId: string) {
       }
       
       // For delivery orders, amount tendered equals total (no cash handling)
-      finalAmountTendered = total - discount;
+      finalAmountTendered = total;
       finalChange = undefined;
       
       console.log(`✅ Delivery payment method set to: ${finalPaymentMethod} via ${paymentDetails?.eWalletProvider}`);
     }
     
+    // ✅ Calculate discount values from the actual discount data being used
+    const activeSeniorDiscounts = seniorDiscountsParam || seniorDiscounts;
+    const activeOtherDiscount = otherDiscountParam || otherDiscount;
+    
+    const calculatedTotalDiscount = (
+      activeSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0) +
+      (activeOtherDiscount?.amount || 0)
+    );
+
+    // Determine the discount type based on what discounts are present
+    const determinedDiscountType = (() => {
+      if (activeSeniorDiscounts.length > 0) return 'senior';
+      if (activeOtherDiscount) return activeOtherDiscount.type;
+      return undefined;
+    })();
+
+    // Get the first ID number for backwards compatibility
+    const determinedIdNumber = (() => {
+      if (activeSeniorDiscounts.length > 0) return activeSeniorDiscounts[0].idNumber;
+      if (activeOtherDiscount?.idNumber) return activeOtherDiscount.idNumber;
+      return undefined;
+    })();
+    
     const streamlinedData: StreamlinedTransactionData = {
       storeId: currentStore.id,
-      userId: currentShift.userId,
+      userId: userId,  // ⭐ Use cached userId
       shiftId: currentShift.id,
       customerId: selectedCustomer?.id,
       items: transactionItems,
       subtotal,
       tax,
-      discount,
-      discountType,
-      discountIdNumber,
-      total: total - discount,
+      discount: calculatedTotalDiscount,  // ✅ Use calculated value
+      discountType: determinedDiscountType,  // ✅ Use determined type
+      discountIdNumber: determinedIdNumber,  // ✅ Use determined ID
+      total: total,
       amountTendered: finalAmountTendered,
       change: finalChange,
       paymentMethod: finalPaymentMethod,
       paymentDetails,
       orderType: orderType as any,
       deliveryPlatform: deliveryPlatform as any,
-      deliveryOrderNumber: deliveryOrderNumber
+      deliveryOrderNumber: deliveryOrderNumber,
+      // Include detailed discount information
+      seniorDiscounts: activeSeniorDiscounts,
+      otherDiscount: activeOtherDiscount,
+      vatExemption: vatExemption
     };
     
     // Use streamlined transaction service
@@ -275,7 +312,8 @@ export function useTransactionHandler(storeId: string) {
       console.log("✅ Transaction created with inventory deduction completed");
       let inventoryStatusText = "Inventory updated";
       
-      // Clear the cart immediately for better UX
+      // ✅ Clear cart immediately after successful transaction
+      console.log("🧹 Clearing cart after successful transaction...");
       clearCart();
       
       // Navigate immediately after inventory processing
@@ -301,7 +339,7 @@ export function useTransactionHandler(storeId: string) {
         {
           itemCount: items.length,
           paymentMethod: finalPaymentMethod,
-          total: total - discount,
+          total: total,
           inventorySuccess: true
         }
       );

@@ -56,16 +56,32 @@ export class CartCalculationService {
     otherDiscount?: OtherDiscount | null,
     totalDiners: number = 1
   ): CartCalculations {
+    // Validate all items have valid prices (allow zero for free items)
+    const invalidItems = items.filter(i => i.price == null || i.price < 0 || !i.quantity || i.quantity <= 0);
+    if (invalidItems.length > 0) {
+      console.error("❌ CartCalculationService: Items without valid prices/quantities:", invalidItems);
+      return this.getEmptyCalculations();
+    }
+    
     console.log("🧮 CartCalculationService: Starting calculation", {
       itemsCount: items.length,
-      items: items.map(i => ({ price: i.price, qty: i.quantity, total: i.price * i.quantity })),
+      items: items.map(i => ({ 
+        productId: i.productId,
+        name: i.product?.name,
+        price: i.price, 
+        qty: i.quantity, 
+        total: i.price * i.quantity
+      })),
       seniorDiscountsCount: seniorDiscounts.length,
       otherDiscount,
       totalDiners
     });
     
     // Basic calculations - amounts are VAT-inclusive (standard POS behavior)
-    const grossSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const grossSubtotal = items.reduce((sum, item) => {
+      const itemTotal = item.price * item.quantity;
+      return sum + itemTotal;
+    }, 0);
     
     console.log("🧮 CartCalculationService: Gross subtotal calculated", grossSubtotal);
     
@@ -116,7 +132,18 @@ export class CartCalculationService {
       const discountSubtotal = grossSubtotal > 0 ? grossSubtotal : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       switch (otherDiscount.type) {
         case 'pwd':
-          otherDiscountAmount = discountSubtotal * this.PWD_DISCOUNT_RATE;
+          // PWD discount: Calculate on VAT-exclusive amount (BIR compliance)
+          // Step 1: Remove VAT from gross price
+          const pwdNetAmount = discountSubtotal / (1 + this.VAT_RATE);
+          
+          // Step 2: Apply 20% discount on VAT-exclusive amount
+          otherDiscountAmount = pwdNetAmount * this.PWD_DISCOUNT_RATE;
+          
+          // Step 3: PWD transactions are VAT-exempt (no VAT collected)
+          vatExemption = discountSubtotal - pwdNetAmount; // Full VAT exemption
+          vatExemptSales = pwdNetAmount; // For BIR reporting
+          vatableSales = 0; // No vatable sales for PWD transactions
+          netAmount = pwdNetAmount; // Update net amount
           break;
         case 'employee':
           otherDiscountAmount = discountSubtotal * this.EMPLOYEE_DISCOUNT_RATE;
@@ -207,6 +234,25 @@ export class CartCalculationService {
       totalSeniorDiscount,
       totalVATExemption,
       perSeniorPays
+    };
+  }
+
+  static getEmptyCalculations(): CartCalculations {
+    return {
+      grossSubtotal: 0,
+      netAmount: 0,
+      standardVAT: 0,
+      vatExemption: 0,
+      adjustedVAT: 0,
+      seniorDiscountAmount: 0,
+      otherDiscountAmount: 0,
+      totalDiscountAmount: 0,
+      finalTotal: 0,
+      vatableSales: 0,
+      vatExemptSales: 0,
+      zeroRatedSales: 0,
+      totalDiners: 1,
+      numberOfSeniors: 0
     };
   }
 }

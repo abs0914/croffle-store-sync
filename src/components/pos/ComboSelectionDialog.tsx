@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { Product, Category } from "@/types";
 import { useComboService } from "@/hooks/pos/useComboService";
 import { useComboDataValidation } from "@/hooks/pos/useComboDataValidation";
+import { useMemoizedCategorySearch } from "@/hooks/pos/useMemoizedCategorySearch";
 import { ProductCustomizationDialog } from "./customization/ProductCustomizationDialog";
 import { AddonCategory } from "@/services/pos/addonService";
 import { MixMatchRule } from "@/types/productVariations";
@@ -30,7 +31,7 @@ interface ComboSelectionDialogProps {
   }) => void;
 }
 
-const CROFFLE_CATEGORIES = ["Classic", "Glaze", "Fruity", "Premium", "Mini Croffle"];
+const CROFFLE_CATEGORIES = ["Classic", "Plain", "Fruity", "Premium", "Mini Croffle"];
 
 export function ComboSelectionDialog({
   open,
@@ -50,6 +51,13 @@ export function ComboSelectionDialog({
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
   
   const { getComboPrice, getEspressoProducts } = useComboService();
+  
+  // Use memoized category search for performance - replaces getCategoryProducts
+  const { getProductsForCategory } = useMemoizedCategorySearch({ 
+    products, 
+    categories 
+  });
+  
   const {
     isDataLoaded,
     isDataReady,
@@ -61,105 +69,31 @@ export function ComboSelectionDialog({
     resetError
   } = useComboDataValidation(products, categories);
 
-  // Enhanced getCategoryProducts with error handling and caching
+  // Wrapped getCategoryProducts to add filtering - uses memoized version
   const getCategoryProducts = useCallback((categoryName: string): Product[] => {
-    try {
-      console.log(`Getting products for category: "${categoryName}"`);
-      
-      // Validate inputs
-      if (!categoryName || !Array.isArray(products) || !Array.isArray(categories)) {
-        console.warn('Invalid input data for getCategoryProducts');
-        return [];
-      }
-      
-      // Special case for Mini Croffle with improved matching
-      if (categoryName === "Mini Croffle") {
-        console.log('Special Mini Croffle category handling activated');
-        
-        // First try to find by name with proper croffle filtering
-        let miniProducts = products.filter(p => 
-          p && p.name && typeof p.name === 'string' &&
-          p.name.toLowerCase().includes("mini") && 
-          (p.name.toLowerCase().includes("croffle") || p.name.toLowerCase().includes("mix")) &&
-          !p.name.toLowerCase().includes("box") &&
-          !p.name.toLowerCase().includes("packaging") &&
-          !p.name.toLowerCase().includes("container") &&
-          !p.name.toLowerCase().includes("bag") &&
-          !p.name.toLowerCase().includes("combo") && // Exclude pre-made combo products
-          p.is_active && p.price > 0 // Exclude ₱0 products to prevent duplicates
-        );
-        
-        // If no products found by name, try "Mix & Match" category
-        if (miniProducts.length === 0) {
-          const mixMatchCategory = categories.find(c => c && c.name === "Mix & Match" && c.is_active);
-          if (mixMatchCategory && mixMatchCategory.id) {
-            miniProducts = products.filter(p => 
-              p && p.category_id === mixMatchCategory.id && 
-              p.name && !p.name.toLowerCase().includes("box") &&
-              !p.name.toLowerCase().includes("packaging") &&
-              !p.name.toLowerCase().includes("combo") &&
-              p.is_active && p.price > 0
-            );
-          }
-        }
-        
-        // Remove duplicates by unique ID to prevent UI duplication
-        const uniqueMiniProducts = miniProducts.filter((product, index, self) => {
-          return index === self.findIndex(p => p.id === product.id);
-        });
-        
-        console.log(`Mini Croffle products found:`, uniqueMiniProducts.length, uniqueMiniProducts.map(p => ({
-          id: p.id, 
-          name: p.name, 
-          price: p.price
-        })));
-        return uniqueMiniProducts || [];
-      }
-      
-      // For other categories, find products with enhanced validation
-      const matchingCategories = categories.filter(c => 
-        c && c.name === categoryName && c.is_active && c.id
+    const products = getProductsForCategory(categoryName);
+    
+    // Additional filtering for Mini Croffle and other categories
+    if (categoryName === "Mini Croffle") {
+      return products.filter(p => 
+        p.name && !p.name.toLowerCase().includes("box") &&
+        !p.name.toLowerCase().includes("packaging") &&
+        !p.name.toLowerCase().includes("combo") &&
+        p.price > 0
       );
-      
-      if (matchingCategories.length === 0) {
-        console.log(`No active category found for "${categoryName}"`);
-        return [];
-      }
-      
-      const categoryIds = matchingCategories.map(c => c.id);
-      
-      console.log(`Category "${categoryName}" search:`, {
-        found: categoryIds.length > 0,
-        categoryIds,
-        categoriesWithName: matchingCategories,
-        allCategories: categories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active }))
-      });
-      
-      // Filter products with enhanced validation and exclude non-croffle items
-      const categoryProducts = products.filter(p => 
-        p && p.category_id && categoryIds.includes(p.category_id) && p.is_active &&
-        // Exclude add-on items and packaging from croffle categories
-        !(p.name && (
-          p.name.toLowerCase().includes("crushed") ||
-          p.name.toLowerCase().includes("box") ||
-          p.name.toLowerCase().includes("packaging") ||
-          p.name.toLowerCase().includes("container") ||
-          p.name.toLowerCase().includes("bag") ||
-          (p.name.toLowerCase().includes("biscoff") && p.name.toLowerCase().includes("crushed"))
-        ))
-      );
-      
-      console.log(`Products in "${categoryName}" category:`, {
-        count: categoryProducts.length,
-        products: categoryProducts.map(p => ({ id: p.id, name: p.name, category_id: p.category_id }))
-      });
-      
-      return categoryProducts || [];
-    } catch (error) {
-      console.error(`Error in getCategoryProducts for "${categoryName}":`, error);
-      return [];
     }
-  }, [products, categories]);
+    
+    // For other categories, exclude add-on items
+    return products.filter(p => 
+      !(p.name && (
+        p.name.toLowerCase().includes("crushed") ||
+        p.name.toLowerCase().includes("box") ||
+        p.name.toLowerCase().includes("packaging") ||
+        p.name.toLowerCase().includes("container") ||
+        p.name.toLowerCase().includes("bag")
+      ))
+    );
+  }, [getProductsForCategory]);
 
   // Auto-select first available category when data is ready (only once)
   useEffect(() => {
@@ -186,41 +120,11 @@ export function ComboSelectionDialog({
     }
   }, [open, resetError]);
 
-  // Enhanced debug log for combo dialog data  
-  console.log('🔍 ComboSelectionDialog received:', {
-    totalProducts: products.length,
-    totalCategories: categories.length,
-    sampleProductNames: products.slice(0, 5).map(p => p.name),
-    storeFilter: categories.length > 0 ? categories[0].store_id : 'unknown',
-    categoriesDetails: categories.map(c => ({
-      id: c.id,
-      name: c.name,
-      is_active: c.is_active,
-      store_id: c.store_id
-    })),
-    croffleProductCounts: CROFFLE_CATEGORIES.map(catName => ({
-      category: catName,
-      count: getCategoryProducts(catName).length,
-      foundCategories: categories.filter(c => c.name === catName).length,
-      categoryDetails: categories.filter(c => c.name === catName).map(c => ({ id: c.id, is_active: c.is_active }))
-    })),
-    allProductsDetailed: products.map(p => ({
-      id: p.id,
-      name: p.name,
-      category_id: p.category_id,
-      is_active: p.is_active,
-      matchedCategory: categories.find(c => c.id === p.category_id)?.name || 'NO CATEGORY'
-    }))
-  });
-
-  // Log combo service debug info
-  const espressoProducts = getEspressoProducts(products, categories);
-  console.log('🔍 ComboDialog - Final validation:', {
-    hasEspressoProducts: espressoProducts.length > 0,
-    espressoCount: espressoProducts.length,
-    dataLoadStatus: { isDataLoaded, isDataReady, hasAnyValidProducts },
-    validationErrors: dataError
-  });
+  // Memoize espresso products to prevent excessive re-calculations
+  const espressoProducts = useMemo(() => 
+    getEspressoProducts(products, categories), 
+    [products, categories]
+  );
 
   // Enhanced category selection with visual feedback
   const handleCategorySelect = useCallback((category: string) => {

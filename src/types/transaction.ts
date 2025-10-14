@@ -89,6 +89,20 @@ export interface Transaction {
   pwd_discount?: number;
   sequence_number?: number;
   terminal_id?: string;
+  // Detailed discount breakdown
+  senior_discounts_detail?: Array<{
+    id: string;
+    idNumber: string;
+    name: string;
+    discountAmount: number;
+  }>;
+  other_discount_detail?: {
+    type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo';
+    amount: number;
+    idNumber?: string;
+    justification?: string;
+  };
+  vat_exemption_amount?: number;
 }
 
 export interface TransactionItem {

@@ -48,7 +48,9 @@ export default function DiscountSelector({
       case 'senior':
         return subtotal * SENIOR_DISCOUNT_RATE;
       case 'pwd':
-        return subtotal * PWD_DISCOUNT_RATE;
+        // PWD discount: Calculate on VAT-exclusive amount (BIR compliance)
+        const pwdNetAmount = subtotal / 1.12; // Remove VAT first
+        return pwdNetAmount * PWD_DISCOUNT_RATE; // 20% on net amount
       case 'employee':
         return subtotal * EMPLOYEE_DISCOUNT_RATE;
       case 'loyalty':

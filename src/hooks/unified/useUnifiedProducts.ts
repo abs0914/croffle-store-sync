@@ -4,7 +4,7 @@
  * Provides real-time synchronized product and inventory data
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { unifiedProductInventoryService, UnifiedInventoryData, UnifiedProductData } from '@/services/unified/UnifiedProductInventoryService';
 import { Category } from '@/types';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -56,8 +56,12 @@ export function useUnifiedProducts({
   // Debounced search term for performance
   const debouncedSearchTerm = useDebounce(filters.searchTerm, 300);
 
+  // Ref to track loading state and prevent race conditions
+  const loadingRef = useRef(false);
+  const lastLoadedStoreRef = useRef<string | null>(null);
+
   /**
-   * Load unified data
+   * Load unified data with proper race condition prevention
    */
   const loadData = useCallback(async () => {
     if (!storeId) {
@@ -72,15 +76,36 @@ export function useUnifiedProducts({
         lastSync: new Date().toISOString()
       });
       setIsLoading(false);
+      loadingRef.current = false;
+      return;
+    }
+
+    // Prevent duplicate loading for same store
+    if (loadingRef.current && lastLoadedStoreRef.current === storeId) {
+      console.log('⏳ Already loading data for this store, skipping duplicate request');
       return;
     }
 
     try {
       console.log('🔄 Loading unified data for store:', storeId);
+      loadingRef.current = true;
+      lastLoadedStoreRef.current = storeId;
       setIsLoading(true);
       setError(null);
       
       const unifiedData = await unifiedProductInventoryService.getUnifiedData(storeId);
+      
+      // Validate we're still loading the same store (prevent stale data)
+      if (lastLoadedStoreRef.current !== storeId) {
+        console.log('⚠️ Store changed during load, discarding stale data');
+        return;
+      }
+      
+      // Early return if no products (empty data)
+      if (!unifiedData.products || unifiedData.products.length === 0) {
+        console.warn('⚠️ No products returned from service');
+      }
+      
       setData(unifiedData);
       setIsConnected(true);
       
@@ -103,6 +128,7 @@ export function useUnifiedProducts({
       }
     } finally {
       setIsLoading(false);
+      loadingRef.current = false;
     }
   }, [storeId]);
 
@@ -220,11 +246,13 @@ export function useUnifiedProducts({
     return unifiedProductInventoryService.validateProductsForSale(storeId, items);
   }, [storeId]);
 
-  // Initial data load and store change handling
+  // Initial data load - only trigger when storeId changes
   useEffect(() => {
-    console.log('🔄 Store changed, loading data for:', storeId);
-    loadData();
-  }, [loadData, storeId]); // Add storeId dependency to ensure reload on store change
+    if (storeId !== lastLoadedStoreRef.current) {
+      console.log('🔄 Store changed, loading data for:', storeId);
+      loadData();
+    }
+  }, [storeId, loadData]);
 
   // Set up real-time subscriptions
   useEffect(() => {

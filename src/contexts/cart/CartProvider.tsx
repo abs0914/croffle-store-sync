@@ -1,5 +1,5 @@
 
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, ReactNode } from "react";
 import { CartItem, Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
 import { useStore } from "../StoreContext";
@@ -59,28 +59,56 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Get calculations using the centralized service
-  const getCartCalculations = (): CartCalculations => {
+  // Memoize calculations to prevent spam - only recalculate when dependencies change
+  const calculations = useMemo(() => {
+    // Return empty calculations if no items
+    if (items.length === 0) {
+      return CartCalculationService.getEmptyCalculations();
+    }
+    
+    // Validate that all items have proper structure with prices
+    const validItems = items.filter(i => i.price !== undefined && i.price !== null && i.quantity > 0);
+    if (validItems.length !== items.length) {
+      console.error("❌ CartProvider: Some items missing price or quantity!", {
+        totalItems: items.length,
+        validItems: validItems.length,
+        invalidItems: items.filter(i => !i.price || i.quantity <= 0).map(i => ({
+          productId: i.productId,
+          name: i.product?.name,
+          price: i.price,
+          quantity: i.quantity
+        }))
+      });
+    }
+
     const calculationResult = CartCalculationService.calculateCartTotals(
-      items,
+      validItems,
       seniorDiscounts,
       otherDiscount,
       totalDiners
     );
     
-    console.log("🧮 CartProvider: Cart calculation debug", {
-      itemsCount: items.length,
-      itemsData: items.map(i => ({ name: i.product.name, qty: i.quantity, price: i.price })),
+    console.log("🧮 CartProvider: Cart calculation RESULT", {
+      itemsCount: validItems.length,
       seniorDiscountsCount: seniorDiscounts.length,
-      otherDiscount: otherDiscount,
       totalDiners,
-      calculationResult
+      grossSubtotal: calculationResult.grossSubtotal,
+      finalTotal: calculationResult.finalTotal,
+      adjustedVAT: calculationResult.adjustedVAT
     });
+    
     return calculationResult;
-  };
+  }, [items, seniorDiscounts, otherDiscount, totalDiners]);
 
-  const calculations = getCartCalculations();
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = useMemo(() => 
+    items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
+  
+  // Provide getCartCalculations for backward compatibility
+  const getCartCalculations = useCallback((): CartCalculations => {
+    return calculations;
+  }, [calculations]);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation, customization?: any) => {
     console.log("🛒 CartContext: addItem function called! Arguments:", {
@@ -127,36 +155,73 @@ export function CartProvider({ children }: { children: ReactNode }) {
       };
     };
 
-    const existingItemIndex = items.findIndex(item => {
+    // Simplified matching logic to fix duplicate items bug
+    const existingItemIndex = items.findIndex((item, idx) => {
+      console.log(`🔍 CartProvider: Checking item ${idx} for duplicate`, {
+        checkingProductId: item.productId,
+        targetProductId: product.id,
+        productMatch: item.productId === product.id,
+        checkingVariationId: item.variationId,
+        targetVariationId: variation?.id,
+        variationIdType: typeof item.variationId,
+        checkingCustomization: item.customization ? "present" : "absent",
+        targetCustomization: customization ? "present" : "absent"
+      });
+      
+      // Handle customized products (Mix & Match, Recipe customizations)
       if (customization) {
-        // Handle Mix & Match croffle uniqueness by selection signature
+        // Mix & Match croffle - compare by selection signature
         if (customization.type === 'mix_match_croffle') {
           const a = normalizeMixMatch(item.customization);
           const b = normalizeMixMatch(customization);
-          return item.productId === product.id && a && b && a.croffleType === b.croffleType && a.toppingIds === b.toppingIds && a.sauceIds === b.sauceIds && (item.variationId || null) === (variation?.id || null);
+          return item.productId === product.id && 
+                 a && b && 
+                 a.croffleType === b.croffleType && 
+                 a.toppingIds === b.toppingIds && 
+                 a.sauceIds === b.sauceIds && 
+                 (item.variationId ?? null) === (variation?.id ?? null);
         }
-        // Legacy recipe customization: compare selected_choices if present; otherwise treat as unique
+        // Recipe customization - compare selected_choices
         if (item.customization?.selected_choices || customization.selected_choices) {
           return item.productId === product.id &&
                  item.customization &&
                  JSON.stringify(item.customization.selected_choices || []) === JSON.stringify(customization.selected_choices || []) &&
-                 (item.variationId || null) === (variation?.id || null);
+                 (item.variationId ?? null) === (variation?.id ?? null);
         }
         return false;
       }
-      if (variation) {
-        return item.productId === product.id && item.variationId === variation.id && !item.customization;
+      
+      // Products with variations - match on productId AND variationId (check variation.id exists)
+      if (variation?.id) {
+        return item.productId === product.id && 
+               (item.variationId ?? null) === variation.id && 
+               !item.customization;
       }
-      return item.productId === product.id && !item.variationId && !item.customization;
+      
+      // Simple products - match on productId only, no variation or customization
+      return item.productId === product.id && 
+             (item.variationId ?? null) === null && 
+             !item.customization;
     });
 
-    console.log("CartContext: Existing item index:", existingItemIndex);
-    console.log("CartContext: Current items before addition:", items);
+    console.log("🔍 CartProvider: Duplicate search result", {
+      existingItemIndex,
+      willUpdate: existingItemIndex !== -1,
+      willCreateNew: existingItemIndex === -1,
+      searchedProductId: product.id,
+      searchedProductName: product.name,
+      searchedVariationId: variation?.id ?? null,
+      hasCustomization: !!customization,
+      currentItemsCount: items.length
+    });
 
     if (existingItemIndex !== -1) {
       console.log("🛒 CartContext: Updated existing item quantity");
       const newItems = [...items];
-      newItems[existingItemIndex].quantity += quantity;
+      newItems[existingItemIndex] = {
+        ...newItems[existingItemIndex],
+        quantity: newItems[existingItemIndex].quantity + quantity
+      };
       console.log("🛒 CartContext: About to setItems for existing item", { beforeCount: items.length, afterCount: newItems.length });
       setItems(newItems);
 
@@ -176,13 +241,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         },
         quantity,
         price: itemPrice,
-        customization: customization || undefined,
+        variationId: variation?.id ?? null,
+        variation: variation ?? undefined,
+        customization: customization ?? undefined,
       };
-
-      if (variation) {
-        newItem.variationId = variation.id;
-        newItem.variation = variation;
-      }
 
       console.log("🛒 CartContext: New cart item created:", newItem);
 
@@ -191,6 +253,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.log("🛒 CartContext: setItems callback - Previous items:", prevItems.length);
         const updatedItems = [...prevItems, newItem];
         console.log("🛒 CartContext: setItems callback - Updated items array:", updatedItems.length);
+        
+        // 🔍 DIAGNOSTIC: Log complete structure of items after addition
+        console.log("🔍 DIAGNOSTIC - CartProvider: Items AFTER addItem", {
+          itemsCount: updatedItems.length,
+          completeItems: updatedItems.map(i => ({
+            productId: i.productId,
+            productName: i.product?.name,
+            price: i.price,
+            quantity: i.quantity,
+            hasPrice: i.price !== undefined && i.price !== null,
+            priceType: typeof i.price,
+            variationId: i.variationId
+          }))
+        });
+        
         return updatedItems;
       });
 
@@ -215,14 +292,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const updateQuantity = (itemIndex: number, quantity: number) => {
-    if (quantity < 1) return;
+    console.log("🔢 CartProvider: updateQuantity called", {
+      itemIndex,
+      requestedQuantity: quantity,
+      currentItemsCount: items.length,
+      targetItem: items[itemIndex] ? {
+        productId: items[itemIndex].productId,
+        name: items[itemIndex].product?.name,
+        currentQuantity: items[itemIndex].quantity,
+        variationId: items[itemIndex].variationId,
+        hasCustomization: !!items[itemIndex].customization
+      } : "INDEX OUT OF BOUNDS"
+    });
+
+    if (quantity < 1) {
+      console.warn("⚠️ CartProvider: Quantity cannot be less than 1");
+      return;
+    }
+
+    if (itemIndex < 0 || itemIndex >= items.length) {
+      console.error("❌ CartProvider: Invalid item index", { itemIndex, itemsLength: items.length });
+      return;
+    }
 
     const newItems = [...items];
-    newItems[itemIndex].quantity = quantity;
+    const oldQuantity = newItems[itemIndex].quantity;
+    newItems[itemIndex] = {
+      ...newItems[itemIndex],
+      quantity: quantity
+    };
     setItems(newItems);
-    console.log("CartContext: Updated quantity for item", {
+    
+    console.log("✅ CartProvider: Quantity updated successfully", {
       product: newItems[itemIndex].product.name,
-      newQuantity: quantity
+      oldQuantity,
+      newQuantity: quantity,
+      itemIndex
     });
   };
 
@@ -230,7 +335,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (price < 0) return;
 
     const newItems = [...items];
-    newItems[itemIndex].price = price;
+    newItems[itemIndex] = {
+      ...newItems[itemIndex],
+      price: price
+    };
     setItems(newItems);
     console.log("CartContext: Updated price for item", {
       product: newItems[itemIndex].product.name,

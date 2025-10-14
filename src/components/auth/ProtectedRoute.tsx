@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { UserRole } from '@/types';
@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { checkRouteAccess, debugRouteAccess, getRouteAccessDescription, ROUTE_PATHS } from '@/contexts/auth/role-utils';
+
+// Cache for route access decisions to prevent repeated calculations
+const routeAccessCache = new Map<string, { decision: boolean; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -39,29 +43,28 @@ export function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  // Check role-based access
-  const hasRoleAccess = () => {
-    console.log(`🔍 ProtectedRoute hasRoleAccess Debug:`, {
-      userRole: user?.role,
-      allowedRoles,
-      requiredRole,
-      currentPath: window.location.pathname
-    });
+  // Memoized access checks with caching
+  const { roleAccess, storeAccess } = useMemo(() => {
+    if (!user?.role) return { roleAccess: false, storeAccess: false };
     
-    if (!user?.role) {
-      console.log(`❌ No user role found`);
-      return false;
+    const currentPath = window.location.pathname;
+    const cacheKey = `${user.id}-${currentPath}-${requiredRole}-${allowedRoles?.join(',')}-${requireStoreAccess}`;
+    
+    // Check cache
+    const cached = routeAccessCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return { roleAccess: cached.decision, storeAccess: cached.decision };
     }
+    
+    // Check role-based access
+    let hasRoleAccess = false;
     
     // If specific allowed roles are provided, check against them
     if (allowedRoles && allowedRoles.length > 0) {
-      const hasAllowedRole = allowedRoles.includes(user.role);
-      console.log(`🎯 Checking allowed roles:`, { allowedRoles, userRole: user.role, hasAllowed: hasAllowedRole });
-      return hasAllowedRole;
+      hasRoleAccess = allowedRoles.includes(user.role);
     }
-    
     // If a required role is specified, check role hierarchy
-    if (requiredRole) {
+    else if (requiredRole) {
       const roleHierarchy: Record<UserRole, number> = {
         admin: 7,
         owner: 6,
@@ -71,69 +74,37 @@ export function ProtectedRoute({
         production_user: 2,
         cashier: 1
       };
-      
-      const hasHierarchyAccess = roleHierarchy[user.role] >= roleHierarchy[requiredRole];
-      console.log(`📊 Checking role hierarchy:`, { 
-        userRole: user.role, 
-        requiredRole, 
-        userLevel: roleHierarchy[user.role],
-        requiredLevel: roleHierarchy[requiredRole],
-        hasAccess: hasHierarchyAccess 
-      });
-      return hasHierarchyAccess;
+      hasRoleAccess = roleHierarchy[user.role] >= roleHierarchy[requiredRole];
     }
-    
     // Check route-based access using current path
-    const currentPath = window.location.pathname;
-    const routeAccess = checkRouteAccess(user.role, currentPath);
-    console.log(`🛣️ Checking route-based access:`, { 
-      userRole: user.role, 
-      currentPath, 
-      routeAccess 
-    });
-    return routeAccess;
-  };
-
-  // Check store access if required
-  const hasStoreAccess = () => {
-    console.log(`🏪 ProtectedRoute hasStoreAccess Debug:`, {
-      requireStoreAccess,
-      userRole: user?.role,
-      storeIds: user?.storeIds
-    });
-    
-    if (!requireStoreAccess) {
-      console.log(`✅ Store access not required`);
-      return true;
+    else {
+      hasRoleAccess = checkRouteAccess(user.role, currentPath);
     }
     
-    // Admin and owner have access to all stores
-    if (user?.role === 'admin' || user?.role === 'owner') {
-      console.log(`✅ Admin/Owner has access to all stores`);
-      return true;
+    // Check store access if required
+    let hasStoreAccess = true;
+    if (requireStoreAccess) {
+      // Admin and owner have access to all stores
+      if (user.role === 'admin' || user.role === 'owner') {
+        hasStoreAccess = true;
+      } else {
+        // For other roles, check if they have at least one store assigned
+        hasStoreAccess = !!(user.storeIds && user.storeIds.length > 0);
+      }
     }
     
-    // For other roles, check if they have at least one store assigned
-    const hasStores = user?.storeIds && user.storeIds.length > 0;
-    console.log(`🔍 Checking store assignment:`, { hasStores, storeCount: user?.storeIds?.length });
-    return hasStores;
-  };
+    const finalDecision = hasRoleAccess && hasStoreAccess;
+    
+    // Cache the decision
+    routeAccessCache.set(cacheKey, {
+      decision: finalDecision,
+      timestamp: Date.now()
+    });
+    
+    return { roleAccess: hasRoleAccess, storeAccess: hasStoreAccess };
+  }, [user?.id, user?.role, user?.storeIds, requiredRole, allowedRoles, requireStoreAccess]);
 
-  const roleAccess = hasRoleAccess();
-  const storeAccess = hasStoreAccess();
   const currentPath = window.location.pathname;
-
-  // Final access determination debug
-  console.log(`🚦 Final Access Decision:`, {
-    roleAccess,
-    storeAccess,
-    willAllow: roleAccess && storeAccess,
-    currentPath,
-    userRole: user?.role
-  });
-
-  // Debug logging in development
-  debugRouteAccess(user?.role, currentPath, storeAccess);
 
   // Show access denied page if user doesn't have permission
   if (!roleAccess || !storeAccess) {

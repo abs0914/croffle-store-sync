@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { CartItem, Customer } from '@/types';
 import PaymentProcessor from './payment/PaymentProcessor';
 import { CustomerSelector } from './CustomerSelector';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { OrderTypeSelector } from './OrderTypeSelector';
 import { Separator } from '@/components/ui/separator';
-import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
+import { useOptimizedInventoryValidation } from '@/hooks/pos/useOptimizedInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
-import { BOGOService } from '@/services/cart/BOGOService';
+import { useMemoizedBOGO } from '@/hooks/pos/useMemoizedBOGO';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 import { quickCheckoutValidation } from '@/services/pos/lightweightValidationService';
-import { CartHeader, CartValidationMessage, CartItemsList, CartSummary, CartActions } from './cart';
+import { CartHeader, CartValidationMessage, OptimizedCartItemsList, CartSummary, CartActions } from './cart';
 interface CartViewProps {
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
@@ -22,10 +22,10 @@ interface CartViewProps {
     amount: number;
     idNumber?: string;
   }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string) => Promise<boolean>;
+  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string, cartItems?: CartItem[], cartCalculations?: any) => Promise<boolean>;
   isShiftActive: boolean;
 }
-export default function CartView({
+const CartView = memo(function CartView({
   selectedCustomer,
   setSelectedCustomer,
   handleApplyDiscount,
@@ -59,84 +59,102 @@ export default function CartView({
     clearCart
   } = useCart();
 
-  // Debug logging to track cart data
-  console.log('🔍 CartView: Cart data from context', {
-    itemCount: cartItems?.length || 0,
-    orderType,
-    calculations: calculations,
-    calculationsFinalTotal: calculations?.finalTotal,
-    calculationsType: typeof calculations,
-    seniorDiscountsCount: seniorDiscounts?.length || 0,
-    cartItemsRaw: cartItems,
-    isOrderTypeTransitioning
-  });
-
-  // Debug logging for cart items
-  useEffect(() => {
-    console.log('CartView: Cart items changed', {
-      itemCount: cartItems?.length || 0,
-      orderType,
-      isTransitioning: isOrderTypeTransitioning,
-      items: cartItems?.map(item => ({
-        id: item.productId,
-        name: item.product.name
-      }))
-    });
-  }, [cartItems, orderType, isOrderTypeTransitioning]);
-
   // Handle order type transitions with loading state
   const handleOrderTypeChange = (newOrderType: any) => {
-    console.log('CartView: Order type changing', {
-      from: orderType,
-      to: newOrderType
-    });
     setIsOrderTypeTransitioning(true);
     setOrderType(newOrderType);
 
     // Small delay to ensure context stability
     setTimeout(() => {
       setIsOrderTypeTransitioning(false);
-      console.log('CartView: Order type transition complete');
     }, 100);
   };
   const {
     isValidating,
     validateCartItems,
-    getItemValidation
-  } = useInventoryValidation(currentStore?.id || '');
+    validateCartImmediate,
+    getItemValidation,
+    errors,
+    warnings,
+    validationTime
+  } = useOptimizedInventoryValidation(currentStore?.id || '');
 
-  // Validate cart items when they change
+  // Validate cart items when they change (debounced automatically)
   useEffect(() => {
     const validateCart = async () => {
       if (cartItems.length === 0) {
         setValidationMessage('');
         return;
       }
-      const isValid = await validateCartItems(cartItems);
-      if (!isValid) {
-        setValidationMessage('Some items have insufficient stock');
-      } else {
-        setValidationMessage('');
-      }
+      
+      await validateCartItems(cartItems);
     };
     validateCart();
   }, [cartItems, validateCartItems]);
+
+  // Update validation message when errors/warnings change (separate effect)
+  useEffect(() => {
+    if (errors.length > 0) {
+      setValidationMessage(errors.join(', ') || 'Some items have insufficient stock');
+    } else if (warnings.length > 0) {
+      setValidationMessage(warnings.join(', '));
+    } else {
+      setValidationMessage('');
+    }
+  }, [errors, warnings]);
   const handlePaymentCompleteWithInventoryValidation = async (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any): Promise<boolean> => {
     if (!currentStore?.id) {
       toast.error('No store selected');
       return false;
     }
+    
+    // CRITICAL: Capture cart items AND calculations here before any async operations
+    const currentCartItems = [...cartItems];
+    const currentCalculations = { ...calculations };
+    console.log('🛒 CART VIEW: Captured cart items for payment', {
+      itemCount: currentCartItems.length,
+      items: currentCartItems.map(i => ({ 
+        id: i.productId, 
+        name: i.product?.name, 
+        qty: i.quantity,
+        price: i.price,
+        hasPrice: i.price !== undefined && i.price !== null
+      })),
+      calculations: {
+        grossSubtotal: currentCalculations.grossSubtotal,
+        finalTotal: currentCalculations.finalTotal,
+        adjustedVAT: currentCalculations.adjustedVAT,
+        netAmount: currentCalculations.netAmount
+      }
+    });
+    
+    // CRITICAL: Prevent empty cart transactions
+    if (!currentCartItems || currentCartItems.length === 0) {
+      toast.error('Cannot complete transaction with empty cart');
+      console.error('❌ BLOCKED: Attempted transaction with empty cart');
+      return false;
+    }
+    
     try {
-      // Step 1: Use lightweight validation for final check
-      console.log('💨 Quick checkout validation for', cartItems.length, 'items');
-      const quickValidation = await quickCheckoutValidation(cartItems, currentStore.id);
-      if (!quickValidation.isValid) {
-        toast.error(`Cannot proceed: ${quickValidation.invalidProducts.join(', ')}`);
+      // Step 1: Use IMMEDIATE validation for checkout (bypass debounce)
+      const isValid = await validateCartImmediate(currentCartItems);
+      
+      if (!isValid) {
+        toast.error(`Cannot proceed: ${errors.join(', ')}`);
         return false;
       }
 
-      // Proceed with payment
-      const success = await handlePaymentComplete(paymentMethod, amountTendered, paymentDetails, orderType, deliveryPlatform, deliveryOrderNumber);
+      // Proceed with payment - PASS cartItems AND calculations as parameters
+      const success = await handlePaymentComplete(
+        paymentMethod, 
+        amountTendered, 
+        paymentDetails, 
+        orderType, 
+        deliveryPlatform, 
+        deliveryOrderNumber,
+        currentCartItems, // Pass cart items explicitly
+        currentCalculations // Pass calculations explicitly
+      );
       if (success) {
         setIsPaymentDialogOpen(false);
       }
@@ -156,8 +174,8 @@ export default function CartView({
   const isDeliveryOrderValid = orderType === 'dine_in' || orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim();
   const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
 
-  // Check for BOGO eligibility
-  const bogoResult = BOGOService.analyzeBOGO(cartItems);
+  // Check for BOGO eligibility (memoized to prevent excessive calculations)
+  const bogoResult = useMemoizedBOGO(cartItems);
   return <div className="flex flex-col h-full min-h-0 space-y-3 overflow-y-auto pr-1">
       <CartHeader itemCount={cartItems?.length || 0} onClearCart={clearCart} />
       
@@ -181,8 +199,8 @@ export default function CartView({
         <OrderTypeSelector orderType={orderType} onOrderTypeChange={handleOrderTypeChange} deliveryPlatform={deliveryPlatform} onDeliveryPlatformChange={setDeliveryPlatform} deliveryOrderNumber={deliveryOrderNumber} onDeliveryOrderNumberChange={setDeliveryOrderNumber} />
       </div>
 
-      {/* Cart Items */}
-      <CartItemsList items={cartItems || []} isTransitioning={isOrderTypeTransitioning} orderType={orderType} deliveryPlatform={deliveryPlatform} updateQuantity={updateQuantity} updateItemPrice={updateItemPrice} removeItem={removeItem} getItemValidation={getItemValidation} />
+      {/* Cart Items - Optimized with React.memo */}
+      <OptimizedCartItemsList items={cartItems || []} isTransitioning={isOrderTypeTransitioning} orderType={orderType} deliveryPlatform={deliveryPlatform} updateQuantity={updateQuantity} updateItemPrice={updateItemPrice} removeItem={removeItem} getItemValidation={getItemValidation} />
 
       {/* Bottom Section - Fixed with better spacing */}
       {(cartItems?.length || 0) > 0 && <div className="flex-shrink-0 space-y-2 pb-3">
@@ -201,29 +219,14 @@ export default function CartView({
 
           {/* Action Buttons */}
           <CartActions canCheckout={Boolean(canCheckout)} isShiftActive={isShiftActive} isValidating={isValidating} validationMessage={validationMessage} orderType={orderType} deliveryPlatform={deliveryPlatform} deliveryOrderNumber={deliveryOrderNumber} onCheckout={() => {
-        console.log("🚀 Checkout attempt", {
-          calculationsObject: calculations,
-          finalTotal: calculations?.finalTotal,
-          cartItemsLength: cartItems?.length,
-          type: typeof calculations
-        });
-
         // Allow checkout if there are items in cart, even if total is 0 (complimentary)
         if (!calculations || cartItems?.length === 0) {
-          console.error("❌ Checkout blocked - no items in cart", {
-            calculations,
-            finalTotal: calculations?.finalTotal,
-            itemsInCart: cartItems?.length
-          });
           toast.error('Cannot checkout with empty cart');
           return;
         }
 
         // Allow ₱0 total for complimentary discounts
         if (calculations.finalTotal < 0) {
-          console.error("❌ Checkout blocked - negative total", {
-            finalTotal: calculations.finalTotal
-          });
           toast.error('Invalid cart total');
           return;
         }
@@ -243,4 +246,6 @@ export default function CartView({
           </div>
         </div>}
     </div>;
-}
+});
+
+export default CartView;

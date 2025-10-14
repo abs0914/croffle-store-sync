@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Coffee, Zap } from 'lucide-react';
 import { Product } from '@/types/product';
+import { useMemoizedCategorySearch } from '@/hooks/pos/useMemoizedCategorySearch';
 
 interface ComboSelectionDialogProps {
   open: boolean;
@@ -10,15 +11,24 @@ interface ComboSelectionDialogProps {
   product: Product | null;
   onSelectStandalone: () => void;
   onSelectCombo: (espressoType: 'hot' | 'cold') => void;
+  products?: Product[];
+  categories?: any[];
 }
 
-export const ComboSelectionDialog: React.FC<ComboSelectionDialogProps> = ({
+export const ComboSelectionDialog = React.memo<ComboSelectionDialogProps>(({
   open,
   onClose,
   product,
   onSelectStandalone,
   onSelectCombo,
+  products = [],
+  categories = [],
 }) => {
+  // Use memoized category search for performance
+  const { getCategoryName } = useMemoizedCategorySearch({ 
+    products, 
+    categories 
+  });
   const handleStandalone = () => {
     onSelectStandalone();
     onClose();
@@ -114,4 +124,6 @@ export const ComboSelectionDialog: React.FC<ComboSelectionDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+export default ComboSelectionDialog;

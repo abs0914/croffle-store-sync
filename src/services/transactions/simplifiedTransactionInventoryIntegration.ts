@@ -38,42 +38,63 @@ export class SimplifiedTransactionInventoryIntegration {
     const errors: string[] = [];
     
     try {
-      for (const item of items) {
-        // Check if this is a Mix & Match product
+      // 🚀 OPTIMIZATION: Fetch ALL product recipes in ONE query
+      const nonMixMatchItems = items.filter(item => {
         const isMixMatch = item.productName.toLowerCase().includes('croffle overload') || 
                           item.productName.toLowerCase().includes('mini croffle');
-        
         if (isMixMatch) {
           console.log(`🎯 SIMPLE VALIDATION: Skipping validation for Mix & Match product: ${item.productName}`);
-          continue; // Skip validation for Mix & Match - let smart deduction handle it
         }
-        
-        // Get recipe ingredients for non-Mix & Match products
-        const { data: productData } = await supabase
-          .from('product_catalog')
-          .select(`
-            recipe_id,
-            recipes!inner (
-              recipe_ingredients_with_names!inner (
-                ingredient_name,
-                quantity,
-                inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
-                  id,
-                  stock_quantity
-                )
+        return !isMixMatch;
+      });
+      
+      if (nonMixMatchItems.length === 0) {
+        console.log(`✅ SIMPLE VALIDATION: All items are Mix & Match, skipping validation`);
+        return { canProceed: true, errors: [] };
+      }
+      
+      const productIds = nonMixMatchItems.map(item => item.productId);
+      const storeId = items[0]?.storeId;
+      
+      console.log(`🚀 BATCH VALIDATION: Fetching ${productIds.length} product recipes in ONE query...`);
+      
+      const { data: productsData, error: batchError } = await supabase
+        .from('product_catalog')
+        .select(`
+          id,
+          recipe_id,
+          recipes!inner (
+            recipe_ingredients_with_names!inner (
+              ingredient_name,
+              quantity,
+              inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+                id,
+                stock_quantity
               )
             )
-          `)
-          .eq('id', item.productId)
-          .eq('recipes.recipe_ingredients_with_names.inventory_stock.store_id', item.storeId)
-          .eq('recipes.recipe_ingredients_with_names.inventory_stock.is_active', true);
+          )
+        `)
+        .in('id', productIds)
+        .eq('recipes.recipe_ingredients_with_names.inventory_stock.store_id', storeId)
+        .eq('recipes.recipe_ingredients_with_names.inventory_stock.is_active', true);
+      
+      if (batchError) {
+        console.error(`❌ BATCH VALIDATION: Error fetching recipes:`, batchError);
+        return { canProceed: false, errors: [batchError.message] };
+      }
+      
+      console.log(`✅ BATCH VALIDATION: Fetched ${productsData?.length || 0} product recipes`);
+      
+      // Check each item against fetched data
+      for (const item of nonMixMatchItems) {
+        const productData = productsData?.find(p => p.id === item.productId);
         
-        if (!productData || productData.length === 0) {
+        if (!productData) {
           console.warn(`⚠️ SIMPLE VALIDATION: No recipe found for ${item.productName}`);
           continue; // Don't block transaction for non-recipe items
         }
         
-        const recipe = productData[0].recipes;
+        const recipe = productData.recipes;
         if (!recipe?.recipe_ingredients_with_names) continue;
         
         // Check each ingredient
@@ -290,72 +311,23 @@ export class SimplifiedTransactionInventoryIntegration {
   /**
    * **PHASE 1 FIX**: Enhanced authentication fallback with retry logic
    */
-  static async getAuthenticatedUserWithRetry(maxRetries: number = 2): Promise<{ userId: string | null; error?: string }> {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`🔐 AUTH RETRY: Attempt ${attempt}/${maxRetries}`);
-        
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (error) {
-          console.warn(`⚠️ AUTH RETRY ${attempt}: ${error.message}`);
-          if (attempt < maxRetries) {
-            // Exponential backoff: 100ms, 300ms, etc.
-            const delay = 100 * (Math.pow(3, attempt - 1));
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-          return { userId: null, error: `Authentication failed after ${maxRetries} attempts: ${error.message}` };
-        }
-        
-        if (!user) {
-          console.warn(`⚠️ AUTH RETRY ${attempt}: No user in session`);
-          if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            continue;
-          }
-          return { userId: null, error: 'No authenticated user found after retries' };
-        }
-        
-        console.log(`✅ AUTH SUCCESS: User ${user.id} authenticated on attempt ${attempt}`);
-        return { userId: user.id };
-        
-      } catch (error) {
-        console.error(`❌ AUTH RETRY ${attempt} ERROR:`, error);
-        if (attempt === maxRetries) {
-          return { userId: null, error: `Auth service error: ${error instanceof Error ? error.message : 'Unknown error'}` };
-        }
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
-    
-    return { userId: null, error: 'Authentication failed - max retries exceeded' };
-  }
+  /**
+   * PHASE 1 OPTIMIZATION: Auth retry logic removed
+   * Auth session is now cached in AuthSessionContext
+   * userId is passed directly from cached session (-500ms per transaction)
+   */
 
   /**
-   * Legacy method - maintained for backward compatibility
-   * **PHASE 1 FIX**: Now uses enhanced authentication with retry logic
+   * PHASE 1 OPTIMIZATION: Now requires userId from cached session
+   * No more auth retries during transaction processing
    */
   static async processTransactionInventory(
     transactionId: string,
-    items: TransactionItem[]
+    items: TransactionItem[],
+    userId: string
   ): Promise<{ success: boolean; errors: string[]; warnings: string[] }> {
-    console.warn('⚠️ LEGACY CALL: processTransactionInventory called without user context');
-    
-    // **PHASE 1 FIX**: Use enhanced authentication with retry logic
-    const authResult = await this.getAuthenticatedUserWithRetry();
-    
-    if (!authResult.userId) {
-      console.error(`❌ LEGACY CALL: ${authResult.error}`);
-      return {
-        success: false,
-        errors: [`Authentication failed: ${authResult.error}`],
-        warnings: ['Consider migrating to processTransactionInventoryWithAuth method for better reliability']
-      };
-    }
-    
-    console.log(`✅ LEGACY CALL: Authentication succeeded, proceeding with user ${authResult.userId}`);
-    return this.processTransactionInventoryWithAuth(transactionId, items, authResult.userId);
+    console.log('✅ OPTIMIZED: processTransactionInventory with cached userId:', userId);
+    return this.processTransactionInventoryWithAuth(transactionId, items, userId);
   }
   
   /**

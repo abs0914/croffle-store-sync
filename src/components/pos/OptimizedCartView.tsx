@@ -5,8 +5,8 @@ import { Customer } from "@/types";
 import { CustomerLookup } from "@/components/pos/customer";
 import DiscountSelector from "./DiscountSelector";
 import { CartItemsList, CartSummary } from "./cart";
-import { useCartState, useCartActions, useCartCalculations } from "@/contexts/OptimizedCartContext";
-import { BOGOService } from "@/services/cart/BOGOService";
+import { useCart } from "@/contexts/cart/CartContext";
+import { useMemoizedBOGO } from "@/hooks/pos/useMemoizedBOGO";
 
 interface OptimizedCartViewProps {
   selectedCustomer: Customer | null;
@@ -38,12 +38,13 @@ const OptimizedCartView = memo(function OptimizedCartView({
   handlePaymentComplete,
   isShiftActive
 }: OptimizedCartViewProps) {
-  const { items } = useCartState();
-  const { removeItem, updateQuantity, clearCart } = useCartActions();
-  const { subtotal, tax, total } = useCartCalculations();
+  const { items, removeItem, updateQuantity, clearCart, calculations } = useCart();
+  const subtotal = calculations?.netAmount || 0;
+  const tax = calculations?.adjustedVAT || 0;
+  const total = calculations?.finalTotal || 0;
   
-  // Check for BOGO eligibility
-  const bogoResult = BOGOService.analyzeBOGO(items);
+  // Check for BOGO eligibility (memoized to prevent excessive calculations)
+  const bogoResult = useMemoizedBOGO(items);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
@@ -62,8 +63,8 @@ const OptimizedCartView = memo(function OptimizedCartView({
           </Button>
         </div>
         
-        {/* BOGO Eligibility Indicator */}
-        {bogoResult.hasEligibleItems && (
+        {/* BOGO Eligibility Indicator - DISABLED */}
+        {/* {bogoResult.hasEligibleItems && (
           <div className="p-2 bg-croffle-accent/10 border border-croffle-accent/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -75,7 +76,7 @@ const OptimizedCartView = memo(function OptimizedCartView({
               </span>
             </div>
           </div>
-        )}
+        )} */}
         
         {/* Customer Selection */}
         <CustomerLookup 

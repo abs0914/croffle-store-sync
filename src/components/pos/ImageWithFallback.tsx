@@ -35,7 +35,7 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
 
   const handleImageClick = () => {
     if (enableZoom && !hasError) {
-      openImageZoom(cacheBustedSrc, alt);
+      openImageZoom(src, alt);
     }
   };
 
@@ -50,16 +50,11 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
     );
   }
 
-  // Add cache-busting timestamp to force fresh image loads
-  const cacheBustedSrc = src.includes('?') 
-    ? `${src}&cb=${Date.now()}` 
-    : `${src}?cb=${Date.now()}`;
-
   return (
     <>
       <div className={`relative group ${enableZoom ? 'cursor-pointer' : ''}`}>
         <img
-          src={cacheBustedSrc}
+          src={src}
           alt={alt}
           className={className}
           onError={handleImageError}

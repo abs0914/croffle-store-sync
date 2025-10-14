@@ -261,30 +261,10 @@ export default function MultipleSeniorDiscountSelector({
                   </div>}
               </div>}
             
-            {/* Manual BOGO Button - Outside of discount modes */}
-            {BOGOService.hasEligibleItems(cartItems) && <div className="p-3 bg-croffle-background rounded-lg border">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <Label className="font-medium text-croffle-primary">Buy 1 Take 1 Promo Available!</Label>
-                    <p className="text-sm text-muted-foreground">Click to apply Buy 1 Take 1  promotion</p>
-                  </div>
-                  <Button type="button" variant="default" size="sm" onClick={() => {
-                const bogoResult = BOGOService.analyzeBOGO(cartItems);
-                const bogoDiscount: OtherDiscount = {
-                  type: 'bogo',
-                  amount: bogoResult.discountAmount
-                };
-                onApplyDiscounts([], bogoDiscount, 1);
-                setIsOpen(false);
-              }}>
-                    Apply Buy 1 Take 1
-                  </Button>
-                </div>
-                <div className="text-xs space-y-1">
-                  {BOGOService.analyzeBOGO(cartItems).breakdown.map((line, index) => <p key={index} className="text-muted-foreground">{line}</p>)}
-                  
-                </div>
-              </div>}
+            {/* Manual BOGO Button - DISABLED */}
+            {/* {BOGOService.hasEligibleItems(cartItems) && <div className="p-3 bg-croffle-background rounded-lg border">
+...
+              </div>} */}
             
             <div className="mt-4 p-3 bg-muted rounded-lg">
               <p className="text-sm">

@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logBlockedAttempt } from "./crossStoreMonitoringService";
 
 interface InventoryDeductionItem {
   productId: string;
@@ -171,11 +172,12 @@ export class SimplifiedInventoryService {
           const requiredQuantity = ingredient.quantity * item.quantity;
           console.log(`🔍 PHASE 4: Validating ${ingredientName}: need ${requiredQuantity}`);
           
-          // Get current stock
+          // Get current stock with store validation to prevent cross-store deductions
           const { data: inventoryStock, error: stockError } = await supabase
             .from('inventory_stock')
-            .select('id, item, stock_quantity')
+            .select('id, item, stock_quantity, store_id')
             .eq('id', ingredient.inventory_stock_id)
+            .eq('store_id', item.storeId)
             .eq('is_active', true)
             .maybeSingle();
 
@@ -186,8 +188,28 @@ export class SimplifiedInventoryService {
           }
 
           if (!inventoryStock) {
-            console.error(`❌ PHASE 4: Missing inventory for ingredient: ${ingredientName}`);
-            errors.push(`Missing inventory for ingredient: ${ingredientName}`);
+            console.error(`❌ PHASE 4: Inventory not found for ${ingredientName} in store ${item.storeId}`);
+            errors.push(`Inventory for ${ingredientName} not available in current store`);
+            continue;
+          }
+
+          // ⚠️ CRITICAL: Prevent cross-store deduction
+          if (inventoryStock.store_id !== item.storeId) {
+            console.error(`🚨 PHASE 4: BLOCKED cross-store deduction attempt for ${ingredientName}`, {
+              recipeStore: item.storeId,
+              inventoryStore: inventoryStock.store_id
+            });
+            
+            // Log blocked attempt for monitoring
+            await logBlockedAttempt(
+              item.productName,
+              item.storeId,
+              ingredientName,
+              inventoryStock.store_id,
+              undefined // No transaction ID yet during validation
+            );
+            
+            errors.push(`Cannot use ${ingredientName} from another store's inventory`);
             continue;
           }
 
@@ -466,11 +488,12 @@ export class SimplifiedInventoryService {
         const deductionAmount = ingredient.quantity * item.quantity;
         console.log(`🔄 PHASE 4: Deducting ${ingredientName}: ${deductionAmount}`);
         
-        // Get current inventory with error handling
+        // Get current inventory with store validation to prevent cross-store deductions
         const { data: inventoryStock, error: stockError } = await supabase
           .from('inventory_stock')
-          .select('id, stock_quantity')
+          .select('id, stock_quantity, store_id')
           .eq('id', ingredient.inventory_stock_id)
+          .eq('store_id', item.storeId)
           .eq('is_active', true)
           .maybeSingle();
 
@@ -481,8 +504,28 @@ export class SimplifiedInventoryService {
         }
 
         if (!inventoryStock) {
-          console.error(`❌ PHASE 4: Inventory not found: ${ingredientName}`);
-          errors.push(`Inventory not found: ${ingredientName}`);
+          console.error(`❌ PHASE 4: Inventory not found for ${ingredientName} in store ${item.storeId}`);
+          errors.push(`Inventory for ${ingredientName} not available in current store`);
+          continue;
+        }
+
+        // ⚠️ CRITICAL: Prevent cross-store deduction
+        if (inventoryStock.store_id !== item.storeId) {
+          console.error(`🚨 PHASE 4: BLOCKED cross-store deduction attempt for ${ingredientName}`, {
+            recipeStore: item.storeId,
+            inventoryStore: inventoryStock.store_id
+          });
+          
+          // Log blocked attempt for monitoring
+          await logBlockedAttempt(
+            item.productName,
+            item.storeId,
+            ingredientName,
+            inventoryStock.store_id,
+            transactionId
+          );
+          
+          errors.push(`Cannot deduct ${ingredientName} from another store's inventory`);
           continue;
         }
 

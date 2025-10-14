@@ -7,3 +7,4 @@ export * from './profitLoss';
 export * from './bir';
 export * from './cashier';
 export * from './stock';
+export * from './productSales';

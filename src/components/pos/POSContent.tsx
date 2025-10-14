@@ -1,4 +1,5 @@
 
+import React, { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,13 +41,15 @@ interface POSContentProps {
     },
     orderType?: string,
     deliveryPlatform?: string,
-    deliveryOrderNumber?: string
+    deliveryOrderNumber?: string,
+    cartItems?: any[],
+    cartCalculations?: any
   ) => Promise<boolean>;
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation, customization?: any) => void;
   storeId?: string;
 }
 
-export default function POSContent({
+const POSContent = memo(function POSContent({
   activeCategory,
   setActiveCategory,
   products,
@@ -85,7 +88,7 @@ export default function POSContent({
         {/* Products Section */}
         <div className="flex-1 bg-card rounded-lg shadow-sm border border-border overflow-hidden">
           <div className="p-3 md:p-4 h-full flex flex-col">
-            {storeId && (
+            {storeId && products.length > 0 && (
               <ProductGrid
                 products={products} 
                 allProducts={allProducts}
@@ -133,4 +136,14 @@ export default function POSContent({
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if critical props change
+  return (
+    prevProps.products === nextProps.products &&
+    prevProps.activeCategory === nextProps.activeCategory &&
+    prevProps.currentShift?.id === nextProps.currentShift?.id &&
+    prevProps.discount === nextProps.discount
+  );
+});
+
+export default POSContent;

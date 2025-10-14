@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BluetoothPrinterService } from '@/services/printer/BluetoothPrinterService';
 import { PrinterDiscovery, BluetoothPrinter, ThermalPrinter } from '@/services/printer/PrinterDiscovery';
+import { BluetoothReconnectionService, ConnectionState } from '@/services/printer/BluetoothReconnectionService';
 import { Transaction, Customer } from '@/types';
 import { Store } from '@/types/store';
 import { toast } from 'sonner';
@@ -15,50 +16,32 @@ export function useThermalPrinter() {
   const [connectedPrinter, setConnectedPrinter] = useState<BluetoothPrinter | null>(null);
 
   useEffect(() => {
+    // Initialize the reconnection service
+    BluetoothReconnectionService.initialize();
+    
     checkAvailability();
 
-    // Set up persistent connection monitoring with retry logic
-    const monitorInterval = setInterval(() => {
-      if (isConnected && connectedPrinter) {
-        // Check if printer is still connected
-        const currentlyConnected = PrinterDiscovery.isConnected();
-        if (!currentlyConnected) {
-          console.log('⚠️ Printer connection check failed - attempting reconnection...');
-          
-          // Instead of immediately disconnecting, try to reconnect
-          setTimeout(async () => {
-            try {
-              console.log('🔄 Attempting to restore printer connection...');
-              const reconnected = await PrinterDiscovery.connectToPrinter(connectedPrinter);
-              
-              if (reconnected) {
-                console.log('✅ Printer connection restored successfully');
-                toast.success('Printer connection restored', {
-                  description: 'Bluetooth connection has been re-established'
-                });
-              } else {
-                // Only disconnect after failed reconnection attempt
-                console.log('❌ Failed to restore printer connection - marking as disconnected');
-                setIsConnected(false);
-                setConnectedPrinter(null);
-                toast.warning('Printer connection lost', {
-                  description: 'Please reconnect your printer manually'
-                });
-              }
-            } catch (error) {
-              console.error('Failed to restore printer connection:', error);
-              // Don't automatically disconnect - let user decide
-              toast.warning('Printer connection unstable', {
-                description: 'Connection may be intermittent. Try printing to test.'
-              });
-            }
-          }, 1000); // Small delay before reconnection attempt
+    // Subscribe to reconnection service state changes
+    const unsubscribe = BluetoothReconnectionService.subscribeToStateChanges(
+      (state, printer) => {
+        switch (state) {
+          case ConnectionState.CONNECTED:
+            setIsConnected(true);
+            setConnectedPrinter(printer);
+            break;
+          case ConnectionState.DISCONNECTED:
+          case ConnectionState.RECONNECT_FAILED:
+            setIsConnected(false);
+            break;
+          case ConnectionState.RECONNECTING:
+            // Keep current state during reconnection
+            break;
         }
       }
-    }, 30000); // Check every 30 seconds instead of 5 seconds to reduce interference
+    );
 
-    return () => clearInterval(monitorInterval);
-  }, [isConnected, connectedPrinter]);
+    return () => unsubscribe();
+  }, []);
 
   const checkAvailability = async () => {
     try {
@@ -156,6 +139,10 @@ export function useThermalPrinter() {
       if (success) {
         setIsConnected(true);
         setConnectedPrinter(printer);
+        
+        // Setup disconnection listeners for automatic reconnection
+        BluetoothReconnectionService.setupDisconnectionListeners(printer);
+        
         toast.success(`Connected to ${printer.name}`);
         console.log(`Successfully connected to ${printer.name}`);
       } else {
