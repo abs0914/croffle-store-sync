@@ -8,7 +8,7 @@ import { getOrCreatePOSCategories } from "@/services/pos/categoryMappingService"
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { prepareCategoriesForPOS } from "@/utils/categoryOrdering";
-import { uploadKitKatImageAndUpdateProducts } from "@/services/product/uploadKitKatImage";
+
 
 export function useProductCatalogFetch(storeId: string | null) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -101,31 +101,6 @@ export function useProductCatalogFetch(storeId: string | null) {
     loadData();
   }, [loadData]);
 
-  // Upload KitKat image once on mount (only if needed)
-  useEffect(() => {
-    const uploadImageOnce = async () => {
-      try {
-        // Check if any KitKat products are missing images
-        const { data } = await supabase
-          .from('product_catalog')
-          .select('id')
-          .eq('product_name', 'KitKat Biscuit')
-          .is('image_url', null)
-          .limit(1);
-        
-        if (data && data.length > 0) {
-          console.log('📸 Uploading KitKat image...');
-          await uploadKitKatImageAndUpdateProducts();
-          // Reload data to show the updated images
-          loadData();
-        }
-      } catch (error) {
-        console.error('Error uploading KitKat image:', error);
-      }
-    };
-    
-    uploadImageOnce();
-  }, []); // Run only once on mount
 
   // Real-time subscriptions for product catalog changes
   useEffect(() => {
