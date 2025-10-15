@@ -17,8 +17,11 @@ export const CATEGORY_ORDER = [
   'Espresso',
   // Then Beverages
   'Beverages',
-  // Then Additional Items
+  // Then Additional Items (including all addon category variations)
   'Add-ons',
+  'Add-on',
+  'addon',
+  'Addons',
   // Finally Combos
   'Combo'
 ];

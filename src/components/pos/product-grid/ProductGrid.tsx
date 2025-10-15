@@ -311,7 +311,7 @@ const ProductGrid = memo(function ProductGrid({
     return products.filter(product => {
       const isActive = product.is_active || product.isActive;
 
-      // Exclude products from hidden categories (like Add-ons and Combo)
+      // Exclude products from Combo category only
       const categoryName = getCategoryName(product.category_id);
       const shouldDisplayCategory = shouldDisplayCategoryInPOS(categoryName) && categoryName !== "Combo";
 
