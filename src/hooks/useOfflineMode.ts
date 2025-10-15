@@ -311,6 +311,6 @@ export function useOfflineMode(storeId: string | null) {
     getLowStockItems,
     queueStats: storeId ? offlineTransactionQueue.getQueueStats() : null,
     syncStats: offlineSyncService.getSyncStats(),
-    failedTransactions: offlineSyncService.getFailedTransactions()
+    failedTransactionsList: offlineSyncService.getFailedTransactions()
   };
 }

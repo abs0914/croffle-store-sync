@@ -15,7 +15,6 @@ import {
   Wifi, 
   WifiOff, 
   Database, 
-  Sync, 
   Printer, 
   AlertTriangle, 
   CheckCircle, 
@@ -44,7 +43,7 @@ export function OfflineStatusIndicator({
   compact = false, 
   showControls = true 
 }: OfflineStatusIndicatorProps) {
-  const { offlineStatus, triggerSync } = useOfflineMode(storeId);
+  const offlineStatus = useOfflineMode(storeId);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleManualSync = async () => {
@@ -55,7 +54,7 @@ export function OfflineStatusIndicator({
 
     setIsSyncing(true);
     try {
-      await triggerSync();
+      await offlineStatus.triggerSync();
       toast.success('Sync completed successfully');
     } catch (error) {
       toast.error('Sync failed');
@@ -166,11 +165,7 @@ export function OfflineStatusIndicator({
               onClick={handleManualSync}
               disabled={!offlineStatus.isOnline || isSyncing}
             >
-              {isSyncing ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Sync className="h-4 w-4 mr-2" />
-              )}
+              <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
               Sync Now
             </Button>
           )}

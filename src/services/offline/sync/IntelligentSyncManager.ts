@@ -245,7 +245,7 @@ export class IntelligentSyncManager {
 
       // Phase 3: Complete
       this.notifyProgress({
-        phase: 'finishing',
+        phase: 'completing',
         currentBatch: batches.length,
         totalBatches: batches.length,
         currentTransaction: result.totalProcessed,
@@ -360,31 +360,31 @@ export class IntelligentSyncManager {
   private async syncSingleTransaction(transaction: EnhancedOfflineTransaction): Promise<void> {
     // Convert enhanced transaction to streamlined format
     const streamlinedData = {
-      store_id: transaction.storeId,
-      user_id: transaction.userId,
-      shift_id: transaction.shiftId,
-      customer_id: transaction.customerId,
+      storeId: transaction.storeId,
+      userId: transaction.userId,
+      shiftId: transaction.shiftId,
+      customerId: transaction.customerId,
       items: transaction.items.map(item => ({
-        product_id: item.productId,
-        variation_id: item.variationId,
+        productId: item.productId,
+        variationId: item.variationId,
         name: item.name,
         quantity: item.quantity,
-        unit_price: item.unitPrice,
-        total_price: item.totalPrice
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice
       })),
       subtotal: transaction.subtotal,
       tax: transaction.tax,
       discount: transaction.discount,
-      discount_type: transaction.discountType,
-      discount_id_number: transaction.discountIdNumber,
+      discountType: transaction.discountType,
+      discountIdNumber: transaction.discountIdNumber,
       total: transaction.total,
-      amount_tendered: transaction.amountTendered,
+      amountTendered: transaction.amountTendered,
       change: transaction.change,
-      payment_method: transaction.paymentMethod,
-      payment_details: transaction.paymentDetails,
-      order_type: transaction.orderType,
-      delivery_platform: transaction.deliveryPlatform,
-      delivery_order_number: transaction.deliveryOrderNumber,
+      paymentMethod: transaction.paymentMethod,
+      paymentDetails: transaction.paymentDetails,
+      orderType: (transaction.orderType || 'dine_in') as 'delivery' | 'dine_in' | 'takeout',
+      deliveryPlatform: transaction.deliveryPlatform,
+      deliveryOrderNumber: transaction.deliveryOrderNumber,
       isOfflineSync: true,
       offlineTransactionId: transaction.id,
       offlineTimestamp: transaction.timestamp,
@@ -394,14 +394,14 @@ export class IntelligentSyncManager {
     // Process the transaction
     const result = await streamlinedTransactionService.processTransaction(streamlinedData);
     
-    if (result.success && result.transaction) {
+    if (result?.id) {
       // Mark as successfully synced
       await this.transactionQueue.markTransactionSynced(
         transaction.id,
-        result.transaction.id
+        result.id
       );
     } else {
-      throw new Error(result.error || 'Transaction processing failed');
+      throw new Error('Transaction processing failed');
     }
   }
 

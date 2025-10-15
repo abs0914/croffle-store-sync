@@ -334,8 +334,8 @@ export class OfflinePOSManager {
         });
 
         // Register for background sync
-        if ('sync' in window.ServiceWorkerRegistration.prototype) {
-          await registration.sync.register('offline-transactions-sync');
+        if ('sync' in registration) {
+          await (registration as any).sync.register('offline-transactions-sync');
           console.log('✅ Background sync registered');
         }
 
