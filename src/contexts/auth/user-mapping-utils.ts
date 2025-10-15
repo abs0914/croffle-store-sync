@@ -10,8 +10,10 @@ const userMappingCache = new Map<string, { user: AppUser; timestamp: number }>()
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 interface AppUserData {
-  role: string;
-  store_ids: string[];
+  user_role?: string;
+  role?: string;
+  user_store_ids?: string[];
+  store_ids?: string[];
   first_name: string;
   last_name: string;
   email: string;
@@ -47,16 +49,16 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
 
     // If user exists in app_users, use that data
     if (data && data.length > 0) {
-      const appUserData = data[0] as AppUserData;
+      const appUserData: any = data[0];
       
-      // Fix role assignment - ensure it's properly typed
-      const dbRole = appUserData.role;
+      // Fix role assignment - handle both possible field names from RPC
+      const dbRole = (appUserData.user_role || appUserData.role) as string;
       
       role = dbRole as UserRole;
-      storeIds = appUserData.store_ids || [];
+      storeIds = (appUserData.user_store_ids || appUserData.store_ids || []) as string[];
       
       // Use the name from app_users if available
-      const name = `${appUserData.first_name} ${appUserData.last_name}`.trim();
+      const name = `${appUserData.first_name || ''} ${appUserData.last_name || ''}`.trim();
       
       const finalUser = {
         id: supabaseUser.id,
