@@ -8363,15 +8363,8 @@ export type Database = {
       get_current_user_info: {
         Args: Record<PropertyKey, never> | { user_email: string }
         Returns: {
-          contact_number: string
-          email: string
-          first_name: string
-          id: string
-          is_active: boolean
-          last_name: string
-          role: string
-          store_ids: string[]
-          user_id: string
+          user_role: Database["public"]["Enums"]["app_role"]
+          user_store_ids: string[]
         }[]
       }
       get_inventory_items_by_category: {
