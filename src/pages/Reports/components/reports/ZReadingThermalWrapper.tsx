@@ -1,11 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { RefreshCw, FileBarChart } from "lucide-react";
+import { RefreshCw, FileBarChart, AlertTriangle } from "lucide-react";
 import { fetchZReadingForThermal } from "@/services/reports/modules/zReadingThermalReport";
 import { BIRZReadingView } from "@/components/reports/BIRZReadingView";
+import { EODWarningDialog } from "@/components/reports/EODWarningDialog";
+import { checkPreviousDayEOD, performPreviousDayEOD } from "@/services/reports/previousDayEODCheck";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface ZReadingThermalWrapperProps {
   storeId: string;
@@ -14,6 +19,52 @@ interface ZReadingThermalWrapperProps {
 
 export function ZReadingThermalWrapper({ storeId, date }: ZReadingThermalWrapperProps) {
   const formattedDate = date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+  const [showEODWarning, setShowEODWarning] = useState(false);
+  const [eodStatus, setEodStatus] = useState<{
+    isComplete: boolean;
+    date: string;
+    missingDates: string[];
+    lastCompletedDate: string | null;
+    message: string;
+  } | null>(null);
+
+  // Check previous day EOD on mount (Robinsons Requirement #6)
+  useEffect(() => {
+    const checkEOD = async () => {
+      try {
+        const status = await checkPreviousDayEOD(storeId);
+        setEodStatus(status);
+        
+        if (!status.isComplete && status.missingDates.length > 0) {
+          console.warn('⚠️ Robinsons Compliance: Previous day EOD not completed', status);
+          setShowEODWarning(true);
+        }
+      } catch (error) {
+        console.error('❌ Failed to check previous day EOD', error);
+      }
+    };
+
+    if (storeId) {
+      checkEOD();
+    }
+  }, [storeId]);
+
+  // Mutation to perform previous day EOD
+  const performEODMutation = useMutation({
+    mutationFn: () => performPreviousDayEOD(storeId),
+    onSuccess: (success) => {
+      if (success) {
+        toast.success('Previous day EOD completed successfully');
+        setShowEODWarning(false);
+        setEodStatus(prev => prev ? { ...prev, isComplete: true } : null);
+      } else {
+        toast.error('Failed to perform previous day EOD');
+      }
+    },
+    onError: () => {
+      toast.error('Error performing previous day EOD');
+    }
+  });
   
   const { data, isLoading, error } = useQuery({
     queryKey: ['z-reading-thermal', storeId, formattedDate],
@@ -46,6 +97,57 @@ export function ZReadingThermalWrapper({ storeId, date }: ZReadingThermalWrapper
     },
     refetchOnWindowFocus: false
   });
+  
+  // Show EOD warning if previous day not completed (Robinsons Compliance)
+  if (eodStatus && !eodStatus.isComplete && showEODWarning) {
+    return (
+      <>
+        <Card className="border-destructive bg-gradient-to-br from-red-50/30 to-transparent">
+          <CardContent className="p-8">
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Robinsons Compliance Alert</AlertTitle>
+              <AlertDescription>
+                Previous business day ({eodStatus.date}) was not closed. You must complete the EOD
+                process before generating today's Z-Reading.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {eodStatus.message}
+              </p>
+              
+              <div className="flex gap-2 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEODWarning(false)}
+                >
+                  Dismiss (Review Required)
+                </Button>
+                <Button
+                  onClick={() => performEODMutation.mutate()}
+                  disabled={performEODMutation.isPending}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Perform Previous Day EOD
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <EODWarningDialog
+          open={showEODWarning}
+          onClose={() => setShowEODWarning(false)}
+          onPerformEOD={() => performEODMutation.mutate()}
+          missingDate={eodStatus.date}
+          lastCompletedDate={eodStatus.lastCompletedDate}
+          isPerforming={performEODMutation.isPending}
+        />
+      </>
+    );
+  }
   
   if (isLoading) {
     return (
