@@ -103,6 +103,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, newSession) => {
         authLog(`Auth state changed: ${event}`);
         
+        // Handle token refresh errors and invalid tokens
+        if (event === 'TOKEN_REFRESHED' && !newSession) {
+          authLog('Token refresh failed, clearing invalid session');
+          // Clear invalid tokens from localStorage
+          const storageKey = 'bwmkqscqkfoezcuzgpwq';
+          localStorage.removeItem(`sb-${storageKey}-auth-token`);
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (event === 'SIGNED_OUT') {
+          authLog('User signed out, clearing session');
+          // Clear invalid tokens from localStorage
+          const storageKey = 'bwmkqscqkfoezcuzgpwq';
+          localStorage.removeItem(`sb-${storageKey}-auth-token`);
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+        
         // Only update session state synchronously
         setSession(newSession);
         
@@ -133,7 +156,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession }, error: sessionError }) => {
+      if (sessionError) {
+        authError("Error checking session:", sessionError);
+        // Clear invalid tokens if session check fails
+        if (sessionError.message?.includes('refresh') || sessionError.message?.includes('token')) {
+          authLog('Clearing invalid tokens from storage');
+          const storageKey = 'bwmkqscqkfoezcuzgpwq';
+          localStorage.removeItem(`sb-${storageKey}-auth-token`);
+        }
+        setIsLoading(false);
+        return;
+      }
+      
       if (currentSession?.user) {
         try {
           authLog('Existing session found');
@@ -156,6 +191,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }).catch(error => {
       authError("Error checking session:", error);
+      // Clear invalid tokens on error
+      if (error.message?.includes('refresh') || error.message?.includes('token')) {
+        authLog('Clearing invalid tokens from storage');
+        const storageKey = 'bwmkqscqkfoezcuzgpwq';
+        localStorage.removeItem(`sb-${storageKey}-auth-token`);
+      }
       setIsLoading(false);
     });
 

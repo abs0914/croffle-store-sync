@@ -116,9 +116,15 @@ export const useAuthState = () => {
               await logSecurityEvent('token_refreshed', {}, 'low');
               setupTokenRefresh(data.session);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error("❌ Token refresh failed:", error);
             await logSecurityEvent('token_refresh_failed', { error: String(error) }, 'medium');
+            
+            // Clear invalid tokens from localStorage
+            const storageKey = 'bwmkqscqkfoezcuzgpwq';
+            localStorage.removeItem(`sb-${storageKey}-auth-token`);
+            localStorage.removeItem(`sb-${storageKey}-auth-token-code-verifier`);
+            
             // Only show error and logout if this isn't a manual refresh
             if (!authErrorHandledRef.current) {
               authErrorHandledRef.current = true;
@@ -244,6 +250,11 @@ export const useAuthState = () => {
       // Clear local state immediately to prevent UI issues
       setUser(null);
       setSession(null);
+      
+      // Clear all auth-related data from localStorage to prevent stale tokens
+      const storageKey = 'bwmkqscqkfoezcuzgpwq';
+      localStorage.removeItem(`sb-${storageKey}-auth-token`);
+      localStorage.removeItem(`sb-${storageKey}-auth-token-code-verifier`);
       
       // Attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
