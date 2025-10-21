@@ -17,6 +17,9 @@ export class BluetoothPrinterService {
   private static readonly WEB_BLUETOOTH_SERVICE_UUID = '49535343-fe7d-4ae5-8fa9-9fafd205e455';
   private static readonly WEB_BLUETOOTH_WRITE_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
   
+  // Print queue to prevent concurrent writes
+  private static printQueue: Promise<boolean> = Promise.resolve(true);
+  
   static async isAvailable(): Promise<boolean> {
     try {
       console.log('🔍 Checking Bluetooth thermal printing availability...');
@@ -282,26 +285,42 @@ export class BluetoothPrinterService {
   }
 
   private static async sendDataToPrinter(printer: any, data: string): Promise<boolean> {
-    try {
-      console.log(`Sending data to printer via ${printer.connectionType}...`);
+    // Queue print jobs to prevent concurrent writes
+    return this.printQueue = this.printQueue.then(async () => {
+      try {
+        console.log(`Sending data to printer via ${printer.connectionType}...`);
 
-      if (printer.connectionType === 'web' && printer.webBluetoothDevice) {
-        return await this.sendDataViaWebBluetooth(printer.webBluetoothDevice, data);
-      } else if (printer.connectionType === 'capacitor' && printer.device) {
-        return await this.sendDataViaCapacitorBLE(printer.device, data);
-      } else {
-        throw new Error('Invalid printer configuration for printing');
+        if (printer.connectionType === 'web' && printer.webBluetoothDevice) {
+          return await this.sendDataViaWebBluetooth(printer.webBluetoothDevice, data);
+        } else if (printer.connectionType === 'capacitor' && printer.device) {
+          return await this.sendDataViaCapacitorBLE(printer.device, data);
+        } else {
+          throw new Error('Invalid printer configuration for printing');
+        }
+      } catch (error) {
+        console.error('Failed to send data to printer:', error);
+        return false;
       }
-    } catch (error) {
-      console.error('Failed to send data to printer:', error);
-      return false;
-    }
+    });
   }
-
+  
   private static async sendDataViaWebBluetooth(device: BluetoothDevice, data: string): Promise<boolean> {
     try {
-      if (!device.gatt?.connected) {
-        throw new Error('Device not connected');
+      // Validate connection state before proceeding
+      if (!device.gatt) {
+        throw new Error('GATT server not available');
+      }
+      
+      if (!device.gatt.connected) {
+        console.log('⚠️ GATT disconnected, attempting reconnection...');
+        try {
+          await device.gatt.connect();
+          console.log('✅ Reconnected to GATT server');
+          // Wait for connection to stabilize
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (reconnectError) {
+          throw new Error('Device not connected and reconnection failed');
+        }
       }
 
       console.log('Attempting to send data via Web Bluetooth...');
@@ -420,23 +439,39 @@ export class BluetoothPrinterService {
 
       // Use smaller chunk size for better compatibility
       const maxChunkSize = 256; // Reduced from 512 for better compatibility
+      const chunkDelay = 150; // Increased delay for better reliability
+      const maxRetries = 3;
       const totalBytes = dataBytes.length;
 
       if (totalBytes <= maxChunkSize) {
-        // Send small data in one chunk
+        // Send small data in one chunk with retry
         console.log(`Sending ${totalBytes} bytes in single chunk...`);
 
-        if (writeCharacteristic.properties.writeWithoutResponse) {
-          console.log('Using writeWithoutResponse...');
-          await writeCharacteristic.writeValueWithoutResponse(dataBytes);
-        } else if (writeCharacteristic.properties.write) {
-          console.log('Using writeValue...');
-          await writeCharacteristic.writeValue(dataBytes);
-        } else {
-          throw new Error('Characteristic does not support writing');
+        let success = false;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            if (writeCharacteristic.properties.writeWithoutResponse) {
+              console.log('Using writeWithoutResponse...');
+              await writeCharacteristic.writeValueWithoutResponse(dataBytes);
+            } else if (writeCharacteristic.properties.write) {
+              console.log('Using writeValue...');
+              await writeCharacteristic.writeValue(dataBytes);
+            } else {
+              throw new Error('Characteristic does not support writing');
+            }
+            success = true;
+            break;
+          } catch (writeError) {
+            console.warn(`Write attempt ${attempt}/${maxRetries} failed:`, writeError);
+            if (attempt < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            } else {
+              throw writeError;
+            }
+          }
         }
       } else {
-        // Send large data in chunks
+        // Send large data in chunks with retry
         const numChunks = Math.ceil(totalBytes / maxChunkSize);
         console.log(`Sending ${totalBytes} bytes in ${numChunks} chunks of max ${maxChunkSize} bytes each...`);
 
@@ -447,24 +482,42 @@ export class BluetoothPrinterService {
 
           console.log(`Sending chunk ${i + 1}/${numChunks}: ${chunk.length} bytes (${start}-${end - 1})`);
 
-          try {
-            if (writeCharacteristic.properties.writeWithoutResponse) {
-              await writeCharacteristic.writeValueWithoutResponse(chunk);
-            } else if (writeCharacteristic.properties.write) {
-              await writeCharacteristic.writeValue(chunk);
-            } else {
-              throw new Error('Characteristic does not support writing');
-            }
+          let chunkSuccess = false;
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              // Verify connection before each chunk
+              if (!device.gatt?.connected) {
+                throw new Error('Connection lost during transmission');
+              }
 
-            console.log(`✅ Chunk ${i + 1}/${numChunks} sent successfully`);
-          } catch (chunkError) {
-            console.error(`❌ Failed to send chunk ${i + 1}/${numChunks}:`, chunkError);
-            throw new Error(`Failed to send data chunk ${i + 1}: ${chunkError.message}`);
+              if (writeCharacteristic.properties.writeWithoutResponse) {
+                await writeCharacteristic.writeValueWithoutResponse(chunk);
+              } else if (writeCharacteristic.properties.write) {
+                await writeCharacteristic.writeValue(chunk);
+              } else {
+                throw new Error('Characteristic does not support writing');
+              }
+
+              console.log(`✅ Chunk ${i + 1}/${numChunks} sent successfully`);
+              chunkSuccess = true;
+              break;
+            } catch (chunkError) {
+              console.error(`❌ Chunk ${i + 1}/${numChunks} attempt ${attempt}/${maxRetries} failed:`, chunkError);
+              if (attempt < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+              } else {
+                throw new Error(`Failed to send data chunk ${i + 1} after ${maxRetries} attempts: ${chunkError.message}`);
+              }
+            }
+          }
+
+          if (!chunkSuccess) {
+            throw new Error(`Failed to send chunk ${i + 1}/${numChunks}`);
           }
 
           // Longer delay between chunks to ensure printer can process
           if (i < numChunks - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, chunkDelay));
           }
         }
 

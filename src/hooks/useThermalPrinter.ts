@@ -190,6 +190,14 @@ export function useThermalPrinter() {
       return false;
     }
 
+    // Validate connected printer state
+    const printer = PrinterDiscovery.getConnectedPrinter();
+    if (!printer?.isConnected) {
+      toast.error('Printer connection lost. Please reconnect.');
+      setIsConnected(false);
+      return false;
+    }
+
     setIsPrinting(true);
     try {
       console.log(`Starting receipt print for transaction: ${transaction.receiptNumber}`);
@@ -210,7 +218,10 @@ export function useThermalPrinter() {
       console.error('Failed to print receipt:', error);
 
       // Provide specific error messages based on error type
-      if (error.message?.includes('service')) {
+      if (error.message?.includes('not connected') || error.message?.includes('Connection lost')) {
+        toast.error('Printer disconnected. Please reconnect and try again.');
+        setIsConnected(false);
+      } else if (error.message?.includes('service')) {
         toast.error('Printer service not found. Check printer compatibility.');
       } else if (error.message?.includes('characteristic')) {
         toast.error('Printer communication failed. Try reconnecting.');

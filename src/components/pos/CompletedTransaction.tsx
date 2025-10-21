@@ -85,6 +85,17 @@ export default function CompletedTransaction({
         
         try {
           console.log('Auto-printing receipt to thermal printer...');
+          
+          // Wait for connection to stabilize before printing
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Verify printer is still connected before attempting print
+          if (!isConnected) {
+            console.warn('Printer disconnected before print could start');
+            printedReceipts.current.delete(transaction.receiptNumber);
+            return;
+          }
+          
           await printReceipt(transaction, stableCustomer, stableStore, 'Cashier');
 
           // ✅ Clear cart AFTER successful printing
@@ -97,12 +108,13 @@ export default function CompletedTransaction({
           console.error('Auto-print failed:', error);
           // Remove from printed set on failure so it can be retried
           printedReceipts.current.delete(transaction.receiptNumber);
+          toast.error('Auto-print failed. Use manual print button if needed.');
         }
       }
     };
 
-    // Small delay to ensure transaction is fully processed
-    const timer = setTimeout(autoPrint, 1000);
+    // Longer delay to ensure transaction is fully processed and connection is stable
+    const timer = setTimeout(autoPrint, 1500);
     return () => clearTimeout(timer);
   }, [isConnected, transaction?.receiptNumber]); // Removed unstable dependencies
 
