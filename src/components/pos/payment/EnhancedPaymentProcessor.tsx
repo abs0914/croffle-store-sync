@@ -33,7 +33,7 @@ export default function EnhancedPaymentProcessor({
   const [isOpen, setIsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet'>('cash');
-  const [amountTendered, setAmountTendered] = useState<number>(total);
+  const [amountTendered, setAmountTendered] = useState<number>(total === 0 ? 0 : total);
   
   // Card payment details
   const [cardType, setCardType] = useState<string>('Visa');
@@ -89,6 +89,9 @@ export default function EnhancedPaymentProcessor({
   useEffect(() => {
     if (paymentMethod !== 'cash') {
       setAmountTendered(total);
+    } else if (total === 0) {
+      // For complimentary, always set to 0
+      setAmountTendered(0);
     }
   }, [paymentMethod, total]);
 
@@ -103,9 +106,20 @@ export default function EnhancedPaymentProcessor({
     PerformanceMonitor.startTimer(operationId);
 
     // Validation
-    if (paymentMethod === 'cash' && amountTendered < total) {
-      toast.error("Insufficient amount tendered");
-      return;
+    if (paymentMethod === 'cash') {
+      // For complimentary transactions (zero total), amount must be exactly zero
+      if (total === 0) {
+        if (amountTendered !== 0) {
+          toast.error("Complimentary transaction: amount tendered must be ₱0.00");
+          return;
+        }
+      } else {
+        // Normal transaction validation
+        if (amountTendered < total) {
+          toast.error("Insufficient amount tendered");
+          return;
+        }
+      }
     }
 
     if (paymentMethod === 'card' && !cardNumber) {
@@ -170,6 +184,10 @@ export default function EnhancedPaymentProcessor({
   const isPaymentValid = () => {
     switch (paymentMethod) {
       case 'cash':
+        // For complimentary transactions, amount must be exactly 0
+        if (total === 0) {
+          return amountTendered === 0;
+        }
         return amountTendered >= total;
       case 'card':
         return cardNumber.length >= 4;
@@ -214,6 +232,11 @@ export default function EnhancedPaymentProcessor({
           <div className="text-sm text-muted-foreground">
             <p>Total: <span className="font-semibold">{formatCurrency(total)}</span></p>
             {itemCount > 1 && <p>Items: {itemCount}</p>}
+            {total === 0 && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                ✅ Complimentary Transaction - No payment required
+              </div>
+            )}
             {changeAmount > 0 && (
               <p className="text-green-600 font-semibold">
                 Change: {formatCurrency(changeAmount)}

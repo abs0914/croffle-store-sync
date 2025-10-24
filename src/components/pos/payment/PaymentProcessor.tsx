@@ -64,6 +64,10 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
 
   const canProceed = () => {
     if (paymentMethod === 'cash') {
+      // Special handling for complimentary (zero total)
+      if (total === 0) {
+        return cashAmountTendered === 0;
+      }
       return cashAmountTendered >= total;
     } else if (paymentMethod === 'card') {
       return cardType && cardNumber;
@@ -81,6 +85,11 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
           <span>Total ({itemCount} items):</span>
           <span className="font-bold">{formatCurrency(total)}</span>
         </div>
+        {total === 0 && (
+          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+            ✅ Complimentary Transaction - No payment required
+          </div>
+        )}
       </div>
 
       <PaymentMethods

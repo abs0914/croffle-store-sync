@@ -60,22 +60,25 @@ export function CashPaymentTab({
           type="number"
           value={amountTendered || ''}
           onChange={(e) => setAmountTendered(Number(e.target.value))}
-          disabled={disabled}
+          disabled={disabled || total === 0}
+          readOnly={total === 0}
         />
       </div>
       
-      <div className="grid grid-cols-3 gap-2">
-        {uniqueQuickAmounts.map((amount) => (
-          <Button
-            key={amount}
-            variant="outline"
-            onClick={() => setAmountTendered(amount)}
-            disabled={disabled}
-          >
-            {formatCurrency(amount)}
-          </Button>
-        ))}
-      </div>
+      {total > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          {uniqueQuickAmounts.map((amount) => (
+            <Button
+              key={amount}
+              variant="outline"
+              onClick={() => setAmountTendered(amount)}
+              disabled={disabled}
+            >
+              {formatCurrency(amount)}
+            </Button>
+          ))}
+        </div>
+      )}
       
       <Card className="p-4 bg-muted">
         <div className="flex justify-between text-lg font-medium">
