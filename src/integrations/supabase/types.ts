@@ -354,7 +354,7 @@ export type Database = {
           event_name: string
           hash_value: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           log_type: string
           previous_hash: string | null
           receipt_number: string | null
@@ -372,7 +372,7 @@ export type Database = {
           event_name: string
           hash_value: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           log_type: string
           previous_hash?: string | null
           receipt_number?: string | null
@@ -390,7 +390,7 @@ export type Database = {
           event_name?: string
           hash_value?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           log_type?: string
           previous_hash?: string | null
           receipt_number?: string | null
@@ -5991,7 +5991,7 @@ export type Database = {
           event_details: Json | null
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           severity: string | null
           user_agent: string | null
           user_id: string | null
@@ -6001,7 +6001,7 @@ export type Database = {
           event_details?: Json | null
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           severity?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -6011,7 +6011,7 @@ export type Database = {
           event_details?: Json | null
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           severity?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -6024,7 +6024,7 @@ export type Database = {
           event_data: Json | null
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           risk_level: string | null
           user_agent: string | null
           user_email: string | null
@@ -6035,7 +6035,7 @@ export type Database = {
           event_data?: Json | null
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           risk_level?: string | null
           user_agent?: string | null
           user_email?: string | null
@@ -6046,7 +6046,7 @@ export type Database = {
           event_data?: Json | null
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           risk_level?: string | null
           user_agent?: string | null
           user_email?: string | null
@@ -7426,7 +7426,7 @@ export type Database = {
           changed_at: string
           changed_by: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_role: Database["public"]["Enums"]["app_role"]
           old_role: Database["public"]["Enums"]["app_role"] | null
           reason: string | null
@@ -7437,7 +7437,7 @@ export type Database = {
           changed_at?: string
           changed_by: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_role: Database["public"]["Enums"]["app_role"]
           old_role?: Database["public"]["Enums"]["app_role"] | null
           reason?: string | null
@@ -7448,7 +7448,7 @@ export type Database = {
           changed_at?: string
           changed_by?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_role?: Database["public"]["Enums"]["app_role"]
           old_role?: Database["public"]["Enums"]["app_role"] | null
           reason?: string | null
@@ -7910,7 +7910,7 @@ export type Database = {
     }
     Functions: {
       analyze_store_deployment_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           expected_products: number
           missing_products: number
@@ -7926,7 +7926,7 @@ export type Database = {
         Returns: boolean
       }
       audit_recipe_completeness: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           missing_ingredients: string[]
           recipe_id: string
@@ -7940,7 +7940,7 @@ export type Database = {
         }[]
       }
       audit_recipe_template_consistency: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deployed_quantity: number
           deployed_unit: string
@@ -7965,22 +7965,16 @@ export type Database = {
         Args: { p_updates: Json }
         Returns: undefined
       }
-      begin_transaction: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      begin_transaction: { Args: never; Returns: string }
       bulk_update_product_categories: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           products_failed: number
           products_updated: number
           store_name: string
         }[]
       }
-      calculate_recipe_cost: {
-        Args: { recipe_id: number }
-        Returns: number
-      }
+      calculate_recipe_cost: { Args: { recipe_id: number }; Returns: number }
       calculate_recipe_suggested_price: {
         Args: { recipe_id_param: string; store_id_param?: string }
         Returns: number
@@ -8037,12 +8031,9 @@ export type Database = {
         Args: { p_identifier: string; p_identifier_type?: string }
         Returns: undefined
       }
-      commit_transaction: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      commit_transaction: { Args: never; Returns: string }
       complete_inventory_sync: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           action_type: string
           details: string
@@ -8050,7 +8041,7 @@ export type Database = {
         }[]
       }
       complete_recipe_ingredients: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           categories_processed: string[]
           execution_details: Json
@@ -8059,7 +8050,7 @@ export type Database = {
         }[]
       }
       create_advanced_inventory_mappings: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           mapping_details: Json
           mappings_created: number
@@ -8079,7 +8070,7 @@ export type Database = {
         Returns: string
       }
       create_ingredient_inventory_mappings: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           mapping_details: Json
           mappings_created: number
@@ -8091,7 +8082,7 @@ export type Database = {
         Returns: string
       }
       deploy_all_recipe_templates_to_all_stores: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deployed_ingredients: number
           deployed_products: number
@@ -8103,7 +8094,7 @@ export type Database = {
         }[]
       }
       deploy_and_fix_recipe_templates_to_all_stores: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deployed_ingredients: number
           deployed_products: number
@@ -8116,7 +8107,7 @@ export type Database = {
         }[]
       }
       deploy_catalog_products_only: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           execution_time_ms: number
           products_added: number
@@ -8124,7 +8115,7 @@ export type Database = {
         }[]
       }
       deploy_missing_products_to_catalog: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           categories_added: number
           execution_time_ms: number
@@ -8133,7 +8124,7 @@ export type Database = {
         }[]
       }
       deploy_products_to_all_stores: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deployed_count: number
           details: string[]
@@ -8152,7 +8143,7 @@ export type Database = {
         }[]
       }
       deploy_recipe_templates_to_all_stores_v2: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deployed_ingredients: number
           deployed_products: number
@@ -8165,7 +8156,7 @@ export type Database = {
         }[]
       }
       deploy_recipe_templates_to_all_stores_v3: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deployed_ingredients: number
           deployed_products: number
@@ -8190,14 +8181,8 @@ export type Database = {
           recipe_name: string
         }[]
       }
-      disable_sync_triggers: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      enable_sync_triggers: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      disable_sync_triggers: { Args: never; Returns: undefined }
+      enable_sync_triggers: { Args: never; Returns: undefined }
       expand_combo_products: {
         Args: { p_transaction_items: Json }
         Returns: Json
@@ -8250,7 +8235,7 @@ export type Database = {
         Returns: number
       }
       fix_all_incomplete_recipes: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           execution_details: Json
           ingredients_added: number
@@ -8276,7 +8261,7 @@ export type Database = {
         }[]
       }
       fix_recipe_ingredients_with_proper_units: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           execution_details: Json
           ingredients_added: number
@@ -8287,28 +8272,16 @@ export type Database = {
         Args: { promo_name: string; promo_ref: string }
         Returns: string
       }
-      generate_fulfillment_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_purchase_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_fulfillment_number: { Args: never; Returns: string }
+      generate_purchase_order_number: { Args: never; Returns: string }
       generate_recipe_sku: {
         Args: { recipe_name: string; recipe_type?: string }
         Returns: string
       }
-      generate_sequential_journal_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_stock_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_sequential_journal_number: { Args: never; Returns: string }
+      generate_stock_order_number: { Args: never; Returns: string }
       generate_store_inventory_from_recipes: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           execution_details: Json
           items_created: number
@@ -8320,7 +8293,7 @@ export type Database = {
         Returns: number
       }
       get_all_users: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           contact_number: string
           created_at: string
@@ -8335,12 +8308,9 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_authenticated_user_with_fallback: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_authenticated_user_with_fallback: { Args: never; Returns: string }
       get_category_statistics: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           category_name: string
           percentage: number
@@ -8360,13 +8330,28 @@ export type Database = {
           unit_cost: number
         }[]
       }
-      get_current_user_info: {
-        Args: Record<PropertyKey, never> | { user_email: string }
-        Returns: {
-          user_role: Database["public"]["Enums"]["app_role"]
-          user_store_ids: string[]
-        }[]
-      }
+      get_current_user_info:
+        | {
+            Args: never
+            Returns: {
+              user_role: Database["public"]["Enums"]["app_role"]
+              user_store_ids: string[]
+            }[]
+          }
+        | {
+            Args: { user_email: string }
+            Returns: {
+              contact_number: string
+              email: string
+              first_name: string
+              id: string
+              is_active: boolean
+              last_name: string
+              role: string
+              store_ids: string[]
+              user_id: string
+            }[]
+          }
       get_inventory_items_by_category: {
         Args: { store_id_param: string }
         Returns: {
@@ -8379,7 +8364,7 @@ export type Database = {
         }[]
       }
       get_location_suppliers: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           supplier_id: number
           supplier_name: string
@@ -8406,7 +8391,7 @@ export type Database = {
         Returns: string
       }
       get_recipe_repair_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           orphaned_products: number
           products_missing_recipes: number
@@ -8425,7 +8410,7 @@ export type Database = {
         }[]
       }
       get_sm_cron_jobs: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active: boolean
           command: string
@@ -8455,7 +8440,7 @@ export type Database = {
         }[]
       }
       get_system_health: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           metric: string
           status: string
@@ -8467,7 +8452,7 @@ export type Database = {
         Returns: string[]
       }
       get_users_needing_sync: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           email: string
           id: string
@@ -8499,37 +8484,19 @@ export type Database = {
         }
         Returns: undefined
       }
-      is_admin_email: {
-        Args: { email_address: string }
-        Returns: boolean
-      }
-      is_admin_or_owner: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_admin_or_owner_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_current_user_admin_or_owner: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_store_accessible: {
-        Args: { p_store_id: string }
-        Returns: boolean
-      }
-      is_user_admin_or_owner: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_admin_email: { Args: { email_address: string }; Returns: boolean }
+      is_admin_or_owner: { Args: never; Returns: boolean }
+      is_admin_or_owner_user: { Args: never; Returns: boolean }
+      is_current_user_admin_or_owner: { Args: never; Returns: boolean }
+      is_store_accessible: { Args: { p_store_id: string }; Returns: boolean }
+      is_user_admin_or_owner: { Args: never; Returns: boolean }
       is_user_rate_limited: {
         Args: { p_identifier: string; p_identifier_type?: string }
         Returns: boolean
       }
-      log_bir_audit: {
-        Args:
-          | {
+      log_bir_audit:
+        | {
+            Args: {
               p_cashier_name?: string
               p_event_data: Json
               p_event_name: string
@@ -8540,7 +8507,10 @@ export type Database = {
               p_transaction_id?: string
               p_user_id?: string
             }
-          | {
+            Returns: string
+          }
+        | {
+            Args: {
               p_cashier_name?: string
               p_event_data: Json
               p_event_name: string
@@ -8551,8 +8521,8 @@ export type Database = {
               p_transaction_id?: string
               p_user_id?: string
             }
-        Returns: string
-      }
+            Returns: string
+          }
       log_inventory_deduction_audit: {
         Args: {
           p_ingredient_name: string
@@ -8632,7 +8602,7 @@ export type Database = {
         Returns: string
       }
       migrate_product_catalog_to_products: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           details: string[]
           error_count: number
@@ -8641,7 +8611,7 @@ export type Database = {
         }[]
       }
       migrate_recipes_to_product_catalog: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           details: string[]
           error_count: number
@@ -8649,7 +8619,7 @@ export type Database = {
         }[]
       }
       monitor_inventory_system_health: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           health_score: number
           mapped_ingredients: number
@@ -8662,22 +8632,10 @@ export type Database = {
           unmapped_ingredients: number
         }[]
       }
-      normalize_unit_name: {
-        Args: { unit_text: string }
-        Returns: string
-      }
-      populate_mix_match_deductions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      rebuild_performance_indexes: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      recalculate_senior_discounts: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      normalize_unit_name: { Args: { unit_text: string }; Returns: string }
+      populate_mix_match_deductions: { Args: never; Returns: undefined }
+      rebuild_performance_indexes: { Args: never; Returns: string }
+      recalculate_senior_discounts: { Args: never; Returns: undefined }
       record_failed_login_attempt: {
         Args: {
           p_block_minutes?: number
@@ -8688,19 +8646,16 @@ export type Database = {
         }
         Returns: boolean
       }
-      refresh_product_availability: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      refresh_product_availability: { Args: never; Returns: undefined }
       repair_missing_product_catalog_entries: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           errors: string[]
           repaired_count: number
         }[]
       }
       repair_recipe_template_links: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           action_type: string
           error_message: string
@@ -8722,16 +8677,10 @@ export type Database = {
           resolved_count: number
         }[]
       }
-      rollback_transaction: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      run_inventory_system_health_check: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      rollback_transaction: { Args: never; Returns: string }
+      run_inventory_system_health_check: { Args: never; Returns: Json }
       safe_clear_recipe_data: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           catalog_references_cleared: number
           recipes_deactivated: number
@@ -8754,14 +8703,8 @@ export type Database = {
           updated_data: Json
         }[]
       }
-      simple_duplicate_cleanup: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      simple_template_fix: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      simple_duplicate_cleanup: { Args: never; Returns: string }
+      simple_template_fix: { Args: never; Returns: string }
       sync_auth_user_to_app_users: {
         Args: {
           contact_number?: string
@@ -8774,7 +8717,7 @@ export type Database = {
         Returns: string
       }
       sync_inventory_across_stores: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           added_items: string[]
           items_added: number
@@ -8782,7 +8725,7 @@ export type Database = {
         }[]
       }
       sync_missing_app_users: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           error_details: string
           synced_count: number
@@ -8798,7 +8741,7 @@ export type Database = {
         }[]
       }
       sync_template_images_to_products: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           details: string[]
           error_count: number
@@ -8816,10 +8759,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      transfer_inventory_stock: {
-        Args:
-          | Record<PropertyKey, never>
-          | {
+      transfer_inventory_stock:
+        | {
+            Args: {
               p_item: string
               p_notes?: string
               p_quantity: number
@@ -8828,16 +8770,11 @@ export type Database = {
               p_unit: string
               p_user_id?: string
             }
-        Returns: boolean
-      }
-      trigger_auto_close_shifts: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      try_cast_jsonb: {
-        Args: { txt: string }
-        Returns: Json
-      }
+            Returns: boolean
+          }
+        | { Args: never; Returns: undefined }
+      trigger_auto_close_shifts: { Args: never; Returns: Json }
+      try_cast_jsonb: { Args: { txt: string }; Returns: Json }
       update_cumulative_sales: {
         Args: {
           p_receipt_number?: string
@@ -8852,7 +8789,7 @@ export type Database = {
         Returns: boolean
       }
       validate_clean_slate_migration: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           check_name: string
           count_items: number
@@ -8861,7 +8798,7 @@ export type Database = {
         }[]
       }
       validate_complete_inventory_system: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           can_process_transactions: boolean
           conversion_mappings: number
@@ -8888,7 +8825,7 @@ export type Database = {
         Returns: boolean
       }
       validate_product_catalog_consistency: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           count_affected: number
           description: string
@@ -8916,7 +8853,7 @@ export type Database = {
         }[]
       }
       validate_recipe_integrity: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           check_name: string
           details: string
@@ -8925,7 +8862,7 @@ export type Database = {
         }[]
       }
       validate_recipe_inventory_consistency: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           has_inventory_mapping: boolean
           ingredient_name: string
