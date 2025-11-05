@@ -38,7 +38,13 @@ export class CroffleComboPromoService {
    * Analyzes cart items and calculates croffle + coffee combo discounts
    */
   static analyzeCombo(items: CartItem[]): CroffleComboResult {
+    console.log('☕🥐 CROFFLE COMBO: Analyzing cart for croffle+coffee combo', {
+      itemsCount: items.length,
+      items: items.map(i => ({ name: i.product?.name, price: i.price, qty: i.quantity }))
+    });
+
     if (!this.COMBO_ENABLED || items.length === 0) {
+      console.log('☕🥐 CROFFLE COMBO: Promo disabled or empty cart');
       return {
         hasEligiblePairs: false,
         discountAmount: 0,
@@ -77,8 +83,16 @@ export class CroffleComboPromoService {
       }
     });
 
+    console.log('☕🥐 CROFFLE COMBO: Found eligible items', {
+      crofflesCount: eligibleCroffles.length,
+      coffeesCount: eligibleCoffees.length,
+      croffles: eligibleCroffles.map(c => ({ name: c.product?.name, price: c.price })),
+      coffees: eligibleCoffees.map(c => ({ name: c.product?.name, price: c.price }))
+    });
+
     // No eligible pairs possible
     if (eligibleCroffles.length === 0 || eligibleCoffees.length === 0) {
+      console.log('☕🥐 CROFFLE COMBO: No eligible pairs found');
       return {
         hasEligiblePairs: false,
         discountAmount: 0,
@@ -131,12 +145,15 @@ export class CroffleComboPromoService {
       return `Free ${name} (${qty}x) = -₱${discount.toFixed(2)}`;
     });
 
-    return {
+    const result = {
       hasEligiblePairs: pairedItems.length > 0,
       discountAmount: totalDiscount,
       pairedItems,
       breakdown
     };
+
+    console.log('☕🥐 CROFFLE COMBO: Analysis complete', result);
+    return result;
   }
 
   /**
