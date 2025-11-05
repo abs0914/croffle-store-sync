@@ -10,6 +10,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
 import { useMemoizedBOGO } from '@/hooks/pos/useMemoizedBOGO';
+import { useMemoizedCroffleCombo } from '@/hooks/pos/useMemoizedCroffleCombo';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 import { quickCheckoutValidation } from '@/services/pos/lightweightValidationService';
 import { CartHeader, CartValidationMessage, OptimizedCartItemsList, CartSummary, CartActions } from './cart';
@@ -176,10 +177,14 @@ const CartView = memo(function CartView({
 
   // Check for BOGO eligibility (memoized to prevent excessive calculations)
   const bogoResult = useMemoizedBOGO(cartItems);
+  
+  // Check for Croffle + Coffee combo eligibility
+  const comboResult = useMemoizedCroffleCombo(cartItems);
+  
   return <div className="flex flex-col h-full min-h-0 space-y-3 overflow-y-auto pr-1">
       <CartHeader itemCount={cartItems?.length || 0} onClearCart={clearCart} />
       
-      {/* BOGO Eligibility Indicator */}
+      {/* Promotion Indicators */}
       {bogoResult.hasEligibleItems && <div className="flex-shrink-0 p-2 bg-croffle-accent/10 border border-croffle-accent/20 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -188,6 +193,19 @@ const CartView = memo(function CartView({
             </div>
             <span className="text-xs text-muted-foreground">
               Save ₱{bogoResult.discountAmount.toFixed(2)}
+            </span>
+          </div>
+        </div>}
+      
+      {/* Croffle + Coffee Combo Indicator */}
+      {comboResult.hasEligiblePairs && <div className="flex-shrink-0 p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-green-600 dark:text-green-400">☕ Free Coffee Promotion</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Save ₱{comboResult.discountAmount.toFixed(2)}
             </span>
           </div>
         </div>}

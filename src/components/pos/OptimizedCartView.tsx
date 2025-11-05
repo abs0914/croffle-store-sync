@@ -88,7 +88,7 @@ const OptimizedCartView = memo(function OptimizedCartView({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">Free Coffee</span>
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">☕ Free Coffee Promotion</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     Save ₱{comboResult.discountAmount.toFixed(2)}
