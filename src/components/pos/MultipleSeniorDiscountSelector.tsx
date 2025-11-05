@@ -120,6 +120,15 @@ export default function MultipleSeniorDiscountSelector({
         const preview = CartCalculationService.calculateSeniorDiscountPreview(subtotal, validSeniorDiscounts.length, totalDiners);
         finalSeniorDiscounts = CartCalculationService.distributeSeniorDiscounts(preview.totalSeniorDiscount, validSeniorDiscounts);
       }
+    } else if (discountMode === 'croffle-combo') {
+      // Apply croffle combo as a promo discount
+      if (comboResult.hasEligiblePairs) {
+        finalOtherDiscount = {
+          type: 'promo',
+          amount: comboResult.discountAmount,
+          justification: 'Buy 1 Croffle, Get 1 Free Coffee Promotion'
+        };
+      }
     } else if (discountMode === 'other') {
       const justificationText = otherDiscountType === 'complimentary' ? `${complimentaryReason} | Approved by: ${approverName}` : undefined;
       finalOtherDiscount = {
