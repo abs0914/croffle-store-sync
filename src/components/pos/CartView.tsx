@@ -212,7 +212,7 @@ const CartView = memo(function CartView({
           </div>
 
           {/* Order Summary */}
-          <CartSummary calculations={calculations} seniorDiscounts={seniorDiscounts} otherDiscount={otherDiscount} />
+          <CartSummary calculations={calculations} seniorDiscounts={seniorDiscounts} otherDiscount={otherDiscount} cartItems={cartItems} />
 
           {/* Multiple Discount Selector */}
           <MultipleSeniorDiscountSelector subtotal={calculations.grossSubtotal} onApplyDiscounts={handleApplyMultipleDiscounts} currentSeniorDiscounts={seniorDiscounts} currentOtherDiscount={otherDiscount} currentTotalDiners={calculations.totalDiners} cartItems={cartItems} />

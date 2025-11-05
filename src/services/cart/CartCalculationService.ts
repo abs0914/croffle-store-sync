@@ -1,5 +1,6 @@
 import { CartItem } from "@/types";
 import { BOGOService } from "./BOGOService";
+import { CroffleComboPromoService } from "./CroffleComboPromoService";
 
 export interface SeniorDiscount {
   id: string;
@@ -9,7 +10,7 @@ export interface SeniorDiscount {
 }
 
 export interface OtherDiscount {
-  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo';
+  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo' | 'croffle_combo';
   amount: number;
   idNumber?: string;
   justification?: string;
@@ -125,6 +126,14 @@ export class CartCalculationService {
       netAmount = seniorPortionVATExempt + nonSeniorPortionNet;
     }
     
+    // BOGO automatic calculation
+    const bogoResult = BOGOService.analyzeBOGO(items);
+    const bogoDiscountAmount = bogoResult.discountAmount;
+    
+    // Croffle Combo automatic calculation
+    const comboResult = CroffleComboPromoService.analyzeCombo(items);
+    const comboDiscountAmount = comboResult.discountAmount;
+    
     // Other discount calculations
     let otherDiscountAmount = 0;
     
@@ -160,8 +169,14 @@ export class CartCalculationService {
         case 'bogo':
           otherDiscountAmount = otherDiscount.amount;
           break;
+        case 'croffle_combo':
+          otherDiscountAmount = otherDiscount.amount;
+          break;
       }
     }
+    
+    // Add automatic promotions to other discount amount
+    otherDiscountAmount += bogoDiscountAmount + comboDiscountAmount;
     
     // Final calculations
     const standardVAT = grossSubtotal * this.VAT_RATE / (1 + this.VAT_RATE);

@@ -1,14 +1,22 @@
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
 import { CartCalculations, SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
+import { CartItem } from '@/types';
+import { BOGOService } from '@/services/cart/BOGOService';
+import { CroffleComboPromoService } from '@/services/cart/CroffleComboPromoService';
 
 interface CartSummaryProps {
   calculations: CartCalculations;
   seniorDiscounts: SeniorDiscount[];
   otherDiscount: OtherDiscount | null;
+  cartItems?: CartItem[];
 }
 
-export function CartSummary({ calculations, seniorDiscounts, otherDiscount }: CartSummaryProps) {
+export function CartSummary({ calculations, seniorDiscounts, otherDiscount, cartItems = [] }: CartSummaryProps) {
+  // Calculate BOGO and Combo details for display
+  const bogoResult = BOGOService.analyzeBOGO(cartItems);
+  const comboResult = CroffleComboPromoService.analyzeCombo(cartItems);
+  
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
@@ -40,14 +48,40 @@ export function CartSummary({ calculations, seniorDiscounts, otherDiscount }: Ca
         </div>
       )}
       
+      {/* BOGO Promotion Breakdown */}
+      {bogoResult.hasEligibleItems && (
+        <div className="space-y-1 bg-croffle-accent/5 p-2 rounded">
+          <div className="text-xs font-medium text-croffle-accent">BOGO Croffle Promotion</div>
+          {bogoResult.breakdown.map((line, index) => (
+            <div key={index} className="flex justify-between text-sm text-croffle-accent">
+              <span className="text-xs">{line.split('=')[0].trim()}</span>
+              <span className="text-xs font-medium">{line.split('=')[1]?.trim()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Croffle + Coffee Combo Breakdown */}
+      {comboResult.hasEligiblePairs && (
+        <div className="space-y-1 bg-green-500/5 p-2 rounded">
+          <div className="text-xs font-medium text-green-600 dark:text-green-400">Free Coffee Promotion</div>
+          {comboResult.breakdown.map((line, index) => (
+            <div key={index} className="flex justify-between text-sm text-green-600 dark:text-green-400">
+              <span className="text-xs">{line.split('=')[0].trim()}</span>
+              <span className="text-xs font-medium">{line.split('=')[1]?.trim()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      
       {/* Other Discount Display */}
-      {calculations.otherDiscountAmount > 0 && (
+      {otherDiscount && otherDiscount.type !== 'bogo' && otherDiscount.type !== 'croffle_combo' && otherDiscount.amount > 0 && (
         <div className="flex justify-between text-sm text-green-600">
         <span>
           Discount Applied
           {otherDiscount?.idNumber && ` - ${otherDiscount.idNumber}`}
         </span>
-          <span>-₱{calculations.otherDiscountAmount.toFixed(2)}</span>
+          <span>-₱{otherDiscount.amount.toFixed(2)}</span>
         </div>
       )}
       

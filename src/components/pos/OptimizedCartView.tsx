@@ -7,6 +7,7 @@ import DiscountSelector from "./DiscountSelector";
 import { CartItemsList, CartSummary } from "./cart";
 import { useCart } from "@/contexts/cart/CartContext";
 import { useMemoizedBOGO } from "@/hooks/pos/useMemoizedBOGO";
+import { useMemoizedCroffleCombo } from "@/hooks/pos/useMemoizedCroffleCombo";
 
 interface OptimizedCartViewProps {
   selectedCustomer: Customer | null;
@@ -45,6 +46,9 @@ const OptimizedCartView = memo(function OptimizedCartView({
   
   // Check for BOGO eligibility (memoized to prevent excessive calculations)
   const bogoResult = useMemoizedBOGO(items);
+  
+  // Check for Croffle + Coffee combo eligibility
+  const comboResult = useMemoizedCroffleCombo(items);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
@@ -63,20 +67,37 @@ const OptimizedCartView = memo(function OptimizedCartView({
           </Button>
         </div>
         
-        {/* BOGO Eligibility Indicator - DISABLED */}
-        {/* {bogoResult.hasEligibleItems && (
-          <div className="p-2 bg-croffle-accent/10 border border-croffle-accent/20 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-croffle-accent rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-croffle-accent">BOGO Available</span>
+        {/* Promotion Indicators */}
+        {(bogoResult.hasEligibleItems || comboResult.hasEligiblePairs) && (
+          <div className="space-y-2">
+            {bogoResult.hasEligibleItems && (
+              <div className="p-2 bg-croffle-accent/10 border border-croffle-accent/20 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-croffle-accent rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-croffle-accent">BOGO Croffle</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Save ₱{bogoResult.discountAmount.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <span className="text-xs text-muted-foreground">
-                Save ₱{bogoResult.discountAmount.toFixed(2)}
-              </span>
-            </div>
+            )}
+            {comboResult.hasEligiblePairs && (
+              <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">Free Coffee</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Save ₱{comboResult.discountAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-        )} */}
+        )}
         
         {/* Customer Selection */}
         <CustomerLookup 
