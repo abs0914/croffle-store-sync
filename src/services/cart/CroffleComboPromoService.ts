@@ -53,11 +53,12 @@ export class CroffleComboPromoService {
 
     items.forEach(item => {
       const itemName = item.product?.name?.toLowerCase() || '';
-      const category = item.product?.category;
-      const itemCategory = (typeof category === 'string' ? category : category?.name || '').toLowerCase();
 
       // Check if it's an eligible croffle (₱125+)
-      if (itemCategory.includes('croffle') && item.price >= this.ELIGIBLE_CROFFLE_MIN_PRICE) {
+      // Check both product name and category for "croffle"
+      const isCroffle = itemName.includes('croffle');
+      
+      if (isCroffle && item.price >= this.ELIGIBLE_CROFFLE_MIN_PRICE) {
         // Add each quantity as separate item for pairing
         for (let i = 0; i < item.quantity; i++) {
           eligibleCroffles.push(item);
