@@ -12,6 +12,8 @@ import { CartCalculationService, SeniorDiscount, OtherDiscount } from "@/service
 import { BOGOService } from "@/services/cart/BOGOService";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useMemoizedCroffleCombo } from "@/hooks/pos/useMemoizedCroffleCombo";
+import { Coffee } from "lucide-react";
 interface MultipleSeniorDiscountSelectorProps {
   subtotal: number;
   onApplyDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: OtherDiscount | null, totalDiners?: number) => void;
@@ -29,7 +31,10 @@ export default function MultipleSeniorDiscountSelector({
   cartItems = []
 }: MultipleSeniorDiscountSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [discountMode, setDiscountMode] = useState<'senior' | 'other'>('senior');
+  const [discountMode, setDiscountMode] = useState<'senior' | 'other' | 'croffle-combo'>('senior');
+  
+  // Check for croffle combo eligibility
+  const comboResult = useMemoizedCroffleCombo(cartItems);
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
   const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary'>('pwd');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
@@ -165,6 +170,12 @@ export default function MultipleSeniorDiscountSelector({
                 <RadioGroupItem value="other" id="other-mode" />
                 <Label htmlFor="other-mode">Single Discount (PWD/Employee/Loyalty/Promo)</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="croffle-combo" id="croffle-combo-mode" disabled={!comboResult.hasEligiblePairs} />
+                <Label htmlFor="croffle-combo-mode" className={!comboResult.hasEligiblePairs ? "text-muted-foreground" : ""}>
+                  ☕ Buy 1 Croffle, Get 1 Free Coffee {!comboResult.hasEligiblePairs && "(Not eligible)"}
+                </Label>
+              </div>
             </RadioGroup>
 
             {discountMode === 'senior' && <div className="space-y-4">
@@ -260,6 +271,42 @@ export default function MultipleSeniorDiscountSelector({
                     </div>
                   </div>}
               </div>}
+
+            {discountMode === 'croffle-combo' && <div className="space-y-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Coffee className="h-5 w-5 text-green-600" />
+                    <h4 className="font-medium text-green-700">Free Coffee Promotion</h4>
+                  </div>
+                  
+                  {comboResult.hasEligiblePairs ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-green-700">
+                        🎉 You qualify for {comboResult.pairedItems.length} free coffee{comboResult.pairedItems.length > 1 ? 's' : ''}!
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-green-600">Promotion Details:</p>
+                        <ul className="text-xs space-y-1 text-muted-foreground">
+                          {comboResult.breakdown.map((item, idx) => (
+                            <li key={idx}>• {item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div className="pt-3 border-t border-green-200">
+                        <p className="text-sm font-medium text-green-700">
+                          Total Savings: {formatCurrency(comboResult.discountAmount)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      <p>Add 1 Regular Croffle (₱125+) and 1 eligible coffee (Americano, Cappuccino, or Café Latte) to qualify.</p>
+                    </div>
+                  )}
+                </div>
+              </div>}
             
             {/* Manual BOGO Button - DISABLED */}
             {/* {BOGOService.hasEligibleItems(cartItems) && <div className="p-3 bg-croffle-background rounded-lg border">
@@ -270,6 +317,12 @@ export default function MultipleSeniorDiscountSelector({
               <p className="text-sm">
                 Subtotal (with VAT): <span className="font-medium">{formatCurrency(subtotal)}</span>
               </p>
+              {discountMode === 'croffle-combo' && comboResult.hasEligiblePairs && (
+                <p className="text-sm">
+                  Croffle Combo Discount: 
+                  <span className="font-medium text-green-600"> -{formatCurrency(comboResult.discountAmount)}</span>
+                </p>
+              )}
               {discountMode === 'senior' && preview.totalSeniorDiscount > 0 && <>
                   <div className="mt-2 space-y-1 text-xs">
                     <p className="font-medium">BIR-Compliant Calculation:</p>
@@ -306,11 +359,17 @@ export default function MultipleSeniorDiscountSelector({
                 }, 1).otherDiscountAmount)}</span>
                 </p>}
               <p className="text-sm font-medium mt-2 pt-2 border-t">
-                Final Total: {formatCurrency(discountMode === 'senior' ? subtotal - ((preview as any).totalVATExemption || 0) - preview.totalSeniorDiscount : subtotal - CartCalculationService.calculateCartTotals([], [], {
-                type: otherDiscountType,
-                amount: 0,
-                idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
-              }, 1).otherDiscountAmount)}
+                Final Total: {formatCurrency(
+                  discountMode === 'senior' 
+                    ? subtotal - ((preview as any).totalVATExemption || 0) - preview.totalSeniorDiscount 
+                    : discountMode === 'croffle-combo'
+                    ? subtotal - comboResult.discountAmount
+                    : subtotal - CartCalculationService.calculateCartTotals([], [], {
+                        type: otherDiscountType,
+                        amount: 0,
+                        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
+                      }, 1).otherDiscountAmount
+                )}
               </p>
             </div>
           </div>
