@@ -135,6 +135,17 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     }).format(amount);
   };
 
+  // Format TIN for BIR compliance
+  const formatTIN = (tin?: string): string => {
+    if (!tin) return 'N/A';
+    // Format as xxx-xxx-xxx-xxx
+    const cleaned = tin.replace(/\D/g, '');
+    if (cleaned.length === 12) {
+      return `${cleaned.slice(0,3)}-${cleaned.slice(3,6)}-${cleaned.slice(6,9)}-${cleaned.slice(9)}`;
+    }
+    return tin;
+  };
+
   // Generate QR code content with error handling
   const qrContent = React.useMemo(() => {
     try {
@@ -158,7 +169,26 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           <h2 className="text-xl font-bold">{currentStore?.business_name || currentStore?.name || 'Store Name'}</h2>
           <p className="text-xs">{currentStore?.address || 'Store Address'}</p>
           {currentStore?.phone && <p className="text-xs">Tel: {currentStore.phone}</p>}
-          {currentStore?.tin && <p className="text-xs">TIN: {currentStore.tin}</p>}
+          
+          {/* BIR: VAT Registration Status */}
+          {currentStore?.is_vat_registered ? (
+            <p className="text-xs font-medium">VAT REG. TIN: {formatTIN(currentStore.tin)}</p>
+          ) : (
+            <p className="text-xs font-medium">NON-VAT REG. TIN: {formatTIN(currentStore.tin)}</p>
+          )}
+          
+          {/* BIR: Taxpayer Name (if different from business name) */}
+          {currentStore?.owner_name && currentStore.owner_name !== currentStore.business_name && (
+            <p className="text-xs">Taxpayer: {currentStore.owner_name}</p>
+          )}
+          
+          {/* BIR: Permit Number and Validity */}
+          {currentStore?.permit_number && (
+            <p className="text-xs">Permit No: {currentStore.permit_number}</p>
+          )}
+          {currentStore?.valid_until && (
+            <p className="text-xs">Valid Until: {format(new Date(currentStore.valid_until), 'MM/dd/yyyy')}</p>
+          )}
           
           <div className="mt-2">
             <h3 className="font-bold">SALES RECEIPT</h3>
@@ -180,6 +210,19 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
               </div>
             )}
           </div>
+          
+          {/* BIR: POS/CAS Supplier Information */}
+          {currentStore?.supplier_name && (
+            <div className="text-xs mt-2 p-2 bg-muted rounded border">
+              <p className="font-medium">POS Provider:</p>
+              <p>{currentStore.supplier_name}</p>
+              {currentStore.supplier_address && <p>{currentStore.supplier_address}</p>}
+              {currentStore.supplier_tin && <p>TIN: {formatTIN(currentStore.supplier_tin)}</p>}
+              {currentStore.accreditation_date && (
+                <p>Accredited: {format(new Date(currentStore.accreditation_date), 'MM/dd/yyyy')}</p>
+              )}
+            </div>
+          )}
         </div>
         
         <Separator className="my-2" />
@@ -367,8 +410,19 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
             <p className="text-xs">Seq: {transaction.sequence_number}</p>
           )}
           <div className="mt-2 border-t pt-2">
-            <p className="text-xs font-bold">THIS SERVES AS AN OFFICIAL RECEIPT</p>
-            <p className="text-xs">Thank you for your purchase!</p>
+            {/* BIR: Accreditation Status */}
+            {!currentStore?.is_bir_accredited ? (
+              <p className="text-xs font-bold text-red-600">THIS IS NOT AN OFFICIAL RECEIPT</p>
+            ) : (
+              <p className="text-xs font-bold">THIS SERVES AS AN OFFICIAL RECEIPT</p>
+            )}
+            
+            {/* BIR: NON-VAT Disclaimer */}
+            {!currentStore?.is_vat_registered && currentStore?.non_vat_disclaimer && (
+              <p className="text-xs mt-2 pt-2 border-t">{currentStore.non_vat_disclaimer}</p>
+            )}
+            
+            <p className="text-xs mt-2">Thank you for your purchase!</p>
             {currentStore?.pos_version && (
               <p className="text-xs">POS Ver: {currentStore.pos_version}</p>
             )}

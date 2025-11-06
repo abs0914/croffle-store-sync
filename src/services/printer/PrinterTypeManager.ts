@@ -5,6 +5,16 @@ import { Transaction, Customer } from '@/types';
 import { Store } from '@/types/store';
 
 export class PrinterTypeManager {
+  // Format TIN for BIR compliance
+  private static formatTIN(tin?: string): string {
+    if (!tin) return 'N/A';
+    const cleaned = tin.replace(/\D/g, '');
+    if (cleaned.length === 12) {
+      return `${cleaned.slice(0,3)}-${cleaned.slice(3,6)}-${cleaned.slice(6,9)}-${cleaned.slice(9)}`;
+    }
+    return tin;
+  }
+
   // Detect printer type based on device characteristics
   static detectPrinterType(printer: BluetoothPrinter): PrinterType {
     const name = printer.name.toLowerCase();
@@ -118,14 +128,52 @@ export class PrinterTypeManager {
     // Header
     if (store) {
       receipt += formatter.center();
-      receipt += formatter.bold(store.name || 'Store') + '\n';
+      receipt += formatter.bold(store.business_name || store.name || 'Store') + '\n';
       if (store.address) {
         receipt += store.address + '\n';
       }
       if (store.phone) {
         receipt += store.phone + '\n';
       }
+      
+      // BIR: VAT Registration Status
+      if (store.is_vat_registered) {
+        receipt += `VAT REG. TIN: ${this.formatTIN(store.tin)}\n`;
+      } else if (store.tin) {
+        receipt += `NON-VAT REG. TIN: ${this.formatTIN(store.tin)}\n`;
+      }
+      
+      // BIR: Taxpayer Name (if different)
+      if (store.owner_name && store.owner_name !== store.business_name) {
+        receipt += `Taxpayer: ${store.owner_name}\n`;
+      }
+      
+      // BIR: Permit Number and Validity
+      if (store.permit_number) {
+        receipt += `Permit No: ${store.permit_number}\n`;
+      }
+      if (store.valid_until) {
+        receipt += `Valid Until: ${new Date(store.valid_until).toLocaleDateString()}\n`;
+      }
+      
       receipt += formatter.horizontalLine(width);
+      
+      // BIR: Supplier Information
+      if (store.supplier_name) {
+        receipt += `POS Provider:\n`;
+        receipt += `${store.supplier_name}\n`;
+        if (store.supplier_address) {
+          receipt += `${store.supplier_address}\n`;
+        }
+        if (store.supplier_tin) {
+          receipt += `TIN: ${this.formatTIN(store.supplier_tin)}\n`;
+        }
+        if (store.accreditation_date) {
+          receipt += `Accredited: ${new Date(store.accreditation_date).toLocaleDateString()}\n`;
+        }
+        receipt += formatter.horizontalLine(width);
+      }
+      
       receipt += formatter.left();
     }
     
@@ -184,7 +232,20 @@ export class PrinterTypeManager {
     // Footer
     receipt += formatter.horizontalLine(width);
     receipt += formatter.center();
-    receipt += 'Thank you for your business!\n';
+    
+    // BIR: Compliance Footer
+    if (store?.is_bir_accredited) {
+      receipt += formatter.bold('THIS SERVES AS AN\nOFFICIAL RECEIPT\n');
+    } else {
+      receipt += formatter.bold('THIS IS NOT AN\nOFFICIAL RECEIPT\n');
+    }
+    
+    // BIR: NON-VAT Disclaimer
+    if (!store?.is_vat_registered && store?.non_vat_disclaimer) {
+      receipt += '\n' + store.non_vat_disclaimer + '\n';
+    }
+    
+    receipt += '\nThank you for your business!\n';
     receipt += formatter.left();
     receipt += formatter.lineFeed(3);
     receipt += formatter.cut();
@@ -205,9 +266,45 @@ export class PrinterTypeManager {
     
     // Header
     if (store) {
-      receipt += formatter.formatHeader(store.name || 'Store', store.address || '', width);
+      receipt += formatter.formatHeader(store.business_name || store.name || 'Store', store.address || '', width);
       if (store.phone) {
         receipt += formatter.formatLine('Phone:', store.phone, width);
+      }
+      
+      // BIR: VAT Registration Status
+      if (store.is_vat_registered) {
+        receipt += formatter.formatLine('VAT REG. TIN:', this.formatTIN(store.tin), width);
+      } else if (store.tin) {
+        receipt += formatter.formatLine('NON-VAT REG. TIN:', this.formatTIN(store.tin), width);
+      }
+      
+      // BIR: Taxpayer Name (if different)
+      if (store.owner_name && store.owner_name !== store.business_name) {
+        receipt += formatter.formatLine('Taxpayer:', store.owner_name, width);
+      }
+      
+      // BIR: Permit Number and Validity
+      if (store.permit_number) {
+        receipt += formatter.formatLine('Permit No:', store.permit_number, width);
+      }
+      if (store.valid_until) {
+        receipt += formatter.formatLine('Valid Until:', new Date(store.valid_until).toLocaleDateString(), width);
+      }
+      
+      receipt += formatter.horizontalLine(width);
+      
+      // BIR: Supplier Information
+      if (store.supplier_name) {
+        receipt += formatter.formatLine('POS Provider:', store.supplier_name, width);
+        if (store.supplier_address) {
+          receipt += formatter.formatLine('', store.supplier_address, width);
+        }
+        if (store.supplier_tin) {
+          receipt += formatter.formatLine('TIN:', this.formatTIN(store.supplier_tin), width);
+        }
+        if (store.accreditation_date) {
+          receipt += formatter.formatLine('Accredited:', new Date(store.accreditation_date).toLocaleDateString(), width);
+        }
         receipt += formatter.horizontalLine(width);
       }
     }
@@ -257,7 +354,26 @@ export class PrinterTypeManager {
       width
     );
     
-    // Footer
+    // Footer with BIR Compliance
+    receipt += formatter.horizontalLine(width);
+    
+    // BIR: Compliance Footer
+    if (store?.is_bir_accredited) {
+      receipt += formatter.center();
+      receipt += formatter.bold('THIS SERVES AS AN OFFICIAL RECEIPT') + '\n';
+      receipt += formatter.left();
+    } else {
+      receipt += formatter.center();
+      receipt += formatter.bold('THIS IS NOT AN OFFICIAL RECEIPT') + '\n';
+      receipt += formatter.left();
+    }
+    
+    // BIR: NON-VAT Disclaimer
+    if (!store?.is_vat_registered && store?.non_vat_disclaimer) {
+      receipt += formatter.horizontalLine(width);
+      receipt += store.non_vat_disclaimer + '\n';
+    }
+    
     receipt += formatter.formatFooter(width);
     
     return receipt;
