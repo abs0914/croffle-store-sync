@@ -16,8 +16,8 @@ export interface BOGOResult {
 }
 
 export class BOGOService {
-  // BOGO promotion enabled - Buy 2 get 1 free on croffles
-  private static readonly BOGO_ENABLED = true;
+  // BOGO promotion disabled - Buy 2 get 1 free on croffles
+  private static readonly BOGO_ENABLED = false;
   private static readonly BOGO_RULES: BOGORule[] = [
     {
       targetPrice: 125.00,
@@ -43,6 +43,16 @@ export class BOGOService {
    * Analyzes cart items and calculates BOGO discounts
    */
   static analyzeBOGO(items: CartItem[]): BOGOResult {
+    // Early return if BOGO is disabled
+    if (!this.BOGO_ENABLED) {
+      return {
+        hasEligibleItems: false,
+        discountAmount: 0,
+        eligibleItems: [],
+        breakdown: []
+      };
+    }
+
     console.log("🎁 BOGO: Analyzing cart for BOGO promotions", {
       itemsCount: items.length,
       items: items.map(i => ({ name: i.product.name, price: i.price, qty: i.quantity }))
