@@ -200,6 +200,12 @@ async function processRegularProduct(
 
       const deductQuantity = ingredient.quantity * item.quantity;
       const currentStock = ingredient.inventory_stock.stock_quantity;
+      
+      // CRITICAL: Check stock availability BEFORE attempting deduction
+      if (currentStock < deductQuantity) {
+        throw new Error(`Insufficient stock for ${ingredient.inventory_stock.item}: need ${deductQuantity}, have ${currentStock}`);
+      }
+      
       const newStock = currentStock - deductQuantity;
 
       const { error: updateError } = await supabase
@@ -208,7 +214,7 @@ async function processRegularProduct(
         .eq('id', ingredient.inventory_stock_id);
 
       if (updateError) {
-        throw new Error(`Failed to deduct ${ingredient.inventory_stock.item}`);
+        throw new Error(`Failed to deduct ${ingredient.inventory_stock.item}: ${updateError.message}`);
       }
 
       console.log(`✅ Deducted ${deductQuantity} of ${ingredient.inventory_stock.item}`);
