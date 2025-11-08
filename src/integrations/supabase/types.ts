@@ -8815,6 +8815,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_product_catalog_price: {
+        Args: { p_new_price: number; p_product_id: string }
+        Returns: {
+          id: string
+          new_price: number
+          old_price: number
+          product_name: string
+        }[]
+      }
       user_has_store_access: {
         Args: { store_id: string; user_id: string }
         Returns: boolean
