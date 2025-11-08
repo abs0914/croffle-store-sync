@@ -25,7 +25,7 @@ export interface CroffleComboResult {
 
 export class CroffleComboPromoService {
   // Promotion enabled - Buy a croffle, get a free coffee
-  private static readonly COMBO_ENABLED = true;
+  private static readonly COMBO_ENABLED = false;
   private static readonly ELIGIBLE_CROFFLE_MIN_PRICE = 125.00;
   private static readonly ELIGIBLE_COFFEE_PATTERNS = [
     'americano',
