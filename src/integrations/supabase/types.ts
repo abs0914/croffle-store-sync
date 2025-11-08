@@ -1716,6 +1716,30 @@ export type Database = {
           },
         ]
       }
+      data_cleanup_log: {
+        Row: {
+          affected_records: number | null
+          cleanup_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+        }
+        Insert: {
+          affected_records?: number | null
+          cleanup_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+        }
+        Update: {
+          affected_records?: number | null
+          cleanup_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+        }
+        Relationships: []
+      }
       deleted_sugbo_purchase_orders_backup: {
         Row: {
           approved_at: string | null
