@@ -8021,6 +8021,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_auth_rate_limit_v2: {
+        Args: {
+          p_block_minutes?: number
+          p_identifier: string
+          p_identifier_type: string
+          p_max_attempts?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
       check_product_catalog_update_conflicts: {
         Args: { catalog_id: string; new_product_name?: string }
         Returns: {
