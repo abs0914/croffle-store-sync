@@ -175,13 +175,41 @@ export function useTransactionHandler(storeId: string) {
     otherDiscountParam?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string },
     vatExemption?: number
   ) => {
-    if (!currentStore || !currentShift) {
-      toast.error("No active store or shift found");
-      return false;
-    }
+    try {
+      console.log('🎯 [TRANSACTION START] Payment processing initiated', {
+        storeId: currentStore?.id,
+        storeName: currentStore?.name,
+        shiftId: currentShift?.id,
+        userId: userId,
+        itemCount: items.length,
+        total: total,
+        paymentMethod: paymentMethod,
+        timestamp: new Date().toISOString()
+      });
 
-    if (!userId) {
-      toast.error("Authentication required");
+      if (!currentStore || !currentShift) {
+        console.error('❌ [TRANSACTION BLOCKED] Missing store or shift', {
+          hasStore: !!currentStore,
+          hasShift: !!currentShift
+        });
+        toast.error("No active store or shift found");
+        return false;
+      }
+
+      if (!userId) {
+        console.error('❌ [TRANSACTION BLOCKED] Missing user ID');
+        toast.error("Authentication required");
+        return false;
+      }
+
+      if (items.length === 0) {
+        console.error('❌ [TRANSACTION BLOCKED] No items in cart');
+        toast.error("Cart is empty");
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ [TRANSACTION ERROR] Initial validation failed:', error);
+      toast.error('Transaction initialization failed');
       return false;
     }
     
@@ -289,7 +317,24 @@ export function useTransactionHandler(storeId: string) {
       operationId
     });
     
-    const result = await streamlinedTransactionService.processTransaction(streamlinedData, items);
+    let result;
+    try {
+      console.log('🚀 [CALLING SERVICE] About to call streamlinedTransactionService.processTransaction');
+      result = await streamlinedTransactionService.processTransaction(streamlinedData, items);
+      console.log('✅ [SERVICE RETURNED] streamlinedTransactionService.processTransaction completed', {
+        hasResult: !!result,
+        resultType: typeof result,
+        resultValue: result
+      });
+    } catch (serviceError) {
+      console.error('❌ [SERVICE ERROR] streamlinedTransactionService.processTransaction threw error:', {
+        error: serviceError,
+        message: serviceError instanceof Error ? serviceError.message : 'Unknown error',
+        stack: serviceError instanceof Error ? serviceError.stack : undefined
+      });
+      toast.error(serviceError instanceof Error ? serviceError.message : 'Transaction processing failed');
+      return false;
+    }
     
     console.log("🔍 HANDLER - CreateTransaction result:", {
       success: !!result,
@@ -350,13 +395,14 @@ export function useTransactionHandler(storeId: string) {
       const isLargeOrder = items.length > 5;
       const errorMsg = `Transaction creation failed${isLargeOrder ? ` (${items.length} items)` : ''}`;
       
-      console.error("❌ HANDLER - Transaction creation failed - detailed logging:", {
+      console.error("❌ [TRANSACTION FAILED] Service returned null - detailed diagnostic:", {
         operationId,
         itemCount: items.length,
         isLargeOrder,
         storeId: currentStore.id,
+        storeName: currentStore.name,
         shiftId: currentShift.id,
-        userId: currentShift.userId,
+        userId: userId,
         total: streamlinedData.total,
         subtotal,
         tax,
@@ -366,13 +412,25 @@ export function useTransactionHandler(storeId: string) {
         orderType,
         deliveryPlatform,
         timestamp: new Date().toISOString(),
-        transactionStructure: {
+        transactionData: {
           hasShiftId: !!streamlinedData.shiftId,
           hasStoreId: !!streamlinedData.storeId,
           hasUserId: !!streamlinedData.userId,
           itemsLength: streamlinedData.items.length,
-          hasValidTotal: streamlinedData.total > 0
-        }
+          hasValidTotal: streamlinedData.total > 0,
+          items: streamlinedData.items.map(i => ({
+            productId: i.productId,
+            name: i.name,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice
+          }))
+        },
+        cartItems: items.map(i => ({
+          productId: i.productId,
+          name: i.product?.name || i.name,
+          quantity: i.quantity,
+          price: i.price
+        }))
       });
       
       toast.error(isLargeOrder ? 
