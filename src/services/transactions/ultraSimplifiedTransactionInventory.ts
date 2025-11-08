@@ -211,15 +211,20 @@ async function processRegularProduct(
         throw new Error(`Failed to deduct ${ingredient.inventory_stock.item}`);
       }
 
-      // Create audit trail
-      await SimplifiedInventoryAuditService.deductWithAudit(
-        ingredient.inventory_stock_id,
-        deductQuantity,
-        transactionId,
-        ingredient.inventory_stock.item
-      );
-
       console.log(`✅ Deducted ${deductQuantity} of ${ingredient.inventory_stock.item}`);
+      
+      // Create audit trail (non-blocking)
+      try {
+        await SimplifiedInventoryAuditService.deductWithAudit(
+          ingredient.inventory_stock_id,
+          deductQuantity,
+          transactionId,
+          ingredient.inventory_stock.item
+        );
+      } catch (auditError) {
+        console.warn(`⚠️ Audit failed but deduction succeeded for ${ingredient.inventory_stock.item}:`, auditError);
+      }
+      
       return ingredient.inventory_stock.item;
     });
 
@@ -229,8 +234,15 @@ async function processRegularProduct(
     // Process results
     for (const deductionResult of deductionResults) {
       if (deductionResult.status === 'rejected') {
-        result.errors.push(deductionResult.reason.message);
-        result.success = false;
+        // Don't fail if it's just an audit issue - deduction already happened
+        const errorMsg = deductionResult.reason.message;
+        if (errorMsg.includes('audit') || errorMsg.includes('movement')) {
+          result.warnings.push(`Audit warning: ${errorMsg}`);
+          result.deductedCount++; // Deduction succeeded, just audit failed
+        } else {
+          result.errors.push(errorMsg);
+          result.success = false;
+        }
       } else if (deductionResult.value) {
         result.deductedCount++;
       }
