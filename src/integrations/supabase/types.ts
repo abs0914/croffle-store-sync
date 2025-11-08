@@ -8105,6 +8105,13 @@ export type Database = {
         Args: { p_store_id: string; p_user_id?: string }
         Returns: string
       }
+      delete_store_transactions_by_date: {
+        Args: { p_date?: string; p_store_id: string }
+        Returns: {
+          deleted_count: number
+          deleted_receipts: string
+        }[]
+      }
       deploy_all_recipe_templates_to_all_stores: {
         Args: never
         Returns: {
