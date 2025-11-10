@@ -260,6 +260,23 @@ export class OptimizedBatchProductService {
       ri => ri.recipeId === product.recipeId
     );
 
+    // 🔍 DIAGNOSTIC: Log recipe ingredient matching
+    console.log('🔍 [AVAILABILITY DEBUG] Recipe ingredient matching:', {
+      productId,
+      productName: product.productName,
+      recipeId: product.recipeId,
+      recipeActive: product.recipeActive,
+      totalRecipeIngredientsInBatch: batchedData.recipeIngredients.length,
+      matchingIngredients: ingredients.length,
+      allRecipeIds: [...new Set(batchedData.recipeIngredients.map(ri => ri.recipeId))],
+      matchingRecipeIngredients: ingredients.map(i => ({
+        ingredientName: i.ingredientName,
+        requiredQty: i.requiredQuantity,
+        availableStock: i.inventoryStock,
+        stockId: i.inventoryStockId
+      }))
+    });
+
     // PHASE 5 FIX: If recipe ingredients aren't loaded yet (lazy loading),
     // be optimistic and show as available. Real validation happens at payment.
     if (ingredients.length === 0 && batchedData.recipeIngredients.length === 0) {
@@ -510,6 +527,18 @@ export class OptimizedBatchProductService {
         isActive: i.is_active,
         storeId: i.store_id
       }));
+
+      // 🔍 DIAGNOSTIC: Log raw recipe ingredients data
+      console.log('🔍 [CART DEBUG] Raw recipe ingredients data:', {
+        recipeIdsQueried: recipeIds,
+        rawDataCount: recipeIngredientsData.length,
+        rawData: recipeIngredientsData.map(ri => ({
+          recipe_id: ri.recipe_id,
+          ingredient_name: ri.ingredient_name,
+          quantity: ri.quantity,
+          inventory_stock_id: ri.inventory_stock_id
+        }))
+      });
 
       const recipeIngredients: BatchRecipeIngredient[] = recipeIngredientsData.map(ri => ({
         recipeId: ri.recipe_id,
