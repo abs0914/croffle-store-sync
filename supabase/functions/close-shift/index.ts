@@ -1,9 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+// Input validation schema
+const closeShiftSchema = z.object({
+  userId: z.string().uuid({ message: 'Invalid user ID format' }),
+  endingCash: z.number().min(0, { message: 'Ending cash cannot be negative' }).max(10000000, { message: 'Ending cash exceeds maximum allowed' }).optional(),
+  endPhoto: z.string().url({ message: 'Invalid photo URL' }).optional(),
+});
 
 interface CloseShiftRequest {
   userId: string;
@@ -25,21 +33,27 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request body
-    const { userId, endingCash, endPhoto }: CloseShiftRequest = await req.json();
-
-    console.log('📝 Request details:', { userId, endingCash });
-
-    if (!userId) {
-      console.error('❌ Missing userId');
+    // Parse and validate request body
+    const body = await req.json();
+    const validationResult = closeShiftSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      console.error('❌ Invalid request data:', validationResult.error);
       return new Response(
-        JSON.stringify({ error: 'userId is required' }),
+        JSON.stringify({
+          error: 'Invalid request data',
+          details: validationResult.error.errors.map(e => e.message).join(', ')
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
+
+    const { userId, endingCash, endPhoto } = validationResult.data;
+
+    console.log('📝 Request details:', { userId, endingCash });
 
     // Find the active shift for this user
     console.log('🔍 Looking for active shift for user:', userId);
@@ -53,7 +67,7 @@ Deno.serve(async (req) => {
     if (findError && findError.code !== 'PGRST116') {
       console.error('❌ Error finding active shift:', findError);
       return new Response(
-        JSON.stringify({ error: 'Failed to find active shift', details: findError.message }),
+        JSON.stringify({ error: 'Unable to locate active shift' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -99,7 +113,7 @@ Deno.serve(async (req) => {
     if (updateError) {
       console.error('❌ Error closing shift:', updateError);
       return new Response(
-        JSON.stringify({ error: 'Failed to close shift', details: updateError.message }),
+        JSON.stringify({ error: 'Failed to close shift. Please try again.' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -133,11 +147,10 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('❌ Unexpected error:', error);
+    console.error('❌ Unexpected error:', error); // Log detail server-side only
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        error: 'An error occurred while closing the shift. Please try again.'
       }),
       { 
         status: 500, 
