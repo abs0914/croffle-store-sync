@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import { Search, Download, Upload } from 'lucide-react';
 import { InventoryDeductionDiagnostic } from '@/components/debug/InventoryDeductionDiagnostic';
 import { Phase4MonitoringDashboard } from '@/components/monitoring/Phase4MonitoringDashboard';
-import { ProductRecipeLinkageRepairButton } from '@/components/inventory/ProductRecipeLinkageRepairButton';
 
 export default function Inventory() {
   const { toast } = useToast();
@@ -232,9 +231,6 @@ export default function Inventory() {
 
       {/* Phase 4: Real-time Monitoring Dashboard */}
       <Phase4MonitoringDashboard />
-      
-      {/* Emergency Product-Recipe Linkage Repair */}
-      <ProductRecipeLinkageRepairButton storeId={currentStore.id} />
       
       {/* Emergency Diagnostic Component */}
       <InventoryDeductionDiagnostic />
