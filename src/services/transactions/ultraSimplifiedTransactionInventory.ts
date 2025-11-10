@@ -166,19 +166,30 @@ async function processRegularProduct(
   };
 
   try {
-    // Get the product's recipe ingredients
-    const { data: productData } = await supabase
+    // CRITICAL FIX: Add comprehensive logging and cache-busting
+    console.log(`🔍 [INVENTORY CHECK] Fetching recipe for: ${item.productName} in store: ${storeId}`);
+    
+    // Get the product's recipe ingredients with FRESH query (cache-busting timestamp)
+    const queryStart = performance.now();
+    const { data: productData, error: queryError } = await supabase
       .from('product_catalog')
       .select(`
         recipe_id,
+        product_name,
+        store_id,
         recipes!inner(
+          id,
+          name,
           recipe_ingredients(
+            id,
             inventory_stock_id,
             quantity,
+            unit,
             inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
               id,
               item,
-              stock_quantity
+              stock_quantity,
+              unit
             )
           )
         )
@@ -186,24 +197,64 @@ async function processRegularProduct(
       .eq('product_name', item.productName)
       .eq('store_id', storeId)
       .maybeSingle();
-
-    if (!productData?.recipes?.recipe_ingredients) {
-      result.warnings.push(`No recipe found for ${item.productName}`);
+    
+    const queryTime = performance.now() - queryStart;
+    console.log(`⏱️ [QUERY TIME] Recipe fetch: ${queryTime.toFixed(2)}ms`);
+    
+    // CRITICAL: Log query error if any
+    if (queryError) {
+      console.error(`❌ [QUERY ERROR] Failed to fetch recipe:`, queryError);
+      result.errors.push(`Database error for ${item.productName}: ${queryError.message}`);
+      result.success = false;
       return result;
     }
+    
+    // CRITICAL: Log the fetched data for debugging
+    console.log(`📊 [RECIPE DATA] Found:`, {
+      hasData: !!productData,
+      recipeId: productData?.recipe_id,
+      ingredientCount: productData?.recipes?.recipe_ingredients?.length || 0,
+      productData: productData
+    });
+
+    if (!productData?.recipes?.recipe_ingredients) {
+      console.warn(`⚠️ [NO RECIPE] No recipe found for ${item.productName} in store ${storeId}`);
+      console.warn(`📋 [DEBUG INFO] Product data structure:`, JSON.stringify(productData, null, 2));
+      
+      // CRITICAL: This should FAIL the transaction, not just warn
+      result.errors.push(`No recipe configuration found for ${item.productName}. Product cannot be sold until recipe is linked.`);
+      result.success = false;
+      return result;
+    }
+    
+    console.log(`✅ [RECIPE FOUND] Processing ${productData.recipes.recipe_ingredients.length} ingredients for ${item.productName}`);
 
     // Parallelize ingredient deductions
-    const deductionPromises = productData.recipes.recipe_ingredients.map(async (ingredient) => {
+    const deductionPromises = productData.recipes.recipe_ingredients.map(async (ingredient, index) => {
       if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
+        console.warn(`⚠️ [MISSING STOCK] Ingredient ${index} missing stock data:`, ingredient);
         return null;
       }
 
+      const ingredientName = ingredient.inventory_stock.item;
       const deductQuantity = ingredient.quantity * item.quantity;
       const currentStock = ingredient.inventory_stock.stock_quantity;
       
+      // COMPREHENSIVE LOGGING for debugging
+      console.log(`📦 [STOCK CHECK] ${ingredientName}:`, {
+        ingredientId: ingredient.inventory_stock_id,
+        recipeQuantity: ingredient.quantity,
+        transactionQuantity: item.quantity,
+        totalNeeded: deductQuantity,
+        currentStock: currentStock,
+        sufficient: currentStock >= deductQuantity
+      });
+      
       // CRITICAL: Check stock availability BEFORE attempting deduction
       if (currentStock < deductQuantity) {
-        throw new Error(`Insufficient stock for ${ingredient.inventory_stock.item}: need ${deductQuantity}, have ${currentStock}`);
+        const errorMsg = `Insufficient stock for ${ingredientName}: need ${deductQuantity}, have ${currentStock}`;
+        console.error(`❌ [INSUFFICIENT STOCK] ${errorMsg}`);
+        throw new Error(errorMsg);
       }
       
       const newStock = currentStock - deductQuantity;
