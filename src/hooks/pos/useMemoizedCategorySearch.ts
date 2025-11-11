@@ -37,6 +37,14 @@ export function useMemoizedCategorySearch({ products, categories }: CategorySear
       categoryMap.get(categoryName)!.push(product);
     });
     
+    // Deduplicate products in each category by product ID
+    categoryMap.forEach((productList, categoryName) => {
+      const uniqueProducts = Array.from(
+        new Map(productList.map(p => [p.id, p])).values()
+      );
+      categoryMap.set(categoryName, uniqueProducts);
+    });
+    
     return categoryMap;
   }, [products, getCategoryName]);
 
