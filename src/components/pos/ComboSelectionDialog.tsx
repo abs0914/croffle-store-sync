@@ -79,6 +79,7 @@ export function ComboSelectionDialog({
         p.name && !p.name.toLowerCase().includes("box") &&
         !p.name.toLowerCase().includes("packaging") &&
         !p.name.toLowerCase().includes("combo") &&
+        !p.name.toLowerCase().includes("base") &&  // Exclude base products
         p.price > 0
       );
     }
