@@ -1,0 +1,70 @@
+name,category,uom,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location
+REGULAR CROISSANT,raw_materials,1 Box/70pcs.,2100.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+WHIPPED CREAM MIX,raw_materials,1 Piping Bag,280.00,0,10,,,FRANCHISEE OUTSIDE CEBU
+MONALISA,raw_materials,1 Case/12 liters,2400.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+GLAZE POWDER,raw_materials,1 Piping Bag,160.00,0,10,,,FRANCHISEE OUTSIDE CEBU
+Nutella,raw_materials,Pack of 20,90.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Chocolate,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Caramel,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Tiramisu,raw_materials,Pack of 20,70.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Dark Chocolate,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Biscoff,raw_materials,Pack of 32,180.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Kitkat,raw_materials,Pack of 24,150.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Oreo Cookies,raw_materials,Pack of 27,80.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Biscoff Crushed,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Oreo Crushed,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Peanut,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Colored Sprinkles,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Choco Flakes,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Marshmallow,raw_materials,Pack of 10,25.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Graham Crushed,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Strawberry Jam,raw_materials,Pack of 10,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Mango Jam,raw_materials,Pack of 10,70.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Blueberry Jam,raw_materials,Pack of 10,75.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Matcha crumble,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Chocolate crumble,raw_materials,Pack of 20,50.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Rectangle,packaging_materials,Packs of 25,65.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Take -out box w/ cover,packaging_materials,Packs of 25,140.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Mini Take Out Box,packaging_materials,Packs of 25,60.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Overload Cup,packaging_materials,Pack of 50,200.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Chopstick,packaging_materials,Pack of 100,60.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Popsicle stick,packaging_materials,Pack of 50,15.00,0,10,,,FRANCHISEE OUTSIDE CEBU
+Piping bag,packaging_materials,Pack of 50,45.00,0,10,,,FRANCHISEE OUTSIDE CEBU
+Mini Spoon,packaging_materials,Pack of 50,25.00,0,10,,,FRANCHISEE OUTSIDE CEBU
+Wax Paper,packaging_materials,Packs of 100,70.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Wax Paper for Glaze,packaging_materials,Packs of 100,90.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+XL Clear Binbag,packaging_materials,10pcs/roll,65.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Medium Clear Binbag (10pcs/roll),packaging_materials,10pcs/roll,55.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Paper Bag #06,packaging_materials,Packs of 100,91.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Paper Bag #20,packaging_materials,Packs of 100,103.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Storage Box for Croissant,supplies,Per box,115.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Food Grade Containers,supplies,Per container,150.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Waffle Maker,supplies,Per machine,6500.00,0,1,,,FRANCHISEE OUTSIDE CEBU
+Cooling Rack with Cover,supplies,Per piece,500.00,0,2,,,FRANCHISEE OUTSIDE CEBU
+Thong,supplies,Per piece,230.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Spatula,supplies,Per piece,100.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Brush,supplies,Per piece,130.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Uniform (Polo Shirt),supplies,Per shirt,380.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Ice Cream Scooper size 50,supplies,Per piece,800.00,0,2,,,FRANCHISEE OUTSIDE CEBU
+Delonghi Coffee Machine,supplies,1pc,59000.00,0,1,,,FRANCHISEE OUTSIDE CEBU
+Blender,supplies,1pc,4500.00,0,1,,,FRANCHISEE OUTSIDE CEBU
+Pitcher,supplies,1pc,1200.00,0,2,,,FRANCHISEE OUTSIDE CEBU
+Double Wall Coffee Cups with Lid,packaging_materials,Pack of 100,700.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Plastic Cups 16oz with Lid,packaging_materials,Pack of 100,450.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Double Take-out Plastic for Coffee,packaging_materials,Packs of 100,86.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Single Take-out Plastic for Coffee,packaging_materials,Packs of 100,61.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Brown Sugar Sachet,raw_materials,Packs of 100,85.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+White Sugar Sachet,raw_materials,Packs of 100,85.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Creamer Sachet,raw_materials,Packs of 100,90.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Vanilla Syrup,raw_materials,1 liter,450.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Strawberry Syrup,raw_materials,1 liter,450.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Chocolate Sauce,raw_materials,2 liters,700.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Caramel Sauce,raw_materials,2 liters,700.00,0,3,,,FRANCHISEE OUTSIDE CEBU
+Matcha Powder,raw_materials,250g,225.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Cream Frappe,raw_materials,500g,130.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Coffee Beans,raw_materials,1kg,1040.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Bending Straw,packaging_materials,Pack of 100,50.00,0,10,,,FRANCHISEE OUTSIDE CEBU
+Conaprole,raw_materials,1 liter,85.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Monalisa,raw_materials,1 liter,200.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Iced Tea Powder,raw_materials,200g,200.00,0,5,,,FRANCHISEE OUTSIDE CEBU
+Lemonade Powder,raw_materials,280g,500.00,0,5,,,FRANCHISEE OUTSIDE CEBU
