@@ -19,6 +19,7 @@ interface AddCommissaryItemDialogProps {
 export function AddCommissaryItemDialog({ open, onOpenChange, onSuccess }: AddCommissaryItemDialogProps) {
   const [formData, setFormData] = useState({
     name: '',
+    business_category: '',
     category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
     item_type: 'raw_material' as 'raw_material' | 'supply' | 'orderable_item',
     current_stock: 0,
@@ -49,6 +50,7 @@ export function AddCommissaryItemDialog({ open, onOpenChange, onSuccess }: AddCo
         onOpenChange(false);
         setFormData({
           name: '',
+          business_category: '',
           category: 'raw_materials',
           item_type: 'raw_material',
           current_stock: 0,
@@ -84,21 +86,14 @@ export function AddCommissaryItemDialog({ open, onOpenChange, onSuccess }: AddCo
             />
           </div>
           <div>
-            <Label htmlFor="category">Category</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="raw_materials">Raw Materials</SelectItem>
-                <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
-                <SelectItem value="supplies">Supplies</SelectItem>
-                <SelectItem value="finished_goods">Finished Goods</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="business_category">Category</Label>
+            <Input
+              id="business_category"
+              value={formData.business_category}
+              onChange={(e) => setFormData(prev => ({ ...prev, business_category: e.target.value }))}
+              placeholder="e.g., Croffle Items, SAUCES, TOPPINGS"
+              required
+            />
           </div>
           <div>
             <Label htmlFor="current_stock">Current Stock</Label>

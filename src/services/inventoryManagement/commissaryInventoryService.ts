@@ -123,6 +123,7 @@ export const createCommissaryInventoryItem = async (item: Omit<CommissaryInvento
       barcode: item.barcode,
       expiry_date: item.expiry_date,
       storage_location: item.storage_location,
+      business_category: item.business_category,
       is_active: item.is_active
     };
     
