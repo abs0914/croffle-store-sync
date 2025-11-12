@@ -134,8 +134,10 @@ export function CreatePurchaseOrderDialog({
     : orderableItems.filter(item => item.business_category === selectedCategory);
 
   const handleSubmit = async () => {
-    if (!user?.storeIds?.[0]) {
-      toast.error('No store assigned to user');
+    const storeId = currentStore?.id || user?.storeIds?.[0];
+    
+    if (!storeId) {
+      toast.error('No store selected');
       return;
     }
 
@@ -147,7 +149,7 @@ export function CreatePurchaseOrderDialog({
     setLoading(true);
     try {
       const orderData = {
-        store_id: user.storeIds[0],
+        store_id: storeId,
         created_by: user.id,
         status: 'pending' as const,
         total_amount: totalAmount,
