@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, Minus, AlertCircle, RefreshCw } from "lucide-react";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
@@ -42,6 +43,18 @@ export function CreatePurchaseOrderDialog({
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [notes, setNotes] = useState('');
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const categories = [
+    'Croffle Items',
+    'SAUCES',
+    'TOPPINGS',
+    'BOXES',
+    'MISCELLANEOUS',
+    'EQUIPMENT and SUPPLIES',
+    'Coffee Items',
+    'Others'
+  ];
 
   const loadOrderableItems = async () => {
     console.log('Loading orderable items for store:', currentStore?.name, 
@@ -115,6 +128,10 @@ export function CreatePurchaseOrderDialog({
   };
 
   const totalAmount = orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
+  const filteredItems = selectedCategory === 'all' 
+    ? orderableItems 
+    : orderableItems.filter(item => item.business_category === selectedCategory);
 
   const handleSubmit = async () => {
     if (!user?.storeIds?.[0]) {
@@ -235,31 +252,55 @@ export function CreatePurchaseOrderDialog({
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto">
-                  {orderableItems.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-sm">{item.name}</h4>
-                        <Badge variant="secondary" className="text-xs">
-                          {item.current_stock} {item.uom}
-                        </Badge>
+                <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+                  <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+                    <TabsTrigger value="all" className="flex-1 min-w-[100px]">All</TabsTrigger>
+                    {categories.map((category) => (
+                      <TabsTrigger key={category} value={category} className="flex-1 min-w-[100px] text-xs">
+                        {category}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  
+                  <TabsContent value={selectedCategory} className="mt-4">
+                    {filteredItems.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">No products found in this category</p>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.uom}
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto">
+                        {filteredItems.map((item) => (
+                          <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-sm">{item.name}</h4>
+                              <Badge variant="secondary" className="text-xs">
+                                {item.current_stock} {item.uom}
+                              </Badge>
+                            </div>
+                            {item.business_category && (
+                              <Badge variant="outline" className="text-xs">
+                                {item.business_category}
+                              </Badge>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                              Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.uom}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addOrderItem(item)}
+                              className="w-full"
+                              disabled={item.current_stock <= 0}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add to Order
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addOrderItem(item)}
-                        className="w-full"
-                        disabled={item.current_stock <= 0}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add to Order
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               )}
             </CardContent>
           </Card>
