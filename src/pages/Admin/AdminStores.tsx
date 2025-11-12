@@ -19,6 +19,8 @@ export default function AdminStores() {
     setStatusFilter,
     locationFilter,
     setLocationFilter,
+    ownershipFilter,
+    setOwnershipFilter,
     isLoading,
     refreshStores,
     storeMetrics
@@ -56,6 +58,8 @@ export default function AdminStores() {
         setStatusFilter={setStatusFilter}
         locationFilter={locationFilter}
         setLocationFilter={setLocationFilter}
+        ownershipFilter={ownershipFilter}
+        setOwnershipFilter={setOwnershipFilter}
         viewMode={viewMode}
         setViewMode={setViewMode}
       />
