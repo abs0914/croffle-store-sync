@@ -29,12 +29,12 @@ export function EditCommissaryItemDialog({
     name: '',
     business_category: '',
     category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
+    item_type: 'raw_material' as 'raw_material' | 'supply' | 'orderable_item',
     minimum_threshold: 0,
     uom: '', // Changed from unit to uom
     unit_cost: 0,
     supplier_id: '',
     sku: '',
-    barcode: '',
     expiry_date: '',
     storage_location: ''
   });
@@ -47,12 +47,12 @@ export function EditCommissaryItemDialog({
           name: item.name,
           business_category: item.business_category || '',
           category: item.category,
+          item_type: item.item_type,
           minimum_threshold: item.minimum_threshold,
           uom: item.uom, // Use uom instead of unit
           unit_cost: item.unit_cost || 0,
           supplier_id: item.supplier_id || '',
           sku: item.sku || '',
-          barcode: item.barcode || '',
           expiry_date: item.expiry_date || '',
           storage_location: item.storage_location || ''
         });
@@ -75,7 +75,6 @@ export function EditCommissaryItemDialog({
       ...formData,
       supplier_id: formData.supplier_id === 'none' || formData.supplier_id === '' ? undefined : formData.supplier_id,
       sku: formData.sku || undefined,
-      barcode: formData.barcode || undefined,
       expiry_date: formData.expiry_date || undefined,
       storage_location: formData.storage_location || undefined
     });
@@ -207,12 +206,22 @@ export function EditCommissaryItemDialog({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="barcode">Barcode</Label>
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
-              />
+              <Label htmlFor="item_type">Item Type *</Label>
+              <Select
+                value={formData.item_type}
+                onValueChange={(value: 'raw_material' | 'supply' | 'orderable_item') => 
+                  setFormData(prev => ({ ...prev, item_type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="raw_material">Raw Material</SelectItem>
+                  <SelectItem value="supply">Supply</SelectItem>
+                  <SelectItem value="orderable_item">Orderable Item (Finished Product)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
