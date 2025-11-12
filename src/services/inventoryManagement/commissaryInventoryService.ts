@@ -319,9 +319,9 @@ export const removeDuplicateCommissaryItems = async (): Promise<boolean> => {
   }
 };
 
-export const fetchOrderableItems = async (storeLocationType?: 'inside_cebu' | 'outside_cebu'): Promise<CommissaryInventoryItem[]> => {
+export const fetchOrderableItems = async (storeLocationType?: 'inside_cebu' | 'outside_cebu', ownershipType?: 'company_owned' | 'franchisee'): Promise<CommissaryInventoryItem[]> => {
   try {
-    console.log('Fetching orderable items for location:', storeLocationType || 'all locations');
+    console.log('Fetching orderable items for location:', storeLocationType, 'ownership:', ownershipType);
     
     // First, let's check what data exists in the table with minimal filtering
     const { data: allData, error: allError } = await supabase
@@ -344,13 +344,27 @@ export const fetchOrderableItems = async (storeLocationType?: 'inside_cebu' | 'o
       .eq('item_type', 'orderable_item')
       .gte('current_stock', 0);
 
-    // Filter by store location if provided
-    if (storeLocationType) {
-      const locationFilter = storeLocationType === 'inside_cebu' 
-        ? 'INSIDE CEBU' 
-        : 'OUTSIDE CEBU';
-      console.log('Filtering orderable items by storage_location containing:', locationFilter);
-      query = query.ilike('storage_location', `%${locationFilter}%`);
+    // Filter by store location and ownership type
+    if (storeLocationType || ownershipType) {
+      const locationFilters: string[] = [];
+      
+      if (ownershipType === 'company_owned') {
+        // Company-owned stores (branches) see BRANCHES items
+        locationFilters.push('BRANCHES');
+      } else if (ownershipType === 'franchisee') {
+        // Franchisee stores
+        if (storeLocationType === 'inside_cebu') {
+          locationFilters.push('FRANCHISEE CEBU');
+        } else if (storeLocationType === 'outside_cebu') {
+          locationFilters.push('FRANCHISEE OUTSIDE CEBU');
+        }
+      }
+      
+      if (locationFilters.length > 0) {
+        console.log('Filtering orderable items by storage_location:', locationFilters);
+        // Use OR filter to match any of the location filters
+        query = query.or(locationFilters.map(loc => `storage_location.ilike.%${loc}%`).join(','));
+      }
     }
 
     const { data, error } = await query.order('name');

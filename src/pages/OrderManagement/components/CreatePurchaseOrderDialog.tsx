@@ -44,12 +44,21 @@ export function CreatePurchaseOrderDialog({
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState('');
 
   const loadOrderableItems = async () => {
-    console.log('Loading orderable items for store:', currentStore?.name, 'location:', currentStore?.location_type);
+    console.log('Loading orderable items for store:', currentStore?.name, 
+      'location:', currentStore?.location_type, 
+      'ownership:', currentStore?.ownership_type);
     setLoadingItems(true);
     try {
-      // Filter items by current store's location type
-      const items = await fetchOrderableItems(currentStore?.location_type);
-      console.log('Loaded orderable items for location:', currentStore?.location_type, 'Count:', items.length);
+      // Filter items by current store's location type and ownership
+      const items = await fetchOrderableItems(
+        currentStore?.location_type, 
+        currentStore?.ownership_type
+      );
+      console.log('Loaded orderable items for store type:', {
+        location: currentStore?.location_type,
+        ownership: currentStore?.ownership_type,
+        count: items.length
+      });
       setOrderableItems(items);
     } catch (error) {
       console.error('Error loading orderable items:', error);
@@ -213,13 +222,16 @@ export function CreatePurchaseOrderDialog({
                   <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">No finished products available for ordering</h3>
                   <p className="text-muted-foreground mb-4">
-                    {currentStore?.location_type 
-                      ? `No products available for ${currentStore.location_type === 'inside_cebu' ? 'Inside Cebu' : 'Outside Cebu'} stores.`
-                      : 'There are no products currently marked as orderable in the commissary inventory.'}
+                    {currentStore?.ownership_type === 'company_owned' 
+                      ? 'No products available for company branches.'
+                      : currentStore?.location_type 
+                        ? `No products available for ${currentStore.location_type === 'inside_cebu' ? 'Franchisee Cebu' : 'Franchisee Outside Cebu'} stores.`
+                        : 'There are no products currently marked as orderable in the commissary inventory.'}
                   </p>
                   <div className="text-sm text-muted-foreground space-y-1">
                     <p>Store: {currentStore?.name}</p>
-                    <p>Location: {currentStore?.location_type ? (currentStore.location_type === 'inside_cebu' ? 'Inside Cebu' : 'Outside Cebu') : 'Not set'}</p>
+                    <p>Type: {currentStore?.ownership_type === 'company_owned' ? 'Branch' : 'Franchisee'}</p>
+                    <p>Location: {currentStore?.location_type ? (currentStore.location_type === 'inside_cebu' ? 'Cebu' : 'Outside Cebu') : 'Not set'}</p>
                   </div>
                 </div>
               ) : (
