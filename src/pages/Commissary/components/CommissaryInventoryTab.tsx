@@ -257,6 +257,7 @@ export function CommissaryInventoryTab() {
         filters={filters}
         setFilters={setFilters}
         suppliers={suppliers}
+        items={items}
       />
 
       {/* Inventory List */}

@@ -99,6 +99,7 @@ export default function CommissaryInventory() {
               filters={filters}
               setFilters={setFilters}
               suppliers={suppliers}
+              items={items}
             />
 
             <InventoryTab

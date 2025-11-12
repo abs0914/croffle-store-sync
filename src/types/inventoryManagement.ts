@@ -168,6 +168,7 @@ export interface CommissaryInventoryItem {
   barcode?: string;
   expiry_date?: string;
   storage_location?: string;
+  business_category?: string; // Original business category name (e.g., "Croffle Items", "SAUCES")
   is_active: boolean;
   created_at: string;
   updated_at: string;

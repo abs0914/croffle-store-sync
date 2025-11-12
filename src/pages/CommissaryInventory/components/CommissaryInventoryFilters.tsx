@@ -11,12 +11,14 @@ interface CommissaryInventoryFiltersProps {
   filters: CommissaryInventoryFilters;
   setFilters: React.Dispatch<React.SetStateAction<CommissaryInventoryFilters>>;
   suppliers: any[];
+  items?: any[]; // Add items to extract unique business categories
 }
 
 export function CommissaryInventoryFiltersComponent({ 
   filters, 
   setFilters, 
-  suppliers 
+  suppliers,
+  items = []
 }: CommissaryInventoryFiltersProps) {
   const clearFilters = () => {
     setFilters({
@@ -30,6 +32,13 @@ export function CommissaryInventoryFiltersComponent({
       sortOrder: 'asc'
     });
   };
+  
+  // Extract unique business categories from items
+  const uniqueBusinessCategories = [...new Set(
+    items
+      .map(item => item.business_category)
+      .filter(Boolean)
+  )].sort();
 
   const getActiveFilterCount = () => {
     let count = 0;
@@ -85,10 +94,20 @@ export function CommissaryInventoryFiltersComponent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="raw_materials">Raw Materials</SelectItem>
-              <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
-              <SelectItem value="supplies">Supplies</SelectItem>
-              <SelectItem value="finished_goods">Finished Goods</SelectItem>
+              {uniqueBusinessCategories.length > 0 ? (
+                // Show business categories if available
+                uniqueBusinessCategories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))
+              ) : (
+                // Fallback to database categories
+                <>
+                  <SelectItem value="raw_materials">Raw Materials</SelectItem>
+                  <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
+                  <SelectItem value="supplies">Supplies</SelectItem>
+                  <SelectItem value="finished_goods">Finished Goods</SelectItem>
+                </>
+              )}
             </SelectContent>
           </Select>
 

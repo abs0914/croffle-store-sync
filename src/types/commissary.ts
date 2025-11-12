@@ -59,6 +59,7 @@ export interface CommissaryInventoryItem {
   barcode?: string;
   expiry_date?: string;
   storage_location?: string;
+  business_category?: string; // Original business category for display (e.g., "Croffle Items", "SAUCES")
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -105,6 +106,7 @@ export interface RawIngredientUpload {
   supplier_name?: string;
   sku?: string;
   storage_location?: string;
+  business_category?: string; // Original business category name for display
 }
 
 // Commissary conversion types

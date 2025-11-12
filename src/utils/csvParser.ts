@@ -23,6 +23,7 @@ export interface RawIngredientUpload {
   supplier_name?: string;
   sku?: string;
   storage_location?: string;
+  business_category?: string; // Original business category name for display
 }
 
 export interface ConversionRecipeUpload {
@@ -365,7 +366,8 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
       minimum_threshold,
       supplier_name: supplier_name?.trim(),
       sku: sku?.trim(),
-      storage_location: storage_location?.trim()
+      storage_location: storage_location?.trim(),
+      business_category: rawCategory.trim() // Preserve original business category
     };
 
     console.log(`Adding ingredient:`, ingredient);

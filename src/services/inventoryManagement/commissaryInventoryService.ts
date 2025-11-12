@@ -69,7 +69,13 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
 
     // Apply filters if provided
     if (filters?.category && filters.category !== 'all') {
-      query = query.eq('category', filters.category);
+      // Check if filtering by business category or database category
+      if (['raw_materials', 'packaging_materials', 'supplies', 'finished_goods'].includes(filters.category)) {
+        query = query.eq('category', filters.category);
+      } else {
+        // Filter by business_category for business-specific categories
+        query = query.eq('business_category', filters.category);
+      }
     }
     if (filters?.search) {
       query = query.ilike('name', `%${filters.search}%`);
@@ -89,7 +95,7 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
     return (data || []).map(item => ({
       ...item,
       uom: item.unit || 'units', // Map unit to uom with fallback
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
       item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
   } catch (error) {

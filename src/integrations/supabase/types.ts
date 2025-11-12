@@ -1201,6 +1201,7 @@ export type Database = {
         Row: {
           average_cost: number | null
           barcode: string | null
+          business_category: string | null
           category: string
           conversion_ratio: number | null
           created_at: string
@@ -1229,6 +1230,7 @@ export type Database = {
         Insert: {
           average_cost?: number | null
           barcode?: string | null
+          business_category?: string | null
           category: string
           conversion_ratio?: number | null
           created_at?: string
@@ -1257,6 +1259,7 @@ export type Database = {
         Update: {
           average_cost?: number | null
           barcode?: string | null
+          business_category?: string | null
           category?: string
           conversion_ratio?: number | null
           created_at?: string

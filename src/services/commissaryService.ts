@@ -166,6 +166,7 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
         supplier_id: ingredient.supplier_name ? supplierMap.get(ingredient.supplier_name.toLowerCase()) : null,
         sku: ingredient.sku,
         storage_location: ingredient.storage_location,
+        business_category: ingredient.business_category, // Preserve original business category
         is_active: true
       };
     });
