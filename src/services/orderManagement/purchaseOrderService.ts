@@ -124,12 +124,33 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
             .single();
 
           if (createError) {
-            console.error('Error creating inventory stock:', createError);
-            continue;
+            // If duplicate key error (23505), it means the item was created by another request
+            // Just fetch it again instead of skipping
+            if (createError.code === '23505') {
+              console.log('Inventory stock already exists (race condition), fetching it...');
+              const { data: existingStock, error: fetchError } = await supabase
+                .from('inventory_stock')
+                .select('*')
+                .eq('store_id', orderData.store_id)
+                .eq('item', commissaryItem.name)
+                .eq('unit', commissaryItem.unit)
+                .single();
+              
+              if (fetchError || !existingStock) {
+                console.error('Failed to fetch existing inventory stock after duplicate error:', fetchError);
+                continue;
+              }
+              
+              inventoryStock = existingStock;
+              console.log('Found existing inventory stock after race condition:', inventoryStock);
+            } else {
+              console.error('Error creating inventory stock:', createError);
+              continue;
+            }
+          } else {
+            inventoryStock = newInventoryStock;
+            console.log('Created new inventory stock:', inventoryStock);
           }
-          
-          inventoryStock = newInventoryStock;
-          console.log('Created new inventory stock:', inventoryStock);
         }
 
         purchaseOrderItems.push({
