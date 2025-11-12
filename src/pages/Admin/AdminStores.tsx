@@ -7,6 +7,8 @@ import { AdminBulkActions } from './components/AdminBulkActions';
 import { useAdminStoresData } from './hooks/useAdminStoresData';
 
 export default function AdminStores() {
+  console.log('🏪 AdminStores component rendering...');
+  
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
@@ -25,6 +27,14 @@ export default function AdminStores() {
     refreshStores,
     storeMetrics
   } = useAdminStoresData();
+
+  console.log('🏪 AdminStores state:', {
+    storesCount: stores.length,
+    filteredCount: filteredStores.length,
+    isLoading,
+    viewMode,
+    selectedCount: selectedStores.length
+  });
 
   const handleSelectStore = (storeId: string) => {
     setSelectedStores(prev => 
@@ -49,9 +59,11 @@ export default function AdminStores() {
     await refreshStores();
   };
 
+  console.log('🏪 Rendering AdminStores UI');
+  
   return (
     <div className="space-y-6">
-      <AdminStoresHeader 
+      <AdminStoresHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         statusFilter={statusFilter}
