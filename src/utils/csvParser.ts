@@ -81,11 +81,19 @@ const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging
     'ingredients': 'raw_materials',
     'raw': 'raw_materials',
     
+    // Business-specific categories - Raw Materials
+    'croffle items': 'raw_materials',
+    'sauces': 'raw_materials',
+    'toppings': 'raw_materials',
+    'coffee items': 'raw_materials',
+    
     // Packaging materials variations
     'packaging_materials': 'packaging_materials',
     'packaging': 'packaging_materials',
     'packages': 'packaging_materials',
     'containers': 'packaging_materials',
+    'boxes': 'packaging_materials',
+    'miscellaneous': 'packaging_materials',
     
     // Supplies variations
     'supplies': 'supplies',
@@ -94,7 +102,7 @@ const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging
     'tools': 'supplies',
     'store_supplies': 'supplies',
     'misc': 'supplies',
-    'miscellaneous': 'supplies',
+    'equipment and supplies': 'supplies',
     
     // Finished goods variations
     'finished_goods': 'finished_goods',
@@ -115,7 +123,7 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
     
     // Map common variations
     const variations: Record<string, string[]> = {
-      'name': ['name', 'ingredient_name', 'item_name', 'product_name'],
+      'name': ['name', 'ingredient_name', 'item_name', 'product_name', 'items'],
       'category': ['category', 'type', 'item_type'],
       'uom': ['uom', 'unit', 'unit_of_measure', 'measure', 'units'],
       'unit_cost': ['unit_cost', 'cost', 'price', 'cost_per_unit'],

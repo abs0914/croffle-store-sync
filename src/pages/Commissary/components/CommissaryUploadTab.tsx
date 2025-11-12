@@ -87,13 +87,14 @@ export const CommissaryUploadTab = () => {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `name,category,uom,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location
-Flour,raw_materials,1 Kilo,50.00,100,20,ABC Supplies,FL001,Dry Storage
-Sugar,raw_materials,680 grams,35.00,50,10,ABC Supplies,SG001,Dry Storage
-Eggs,raw_materials,Pack of 30,180.00,20,5,Fresh Foods,EG001,Cold Storage
-Plastic Cups,packaging_materials,Pack of 100,150.00,200,50,Packaging Co,PC001,Storage Room
-Paper Napkins,supplies,Pack of 500,75.00,100,25,Paper Co,PN001,Storage Room
-Croffle Mix,finished_goods,Box,300.00,50,10,Production,CM001,Storage Room`;
+    const csvContent = `Category,ITEMS,Price,Unit,location
+Croffle Items,REGULAR CROISSANT,2100.00,1 Box/70pcs.,FRANCHISEE OUTSIDE CEBU
+SAUCES,Nutella,90.00,Pack of 20,FRANCHISEE OUTSIDE CEBU
+TOPPINGS,Biscoff,180.00,Pack of 32,FRANCHISEE OUTSIDE CEBU
+BOXES,Rectangle,65.00,Packs of 25,FRANCHISEE OUTSIDE CEBU
+MISCELLANEOUS,Chopstick,60.00,Pack of 100,FRANCHISEE OUTSIDE CEBU
+EQUIPMENT and SUPPLIES,Waffle Maker,6500.00,Per machine,FRANCHISEE OUTSIDE CEBU
+Coffee Items,Coffee Beans,1040.00,1kg,FRANCHISEE OUTSIDE CEBU`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -189,12 +190,12 @@ Croffle Mix,finished_goods,Box,300.00,50,10,Production,CM001,Storage Room`;
               <span className="font-medium">CSV Format Requirements:</span>
             </div>
             <ul className="list-disc list-inside space-y-1 ml-6">
-              <li>Required columns: name, category, uom</li>
-              <li>Optional columns: unit_cost, current_stock, minimum_threshold, supplier_name, sku, storage_location</li>
-              <li>Category must be: raw_materials, packaging_materials, supplies, or finished_goods</li>
-              <li>UOM supports all formats including: Box, Piping Bag, Pack of 10, Pack of 20, Pack of 24, Pack of 25, Pack of 27, Pack of 32, Pack of 50, Pack of 100</li>
-              <li>Unit cost represents the cost per UOM unit</li>
-              <li>Storage locations: Cold Storage, Dry Storage, Freezer, Room Temperature, Storage Room</li>
+              <li>Required columns: <strong>Category</strong>, <strong>ITEMS</strong> (name), <strong>Price</strong> (unit_cost), <strong>Unit</strong> (uom), <strong>location</strong></li>
+              <li>Category examples: Croffle Items, SAUCES, TOPPINGS, BOXES, MISCELLANEOUS, EQUIPMENT and SUPPLIES, Coffee Items</li>
+              <li>Categories are automatically mapped to database types (raw_materials, packaging_materials, supplies)</li>
+              <li>UOM supports all formats: 1 Box/70pcs., Pack of 20, Pack of 32, 1 liter, 250g, Per piece, etc.</li>
+              <li>Price represents the cost per unit</li>
+              <li>Location examples: FRANCHISEE OUTSIDE CEBU, FRANCHISEE CEBU, BRANCHES, or custom storage locations</li>
             </ul>
           </div>
         </CardContent>
