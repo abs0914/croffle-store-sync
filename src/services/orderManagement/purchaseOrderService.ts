@@ -354,6 +354,27 @@ export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
   }
 };
 
+export const updatePurchaseOrderItem = async (
+  itemId: string,
+  updates: { quantity?: number; unit_price?: number; specifications?: string }
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('purchase_order_items')
+      .update(updates)
+      .eq('id', itemId);
+
+    if (error) throw error;
+
+    toast.success('Purchase order item updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating purchase order item:', error);
+    toast.error('Failed to update purchase order item');
+    return false;
+  }
+};
+
 export const deletePurchaseOrderItem = async (itemId: string): Promise<boolean> => {
   try {
     const { error } = await supabase

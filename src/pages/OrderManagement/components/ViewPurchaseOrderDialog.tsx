@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { PurchaseOrder } from "@/types/orderManagement";
-import { updatePurchaseOrder, deletePurchaseOrderItem } from "@/services/orderManagement/purchaseOrderService";
+import { updatePurchaseOrder, updatePurchaseOrderItem, deletePurchaseOrderItem } from "@/services/orderManagement/purchaseOrderService";
 import { useAuth } from "@/contexts/auth";
-import { CheckCircle, XCircle, Package, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, Package, Trash2, Edit, Save, X } from "lucide-react";
 import { useState } from "react";
 
 interface ViewPurchaseOrderDialogProps {
@@ -24,6 +25,9 @@ export function ViewPurchaseOrderDialog({
 }: ViewPurchaseOrderDialogProps) {
   const { user, hasPermission } = useAuth();
   const [deletingItem, setDeletingItem] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editQuantity, setEditQuantity] = useState<number>(0);
+  const [editPrice, setEditPrice] = useState<number>(0);
 
   const handleApprove = async () => {
     const success = await updatePurchaseOrder(order.id, {
@@ -58,6 +62,33 @@ export function ViewPurchaseOrderDialog({
       }
     } finally {
       setDeletingItem(null);
+    }
+  };
+
+  const handleEditItem = (itemId: string, quantity: number, price: number) => {
+    setEditingItem(itemId);
+    setEditQuantity(quantity);
+    setEditPrice(price);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setEditQuantity(0);
+    setEditPrice(0);
+  };
+
+  const handleSaveItem = async (itemId: string) => {
+    try {
+      const success = await updatePurchaseOrderItem(itemId, {
+        quantity: editQuantity,
+        unit_price: editPrice
+      });
+      if (success) {
+        setEditingItem(null);
+        onSuccess(); // Refresh the order data
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
     }
   };
 
@@ -139,24 +170,75 @@ export function ViewPurchaseOrderDialog({
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="font-medium">
-                            {item.quantity} × ₱{item.unit_price?.toFixed(2) || '0.00'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            = ₱{((item.quantity * (item.unit_price || 0))).toFixed(2)}
-                          </p>
-                        </div>
-                        {hasPermission('admin') && order.status === 'pending' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteItem(item.id)}
-                            disabled={deletingItem === item.id}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        {editingItem === item.id ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={editQuantity}
+                                onChange={(e) => setEditQuantity(parseFloat(e.target.value) || 0)}
+                                className="w-20"
+                                min="1"
+                                step="1"
+                              />
+                              <span>×</span>
+                              <Input
+                                type="number"
+                                value={editPrice}
+                                onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
+                                className="w-24"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSaveItem(item.id)}
+                              >
+                                <Save className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelEdit}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-right">
+                              <p className="font-medium">
+                                {item.quantity} × ₱{item.unit_price?.toFixed(2) || '0.00'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                = ₱{((item.quantity * (item.unit_price || 0))).toFixed(2)}
+                              </p>
+                            </div>
+                            {hasPermission('admin') && order.status === 'pending' && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditItem(item.id, item.quantity, item.unit_price || 0)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  disabled={deletingItem === item.id}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
