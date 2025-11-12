@@ -27,6 +27,7 @@ export function EditCommissaryItemDialog({
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
+    business_category: '',
     category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
     minimum_threshold: 0,
     uom: '', // Changed from unit to uom
@@ -44,6 +45,7 @@ export function EditCommissaryItemDialog({
       if (item) {
         setFormData({
           name: item.name,
+          business_category: item.business_category || '',
           category: item.category,
           minimum_threshold: item.minimum_threshold,
           uom: item.uom, // Use uom instead of unit
@@ -108,21 +110,14 @@ export function EditCommissaryItemDialog({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="category">Category *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as any }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="raw_materials">Raw Materials</SelectItem>
-                  <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
-                  <SelectItem value="supplies">Supplies</SelectItem>
-                  <SelectItem value="finished_goods">Finished Goods</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="business_category">Category *</Label>
+              <Input
+                id="business_category"
+                value={formData.business_category}
+                onChange={(e) => setFormData(prev => ({ ...prev, business_category: e.target.value }))}
+                placeholder="e.g., Croffle Items, SAUCES, TOPPINGS"
+                required
+              />
             </div>
           </div>
 
