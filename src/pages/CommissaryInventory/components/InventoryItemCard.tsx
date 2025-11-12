@@ -37,8 +37,6 @@ export function InventoryItemCard({ item, onEdit, onStockAdjustment, onDelete }:
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h3 className="font-semibold text-lg">{item.name}</h3>
-              <Badge variant="outline">{formatCategory(item.category)}</Badge>
-              <Badge variant="secondary">{formatItemType(item.item_type)}</Badge>
               {StatusIcon && (
                 <Badge variant={stockStatus.color as any} className="flex items-center gap-1">
                   <StatusIcon className="h-3 w-3" />
