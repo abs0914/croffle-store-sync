@@ -12,6 +12,7 @@ import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
 import { createPurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
 import { useAuth } from "@/contexts/auth";
+import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
 
 interface CreatePurchaseOrderDialogProps {
@@ -34,6 +35,7 @@ export function CreatePurchaseOrderDialog({
   onSuccess
 }: CreatePurchaseOrderDialogProps) {
   const { user } = useAuth();
+  const { currentStore } = useStore();
   const [loading, setLoading] = useState(false);
   const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
@@ -42,11 +44,12 @@ export function CreatePurchaseOrderDialog({
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState('');
 
   const loadOrderableItems = async () => {
-    console.log('Loading orderable items for user:', user?.email, 'role:', user?.role);
+    console.log('Loading orderable items for store:', currentStore?.name, 'location:', currentStore?.location_type);
     setLoadingItems(true);
     try {
-      const items = await fetchOrderableItems();
-      console.log('Loaded orderable items:', items.length, items);
+      // Filter items by current store's location type
+      const items = await fetchOrderableItems(currentStore?.location_type);
+      console.log('Loaded orderable items for location:', currentStore?.location_type, 'Count:', items.length);
       setOrderableItems(items);
     } catch (error) {
       console.error('Error loading orderable items:', error);
@@ -210,13 +213,13 @@ export function CreatePurchaseOrderDialog({
                   <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">No finished products available for ordering</h3>
                   <p className="text-muted-foreground mb-4">
-                    There are no products currently marked as orderable in the commissary inventory.
+                    {currentStore?.location_type 
+                      ? `No products available for ${currentStore.location_type === 'inside_cebu' ? 'Inside Cebu' : 'Outside Cebu'} stores.`
+                      : 'There are no products currently marked as orderable in the commissary inventory.'}
                   </p>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <p>Debug info:</p>
-                    <p>User: {user?.email}</p>
-                    <p>Role: {user?.role}</p>
-                    <p>Store IDs: {user?.storeIds?.join(', ')}</p>
+                    <p>Store: {currentStore?.name}</p>
+                    <p>Location: {currentStore?.location_type ? (currentStore.location_type === 'inside_cebu' ? 'Inside Cebu' : 'Outside Cebu') : 'Not set'}</p>
                   </div>
                 </div>
               ) : (

@@ -319,9 +319,9 @@ export const removeDuplicateCommissaryItems = async (): Promise<boolean> => {
   }
 };
 
-export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> => {
+export const fetchOrderableItems = async (storeLocationType?: 'inside_cebu' | 'outside_cebu'): Promise<CommissaryInventoryItem[]> => {
   try {
-    console.log('Fetching orderable items...');
+    console.log('Fetching orderable items for location:', storeLocationType || 'all locations');
     
     // First, let's check what data exists in the table with minimal filtering
     const { data: allData, error: allError } = await supabase
@@ -337,13 +337,23 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
     }
 
     // Now try the specific query for orderable items
-    const { data, error } = await supabase
+    let query = supabase
       .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
       .eq('item_type', 'orderable_item')
-      .gte('current_stock', 0)
-      .order('name');
+      .gte('current_stock', 0);
+
+    // Filter by store location if provided
+    if (storeLocationType) {
+      const locationFilter = storeLocationType === 'inside_cebu' 
+        ? 'INSIDE CEBU' 
+        : 'OUTSIDE CEBU';
+      console.log('Filtering orderable items by storage_location containing:', locationFilter);
+      query = query.ilike('storage_location', `%${locationFilter}%`);
+    }
+
+    const { data, error } = await query.order('name');
 
     if (error) {
       console.error('Error fetching orderable items:', error);
