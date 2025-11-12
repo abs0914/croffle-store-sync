@@ -1,0 +1,211 @@
+name,category,uom,unit_cost,current_stock,minimum_threshold,storage_location
+REGULAR CROISSANT,raw_materials,1 Box,2100.00,0,5,FRANCHISEE OUTSIDE CEBU
+WHIPPED CREAM MIX,raw_materials,1 Piping Bag,280.00,0,10,FRANCHISEE OUTSIDE CEBU
+MONALISA,raw_materials,1 Case,2400.00,0,3,FRANCHISEE OUTSIDE CEBU
+GLAZE POWDER,raw_materials,1 Piping Bag,160.00,0,10,FRANCHISEE OUTSIDE CEBU
+Nutella,raw_materials,Pack of 20,90.00,0,5,FRANCHISEE OUTSIDE CEBU
+Chocolate,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Caramel,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Tiramisu,raw_materials,Pack of 20,70.00,0,5,FRANCHISEE OUTSIDE CEBU
+Dark Chocolate,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Biscoff,raw_materials,Pack of 32,180.00,0,5,FRANCHISEE OUTSIDE CEBU
+Kitkat,raw_materials,Pack of 24,150.00,0,5,FRANCHISEE OUTSIDE CEBU
+Oreo Cookies,raw_materials,Pack of 27,80.00,0,5,FRANCHISEE OUTSIDE CEBU
+Biscoff Crushed,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Oreo Crushed,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Peanut,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Colored Sprinkles,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Choco Flakes,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Marshmallow,raw_materials,Pack of 10,25.00,0,5,FRANCHISEE OUTSIDE CEBU
+Graham Crushed,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Strawberry Jam,raw_materials,Pack of 10,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Mango Jam,raw_materials,Pack of 10,70.00,0,5,FRANCHISEE OUTSIDE CEBU
+Blueberry Jam,raw_materials,Pack of 10,75.00,0,5,FRANCHISEE OUTSIDE CEBU
+Matcha crumble,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Chocolate crumble,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE OUTSIDE CEBU
+Rectangle,packaging_materials,Pack of 25,65.00,0,5,FRANCHISEE OUTSIDE CEBU
+Take -out box w/ cover,packaging_materials,Pack of 25,140.00,0,5,FRANCHISEE OUTSIDE CEBU
+Mini Take Out Box,packaging_materials,Pack of 25,60.00,0,5,FRANCHISEE OUTSIDE CEBU
+Overload Cup,packaging_materials,Pack of 50,200.00,0,5,FRANCHISEE OUTSIDE CEBU
+Chopstick,packaging_materials,Pack of 100,60.00,0,5,FRANCHISEE OUTSIDE CEBU
+Popsicle stick,packaging_materials,Pack of 50,15.00,0,10,FRANCHISEE OUTSIDE CEBU
+Piping bag,packaging_materials,Pack of 50,45.00,0,10,FRANCHISEE OUTSIDE CEBU
+Mini Spoon,packaging_materials,Pack of 50,25.00,0,10,FRANCHISEE OUTSIDE CEBU
+Wax Paper,packaging_materials,Pack of 100,70.00,0,5,FRANCHISEE OUTSIDE CEBU
+Wax Paper for Glaze,packaging_materials,Pack of 100,90.00,0,5,FRANCHISEE OUTSIDE CEBU
+XL Clear Binbag,packaging_materials,10pcs/roll,65.00,0,5,FRANCHISEE OUTSIDE CEBU
+Medium Clear Binbag,packaging_materials,10pcs/roll,55.00,0,5,FRANCHISEE OUTSIDE CEBU
+Paper Bag #06,packaging_materials,Pack of 100,91.00,0,5,FRANCHISEE OUTSIDE CEBU
+Paper Bag #20,packaging_materials,Pack of 100,103.00,0,5,FRANCHISEE OUTSIDE CEBU
+Storage Box for Croissant,supplies,Per box,115.00,0,3,FRANCHISEE OUTSIDE CEBU
+Food Grade Containers,supplies,Per container,150.00,0,5,FRANCHISEE OUTSIDE CEBU
+Waffle Maker,supplies,Per machine,6500.00,0,1,FRANCHISEE OUTSIDE CEBU
+Cooling Rack with Cover,supplies,Per piece,500.00,0,2,FRANCHISEE OUTSIDE CEBU
+Thong,supplies,Per piece,230.00,0,3,FRANCHISEE OUTSIDE CEBU
+Spatula,supplies,Per piece,100.00,0,3,FRANCHISEE OUTSIDE CEBU
+Brush,supplies,Per piece,130.00,0,3,FRANCHISEE OUTSIDE CEBU
+Uniform (Polo Shirt),supplies,Per shirt,380.00,0,5,FRANCHISEE OUTSIDE CEBU
+Ice Cream Scooper size 50,supplies,Per piece,800.00,0,2,FRANCHISEE OUTSIDE CEBU
+Delonghi Coffee Machine,supplies,1pc,59000.00,0,1,FRANCHISEE OUTSIDE CEBU
+Blender,supplies,1pc,4500.00,0,1,FRANCHISEE OUTSIDE CEBU
+Pitcher,supplies,1pc,1200.00,0,2,FRANCHISEE OUTSIDE CEBU
+Double Wall Coffee Cups with Lid,packaging_materials,Pack of 100,700.00,0,5,FRANCHISEE OUTSIDE CEBU
+Plastic Cups 16oz with Lid,packaging_materials,Pack of 100,450.00,0,5,FRANCHISEE OUTSIDE CEBU
+Double Take-out Plastic for Coffee,packaging_materials,Pack of 100,86.00,0,5,FRANCHISEE OUTSIDE CEBU
+Single Take-out Plastic for Coffee,packaging_materials,Pack of 100,61.00,0,5,FRANCHISEE OUTSIDE CEBU
+Bending Straw,packaging_materials,Pack of 100,50.00,0,10,FRANCHISEE OUTSIDE CEBU
+Brown Sugar Sachet,raw_materials,Pack of 100,85.00,0,5,FRANCHISEE OUTSIDE CEBU
+White Sugar Sachet,raw_materials,Pack of 100,85.00,0,5,FRANCHISEE OUTSIDE CEBU
+Creamer Sachet,raw_materials,Pack of 100,90.00,0,5,FRANCHISEE OUTSIDE CEBU
+Vanilla Syrup,raw_materials,1 liter,450.00,0,3,FRANCHISEE OUTSIDE CEBU
+Strawberry Syrup,raw_materials,1 liter,450.00,0,3,FRANCHISEE OUTSIDE CEBU
+Chocolate Sauce,raw_materials,2 liters,700.00,0,3,FRANCHISEE OUTSIDE CEBU
+Caramel Sauce,raw_materials,2 liters,700.00,0,3,FRANCHISEE OUTSIDE CEBU
+Matcha Powder,raw_materials,250g,225.00,0,5,FRANCHISEE OUTSIDE CEBU
+Cream Frappe,raw_materials,500g,130.00,0,5,FRANCHISEE OUTSIDE CEBU
+Coffee Beans,raw_materials,1kg,1040.00,0,5,FRANCHISEE OUTSIDE CEBU
+Conaprole,raw_materials,1 liter,85.00,0,5,FRANCHISEE OUTSIDE CEBU
+Monalisa Coffee,raw_materials,1 liter,200.00,0,5,FRANCHISEE OUTSIDE CEBU
+Iced Tea Powder,raw_materials,200g,200.00,0,5,FRANCHISEE OUTSIDE CEBU
+Lemonade Powder,raw_materials,280g,500.00,0,5,FRANCHISEE OUTSIDE CEBU
+REGULAR CROISSANT WITH WHIPPED CREAM,raw_materials,1 Box,2660.00,0,5,FRANCHISEE CEBU
+GLAZE POWDER CEBU,raw_materials,1 Piping Bag,160.00,0,10,FRANCHISEE CEBU
+Nutella Cebu,raw_materials,Pack of 20,90.00,0,5,FRANCHISEE CEBU
+Chocolate Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Caramel Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Tiramisu Cebu,raw_materials,Pack of 20,70.00,0,5,FRANCHISEE CEBU
+Dark Chocolate Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Biscoff Cebu,raw_materials,Pack of 32,180.00,0,5,FRANCHISEE CEBU
+Kitkat Cebu,raw_materials,Pack of 24,150.00,0,5,FRANCHISEE CEBU
+Oreo Cookies Cebu,raw_materials,Pack of 27,80.00,0,5,FRANCHISEE CEBU
+Biscoff Crushed Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Oreo Crushed Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Peanut Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Colored Sprinkles Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Choco Flakes Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Marshmallow Cebu,raw_materials,Pack of 10,25.00,0,5,FRANCHISEE CEBU
+Graham Crushed Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Strawberry Jam Cebu,raw_materials,Pack of 10,50.00,0,5,FRANCHISEE CEBU
+Mango Jam Cebu,raw_materials,Pack of 10,70.00,0,5,FRANCHISEE CEBU
+Blueberry Jam Cebu,raw_materials,Pack of 10,75.00,0,5,FRANCHISEE CEBU
+Matcha crumble Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Chocolate crumble Cebu,raw_materials,Pack of 20,50.00,0,5,FRANCHISEE CEBU
+Rectangle Cebu,packaging_materials,Pack of 25,65.00,0,5,FRANCHISEE CEBU
+Take -out box w/ cover Cebu,packaging_materials,Pack of 25,140.00,0,5,FRANCHISEE CEBU
+Mini Take Out Box Cebu,packaging_materials,Pack of 25,60.00,0,5,FRANCHISEE CEBU
+Overload Cup Cebu,packaging_materials,Pack of 50,200.00,0,5,FRANCHISEE CEBU
+Chopstick Cebu,packaging_materials,Pack of 100,60.00,0,5,FRANCHISEE CEBU
+Popsicle stick Cebu,packaging_materials,Pack of 50,15.00,0,10,FRANCHISEE CEBU
+Piping bag Cebu,packaging_materials,Pack of 50,45.00,0,10,FRANCHISEE CEBU
+Mini Spoon Cebu,packaging_materials,Pack of 50,25.00,0,10,FRANCHISEE CEBU
+Wax Paper Cebu,packaging_materials,Pack of 100,70.00,0,5,FRANCHISEE CEBU
+Wax Paper for Glaze Cebu,packaging_materials,Pack of 100,90.00,0,5,FRANCHISEE CEBU
+XL Clear Binbag Cebu,packaging_materials,10pcs/roll,65.00,0,5,FRANCHISEE CEBU
+Medium Clear Binbag Cebu,packaging_materials,10pcs/roll,55.00,0,5,FRANCHISEE CEBU
+Paper Bag #06 Cebu,packaging_materials,Per pack,91.00,0,5,FRANCHISEE CEBU
+Paper Bag #20 Cebu,packaging_materials,Per pack,103.00,0,5,FRANCHISEE CEBU
+Storage Box for Croissant Cebu,supplies,Per box,115.00,0,3,FRANCHISEE CEBU
+Food Grade Containers Cebu,supplies,Per container,150.00,0,5,FRANCHISEE CEBU
+Waffle Maker Cebu,supplies,Per machine,6500.00,0,1,FRANCHISEE CEBU
+Cooling Rack with Cover Cebu,supplies,Per piece,500.00,0,2,FRANCHISEE CEBU
+Thong Cebu,supplies,Per piece,230.00,0,3,FRANCHISEE CEBU
+Spatula Cebu,supplies,Per piece,100.00,0,3,FRANCHISEE CEBU
+Brush Cebu,supplies,Per piece,130.00,0,3,FRANCHISEE CEBU
+Uniform (Polo Shirt) Cebu,supplies,Per shirt,380.00,0,5,FRANCHISEE CEBU
+Ice Cream Scooper size 50 Cebu,supplies,Per piece,800.00,0,2,FRANCHISEE CEBU
+Delonghi Coffee Machine Cebu,supplies,1pc,59000.00,0,1,FRANCHISEE CEBU
+Blender Cebu,supplies,1pc,4500.00,0,1,FRANCHISEE CEBU
+Pitcher Cebu,supplies,1pc,1200.00,0,2,FRANCHISEE CEBU
+Double Wall Coffee Cups with Lid Cebu,packaging_materials,Pack of 100,700.00,0,5,FRANCHISEE CEBU
+Plastic Cups 16oz with Lid Cebu,packaging_materials,Pack of 100,450.00,0,5,FRANCHISEE CEBU
+Double Take-out Plastic for Coffee Cebu,packaging_materials,Pack of 100,86.00,0,5,FRANCHISEE CEBU
+Single Take-out Plastic for Coffee Cebu,packaging_materials,Pack of 100,61.00,0,5,FRANCHISEE CEBU
+Brown Sugar Sachet Cebu,raw_materials,Pack of 100,85.00,0,5,FRANCHISEE CEBU
+White Sugar Sachet Cebu,raw_materials,Pack of 100,85.00,0,5,FRANCHISEE CEBU
+Creamer Sachet Cebu,raw_materials,Pack of 100,90.00,0,5,FRANCHISEE CEBU
+Vanilla Syrup Cebu,raw_materials,1 liter,450.00,0,3,FRANCHISEE CEBU
+Strawberry Syrup Cebu,raw_materials,1 liter,450.00,0,3,FRANCHISEE CEBU
+Chocolate Sauce Cebu,raw_materials,2 liters,700.00,0,3,FRANCHISEE CEBU
+Caramel Sauce Cebu,raw_materials,2 liters,700.00,0,3,FRANCHISEE CEBU
+Matcha Powder Cebu,raw_materials,250g,225.00,0,5,FRANCHISEE CEBU
+Cream Frappe Cebu,raw_materials,500g,130.00,0,5,FRANCHISEE CEBU
+Coffee Beans Cebu,raw_materials,1kg,1040.00,0,5,FRANCHISEE CEBU
+Bending Straw Cebu,packaging_materials,Pack of 100,50.00,0,10,FRANCHISEE CEBU
+Conaprole Cebu,raw_materials,1 liter,85.00,0,5,FRANCHISEE CEBU
+Monalisa Coffee Cebu,raw_materials,1 liter,200.00,0,5,FRANCHISEE CEBU
+Iced Tea Powder Cebu,raw_materials,200g,200.00,0,5,FRANCHISEE CEBU
+Lemonade Powder Cebu,raw_materials,280g,500.00,0,5,FRANCHISEE CEBU
+REGULAR CROISSANT Branch,raw_materials,1 Box,2100.00,0,5,BRANCHES
+Whipped Cream,raw_materials,Piping Bag,80.00,0,10,BRANCHES
+GLAZE POWDER Branch,raw_materials,1 Piping Bag,160.00,0,10,BRANCHES
+VANILLA ICE CREAM,raw_materials,Gal,350.00,0,3,BRANCHES
+Nutella Branch,raw_materials,Pack of 20,90.00,0,5,BRANCHES
+Chocolate Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Caramel Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Tiramisu Branch,raw_materials,Pack of 20,70.00,0,5,BRANCHES
+Dark Chocolate Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Biscoff Branch,raw_materials,Pack of 32,180.00,0,5,BRANCHES
+Kitkat Branch,raw_materials,Pack of 24,150.00,0,5,BRANCHES
+Oreo Cookies Branch,raw_materials,Pack of 27,80.00,0,5,BRANCHES
+Biscoff Crushed Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Oreo Crushed Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Peanut Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Colored Sprinkles Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Choco Flakes Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Marshmallow Branch,raw_materials,Pack of 10,25.00,0,5,BRANCHES
+Graham Crushed Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Strawberry Jam Branch,raw_materials,Pack of 10,50.00,0,5,BRANCHES
+Mango Jam Branch,raw_materials,Pack of 10,70.00,0,5,BRANCHES
+Blueberry Jam Branch,raw_materials,Pack of 10,75.00,0,5,BRANCHES
+Matcha crumble Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Chocolate crumble Branch,raw_materials,Pack of 20,50.00,0,5,BRANCHES
+Rectangle Branch,packaging_materials,Pack of 25,65.00,0,5,BRANCHES
+Take -out box w/ cover Branch,packaging_materials,Pack of 25,140.00,0,5,BRANCHES
+Mini Take Out Box Branch,packaging_materials,Pack of 25,60.00,0,5,BRANCHES
+Overload Cup Branch,packaging_materials,Pack of 50,200.00,0,5,BRANCHES
+Chopstick Branch,packaging_materials,Pack of 100,60.00,0,5,BRANCHES
+Popsicle stick Branch,packaging_materials,Pack of 50,15.00,0,10,BRANCHES
+Piping bag Branch,packaging_materials,Pack of 50,45.00,0,10,BRANCHES
+Mini Spoon Branch,packaging_materials,Pack of 50,25.00,0,10,BRANCHES
+Wax Paper Branch,packaging_materials,Pack of 100,70.00,0,5,BRANCHES
+Wax Paper for Glaze Branch,packaging_materials,Pack of 100,90.00,0,5,BRANCHES
+XL Clear Binbag Branch,packaging_materials,10pcs/roll,65.00,0,5,BRANCHES
+Medium Clear Binbag Branch,packaging_materials,10pcs/roll,55.00,0,5,BRANCHES
+Paper Bag #06 Branch,packaging_materials,Per pack,91.00,0,5,BRANCHES
+Paper Bag #20 Branch,packaging_materials,Per pack,103.00,0,5,BRANCHES
+Tiny Take-out Plastic,packaging_materials,Per pack,53.00,0,10,BRANCHES
+Medium Take-out Plastic,packaging_materials,Per pack,105.00,0,10,BRANCHES
+MEDIUM BLACK BAG,packaging_materials,Per pack,48.00,0,10,BRANCHES
+EXTRA LARGE BLACK BAG,packaging_materials,Per pack,60.00,0,10,BRANCHES
+Thermal Paper,supplies,Per piece,15.00,0,20,BRANCHES
+Stirrer,packaging_materials,Pack of 100,137.00,0,5,BRANCHES
+Coke,supplies,Per Case,137.00,0,5,BRANCHES
+Sprite,supplies,Per Case,137.00,0,5,BRANCHES
+Bottled Water,supplies,Per Case,235.00,0,5,BRANCHES
+Mineral Water,supplies,Per Gal,30.00,0,10,BRANCHES
+Sponge,supplies,Per piece,5.00,0,20,BRANCHES
+Detergent Powder,supplies,Per piece,5.00,0,10,BRANCHES
+Gloves,supplies,Per pack,25.00,0,10,BRANCHES
+Plastic Portion for Sales,packaging_materials,Per roll,20.00,0,10,BRANCHES
+Delonghi Coffee Machine Branch,supplies,1pc,59000.00,0,1,BRANCHES
+Blender Branch,supplies,1pc,4500.00,0,1,BRANCHES
+Pitcher Branch,supplies,1pc,1200.00,0,2,BRANCHES
+Double Wall Coffee Cups with Lid Branch,packaging_materials,Pack of 100,700.00,0,5,BRANCHES
+Plastic Cups 16oz with Lid Branch,packaging_materials,Pack of 100,450.00,0,5,BRANCHES
+Double Take-out Plastic for Coffee Branch,packaging_materials,Pack of 100,86.00,0,5,BRANCHES
+Single Take-out Plastic for Coffee Branch,packaging_materials,Pack of 100,61.00,0,5,BRANCHES
+Brown Sugar Sachet Branch,raw_materials,Pack of 100,85.00,0,5,BRANCHES
+White Sugar Sachet Branch,raw_materials,Pack of 100,85.00,0,5,BRANCHES
+Creamer Sachet Branch,raw_materials,Pack of 100,90.00,0,5,BRANCHES
+Vanilla Syrup Branch,raw_materials,1 liter,450.00,0,3,BRANCHES
+Strawberry Syrup Branch,raw_materials,1 liter,450.00,0,3,BRANCHES
+Chocolate Sauce Branch,raw_materials,2 liters,700.00,0,3,BRANCHES
+Caramel Sauce Branch,raw_materials,2 liters,700.00,0,3,BRANCHES
+Matcha Powder Branch,raw_materials,250g,225.00,0,5,BRANCHES
+Cream Frappe Branch,raw_materials,500g,130.00,0,5,BRANCHES
+Coffee Beans Branch,raw_materials,1kg,1040.00,0,5,BRANCHES
+Bending Straw Branch,packaging_materials,Pack of 100,50.00,0,10,BRANCHES
+Conaprole Branch,raw_materials,1 liter,85.00,0,5,BRANCHES
+Monalisa Coffee Branch,raw_materials,1 liter,200.00,0,5,BRANCHES
+Iced Tea Powder Branch,raw_materials,200g,200.00,0,5,BRANCHES
+Lemonade Powder Branch,raw_materials,280g,500.00,0,5,BRANCHES
