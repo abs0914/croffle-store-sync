@@ -27,7 +27,6 @@ export function ViewPurchaseOrderDialog({
   const [deletingItem, setDeletingItem] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editQuantity, setEditQuantity] = useState<number>(0);
-  const [editPrice, setEditPrice] = useState<number>(0);
 
   const handleApprove = async () => {
     const success = await updatePurchaseOrder(order.id, {
@@ -65,23 +64,21 @@ export function ViewPurchaseOrderDialog({
     }
   };
 
-  const handleEditItem = (itemId: string, quantity: number, price: number) => {
+  const handleEditItem = (itemId: string, quantity: number) => {
     setEditingItem(itemId);
     setEditQuantity(quantity);
-    setEditPrice(price);
   };
 
   const handleCancelEdit = () => {
     setEditingItem(null);
     setEditQuantity(0);
-    setEditPrice(0);
   };
 
-  const handleSaveItem = async (itemId: string) => {
+  const handleSaveItem = async (itemId: string, unitPrice: number) => {
     try {
       const success = await updatePurchaseOrderItem(itemId, {
         quantity: editQuantity,
-        unit_price: editPrice
+        unit_price: unitPrice
       });
       if (success) {
         setEditingItem(null);
@@ -182,20 +179,13 @@ export function ViewPurchaseOrderDialog({
                                 step="1"
                               />
                               <span>×</span>
-                              <Input
-                                type="number"
-                                value={editPrice}
-                                onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
-                                className="w-24"
-                                min="0"
-                                step="0.01"
-                              />
+                              <span className="font-medium">₱{item.unit_price?.toFixed(2) || '0.00'}</span>
                             </div>
                             <div className="flex gap-1">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleSaveItem(item.id)}
+                                onClick={() => handleSaveItem(item.id, item.unit_price || 0)}
                               >
                                 <Save className="h-4 w-4" />
                               </Button>
@@ -223,7 +213,7 @@ export function ViewPurchaseOrderDialog({
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleEditItem(item.id, item.quantity, item.unit_price || 0)}
+                                  onClick={() => handleEditItem(item.id, item.quantity)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
