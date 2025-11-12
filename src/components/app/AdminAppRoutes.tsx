@@ -24,6 +24,7 @@ import { ManualAdjustments } from '@/pages/Admin/Accounting/ManualAdjustments';
 import { BankReconciliation } from '@/pages/Admin/Accounting/BankReconciliation';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
+import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
 import { AdminPage } from '@/pages/Admin/AdminPage';
 
 export const AdminAppRoutes = () => {
@@ -274,6 +275,7 @@ export const AdminAppRoutes = () => {
       {/* Modular Admin Routes */}
       {AdminInventoryRoutes()}
       {AdminUserRoutes()}
+      {AdminStoreRoutes()}
     </>
   );
 };
