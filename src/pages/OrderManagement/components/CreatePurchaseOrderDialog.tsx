@@ -253,10 +253,10 @@ export function CreatePurchaseOrderDialog({
                 </div>
               ) : (
                 <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-                  <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
-                    <TabsTrigger value="all" className="flex-1 min-w-[100px]">All</TabsTrigger>
+                  <TabsList className="w-full grid grid-cols-3 h-auto gap-1 bg-muted/50 p-2">
+                    <TabsTrigger value="all" className="text-xs whitespace-nowrap">All</TabsTrigger>
                     {categories.map((category) => (
-                      <TabsTrigger key={category} value={category} className="flex-1 min-w-[100px] text-xs">
+                      <TabsTrigger key={category} value={category} className="text-xs whitespace-normal h-auto py-2 px-1">
                         {category}
                       </TabsTrigger>
                     ))}
