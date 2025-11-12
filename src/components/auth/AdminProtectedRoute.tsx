@@ -30,8 +30,17 @@ export function AdminProtectedRoute({
   const { user, isLoading, isAuthenticated } = useAuth();
   const location = useLocation();
 
+  console.log('🛡️ AdminProtectedRoute render:', {
+    path: location.pathname,
+    isLoading,
+    isAuthenticated,
+    userRole: user?.role,
+    section
+  });
+
   // Show loading state while authentication is being checked
   if (isLoading) {
+    console.log('🛡️ AdminProtectedRoute: Showing loading state');
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-croffle-accent"></div>
@@ -41,12 +50,14 @@ export function AdminProtectedRoute({
 
   // Redirect to login page if not authenticated
   if (!isAuthenticated) {
+    console.log('🛡️ AdminProtectedRoute: Not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   // Legacy strict admin check (backwards compatibility)
   if (requireStrictAdmin) {
     const hasStrictAdminAccess = user?.role === 'admin';
+    console.log('🛡️ AdminProtectedRoute: Strict admin check:', hasStrictAdminAccess);
     
     if (!hasStrictAdminAccess) {
       return (
@@ -70,17 +81,25 @@ export function AdminProtectedRoute({
       );
     }
     
+    console.log('🛡️ AdminProtectedRoute: Rendering children (strict mode)');
     return <>{children}</>;
   }
 
   // New section-based permission system
   const adminSection = section || getAdminSectionFromPath(location.pathname);
   
+  console.log('🛡️ AdminProtectedRoute: Section-based check:', {
+    adminSection,
+    hasAnyAccess: hasAnyAdminAccess(user?.role),
+    hasSectionAccess: adminSection ? hasAdminSectionAccess(user?.role, adminSection) : true
+  });
+  
   // Debug access in development
   debugAdminAccess(user?.role, location.pathname);
 
   // Check if user has any admin access at all
   if (!hasAnyAdminAccess(user?.role)) {
+    console.log('🛡️ AdminProtectedRoute: No admin access');
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 p-6">
         <div className="text-center space-y-2">
@@ -105,6 +124,7 @@ export function AdminProtectedRoute({
 
   // Check section-specific access
   if (adminSection && !hasAdminSectionAccess(user?.role, adminSection)) {
+    console.log('🛡️ AdminProtectedRoute: No section access');
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 p-6">
         <div className="text-center space-y-2">
@@ -136,5 +156,6 @@ export function AdminProtectedRoute({
   }
 
   // Render the protected admin content
+  console.log('🛡️ AdminProtectedRoute: Rendering children');
   return <>{children}</>;
 }
