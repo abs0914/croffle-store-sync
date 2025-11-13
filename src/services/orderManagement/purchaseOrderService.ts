@@ -352,3 +352,43 @@ export const deletePurchaseOrderItem = async (itemId: string): Promise<boolean> 
     return false;
   }
 };
+
+export const addPurchaseOrderItem = async (
+  purchaseOrderId: string,
+  commissaryItemId: string,
+  quantity: number,
+  unitPrice: number,
+  specifications?: string
+): Promise<boolean> => {
+  try {
+    // Fetch commissary item details
+    const { data: commissaryItem, error: commissaryError } = await supabase
+      .from('commissary_inventory')
+      .select('name')
+      .eq('id', commissaryItemId)
+      .single();
+
+    if (commissaryError) throw commissaryError;
+
+    // Add the item
+    const { error } = await supabase
+      .from('purchase_order_items')
+      .insert({
+        purchase_order_id: purchaseOrderId,
+        commissary_item_id: commissaryItemId,
+        item_name: commissaryItem.name,
+        quantity,
+        unit_price: unitPrice,
+        specifications
+      });
+
+    if (error) throw error;
+
+    toast.success('Item added to purchase order');
+    return true;
+  } catch (error) {
+    console.error('Error adding purchase order item:', error);
+    toast.error('Failed to add item to purchase order');
+    return false;
+  }
+};

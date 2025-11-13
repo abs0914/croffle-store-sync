@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PurchaseOrder } from "@/types/orderManagement";
-import { updatePurchaseOrder, updatePurchaseOrderItem, deletePurchaseOrderItem } from "@/services/orderManagement/purchaseOrderService";
+import { updatePurchaseOrder, updatePurchaseOrderItem, deletePurchaseOrderItem, addPurchaseOrderItem } from "@/services/orderManagement/purchaseOrderService";
+import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
 import { useAuth } from "@/contexts/auth";
-import { CheckCircle, XCircle, Package, Trash2, Edit, Save, X } from "lucide-react";
-import { useState } from "react";
+import { useStore } from "@/contexts/StoreContext";
+import { CheckCircle, XCircle, Package, Trash2, Edit, Save, X, Plus } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface ViewPurchaseOrderDialogProps {
   order: PurchaseOrder;
@@ -24,9 +28,27 @@ export function ViewPurchaseOrderDialog({
   onSuccess
 }: ViewPurchaseOrderDialogProps) {
   const { user, hasPermission } = useAuth();
+  const { currentStore } = useStore();
   const [deletingItem, setDeletingItem] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editQuantity, setEditQuantity] = useState<number>(0);
+  const [addingItem, setAddingItem] = useState(false);
+  const [orderableItems, setOrderableItems] = useState<any[]>([]);
+  const [selectedItemId, setSelectedItemId] = useState<string>('');
+  const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
+  const [newItemPrice, setNewItemPrice] = useState<number>(0);
+
+  useEffect(() => {
+    if (currentStore && addingItem) {
+      loadOrderableItems();
+    }
+  }, [currentStore, addingItem]);
+
+  const loadOrderableItems = async () => {
+    if (!currentStore) return;
+    const items = await fetchOrderableItems(currentStore.id);
+    setOrderableItems(items);
+  };
 
   const handleApprove = async () => {
     const success = await updatePurchaseOrder(order.id, {
@@ -87,6 +109,34 @@ export function ViewPurchaseOrderDialog({
     } catch (error) {
       console.error('Error updating item:', error);
     }
+  };
+
+  const handleAddItem = async () => {
+    if (!selectedItemId || newItemQuantity <= 0 || newItemPrice <= 0) {
+      return;
+    }
+
+    const success = await addPurchaseOrderItem(
+      order.id,
+      selectedItemId,
+      newItemQuantity,
+      newItemPrice
+    );
+
+    if (success) {
+      setAddingItem(false);
+      setSelectedItemId('');
+      setNewItemQuantity(1);
+      setNewItemPrice(0);
+      onSuccess(); // Refresh the order data
+    }
+  };
+
+  const handleCancelAddItem = () => {
+    setAddingItem(false);
+    setSelectedItemId('');
+    setNewItemQuantity(1);
+    setNewItemPrice(0);
   };
 
   const getStatusColor = (status: string) => {
@@ -150,13 +200,69 @@ export function ViewPurchaseOrderDialog({
 
           {/* Order Items */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Order Items</CardTitle>
+              {order.status === 'pending' && (hasPermission('admin') || hasPermission('owner') || user?.role === 'manager' || user?.role === 'cashier') && !addingItem && (
+                <Button variant="outline" size="sm" onClick={() => setAddingItem(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
-              {order.items && order.items.length > 0 ? (
-                <div className="space-y-3">
-                  {order.items.map((item, index) => (
+              <div className="space-y-3">
+                {addingItem && (
+                  <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
+                    <div className="space-y-2">
+                      <Label>Select Item</Label>
+                      <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose an item..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {orderableItems.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name} - {item.unit}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Quantity</Label>
+                        <Input
+                          type="number"
+                          value={newItemQuantity}
+                          onChange={(e) => setNewItemQuantity(parseFloat(e.target.value) || 1)}
+                          min="1"
+                          step="1"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Unit Price (₱)</Label>
+                        <Input
+                          type="number"
+                          value={newItemPrice}
+                          onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={handleCancelAddItem}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleAddItem} disabled={!selectedItemId || newItemQuantity <= 0 || newItemPrice <= 0}>
+                        Add Item
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {order.items && order.items.length > 0 ? (
+                  <>
+                    {order.items.map((item, index) => (
                     <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex-1">
                         <p className="font-medium">
@@ -232,11 +338,12 @@ export function ViewPurchaseOrderDialog({
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">No items in this order</p>
-              )}
+                    ))}
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No items in this order</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
