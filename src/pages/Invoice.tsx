@@ -1,10 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Receipt, Printer } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Receipt, Printer, Trash2 } from 'lucide-react';
 import CompletedTransaction from '@/components/pos/CompletedTransaction';
 import { Transaction, Customer } from '@/types';
 import { toast } from 'sonner';
+import { deleteTransaction } from '@/services/transactions/transactionDeletionService';
 
 export default function Invoice() {
   const { transactionId } = useParams<{ transactionId: string }>();
@@ -24,6 +36,7 @@ export default function Invoice() {
   const [customer, setCustomer] = useState<Customer | null>(
     location.state?.customer || null
   );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     console.log("🔍 Invoice useEffect - checking transaction data:", {
@@ -62,6 +75,33 @@ export default function Invoice() {
     navigate('/pos');
   };
 
+  const handleDeleteTransaction = async () => {
+    if (!transaction?.receiptNumber) {
+      toast.error('No receipt number found');
+      return;
+    }
+
+    setIsDeleting(true);
+    console.log(`🗑️ Deleting transaction: ${transaction.receiptNumber}`);
+
+    const result = await deleteTransaction(
+      transaction.id || transactionId || '', 
+      transaction.receiptNumber
+    );
+
+    if (result.success) {
+      console.log(`✅ Transaction deleted successfully. Inventory items reversed: ${result.inventoryReversed}`);
+      toast.success(`Transaction ${transaction.receiptNumber} deleted and inventory restored`);
+      // Navigate back to POS
+      navigate('/pos', { replace: true });
+    } else {
+      console.error(`❌ Failed to delete transaction: ${result.error}`);
+      toast.error(`Failed to delete transaction: ${result.error}`);
+    }
+
+    setIsDeleting(false);
+  };
+
   if (!transaction) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -97,6 +137,39 @@ export default function Invoice() {
           
           {/* Right section - Action buttons */}
           <div className="flex items-center gap-2 shrink-0">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isDeleting}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Delete</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete transaction <strong>#{transaction.receiptNumber}</strong> and reverse all inventory deductions.
+                    <br /><br />
+                    <strong>This action cannot be undone.</strong>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDeleteTransaction}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete Transaction'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             <Button
               variant="outline"
               size="sm"
