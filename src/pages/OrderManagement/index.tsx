@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
@@ -7,23 +8,11 @@ import { PurchaseOrdersTab } from "./components/PurchaseOrdersTab";
 import { GRNTab } from "./components/GRNTab";
 import { ShoppingCart, ClipboardCheck } from "lucide-react";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
-export default function OrderManagement() {
-  const { user, hasPermission } = useAuth();
+import CreatePurchaseOrder from "./CreatePurchaseOrder";
+
+function OrderManagementMain() {
   const [activeTab, setActiveTab] = useState("my-orders");
   useOrderNotifications();
-  if (!user || (!hasPermission('manager') && !hasPermission('admin') && !hasPermission('owner'))) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">
-              You don't have permission to access Order Management. This feature is available to managers and above.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -57,5 +46,30 @@ export default function OrderManagement() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function OrderManagement() {
+  const { user, hasPermission } = useAuth();
+  
+  if (!user || (!hasPermission('manager') && !hasPermission('admin') && !hasPermission('owner'))) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">
+              You don't have permission to access Order Management. This feature is available to managers and above.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route index element={<OrderManagementMain />} />
+      <Route path="create" element={<CreatePurchaseOrder />} />
+    </Routes>
   );
 }

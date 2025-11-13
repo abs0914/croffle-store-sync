@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AdminPurchaseOrdersHeader } from './components/AdminPurchaseOrdersHeader';
 import { AdminPurchaseOrdersMetrics } from './components/AdminPurchaseOrdersMetrics';
 import { AdminPurchaseOrdersList } from './components/AdminPurchaseOrdersList';
@@ -6,7 +7,6 @@ import { AdminPurchaseOrderBulkActions } from './components/AdminPurchaseOrderBu
 import { AdminDiscrepancyResolutions } from './components/AdminDiscrepancyResolutions';
 import { useAdminPurchaseOrdersData } from './hooks/useAdminPurchaseOrdersData';
 import { ViewPurchaseOrderDialog } from '@/pages/OrderManagement/components/ViewPurchaseOrderDialog';
-import { CreatePurchaseOrderDialog } from '@/pages/OrderManagement/components/CreatePurchaseOrderDialog';
 import { PurchaseOrder } from '@/types/orderManagement';
 import { updatePurchaseOrder, fulfillPurchaseOrder, deliverPurchaseOrder, deletePurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
 import { useAuth } from '@/contexts/auth';
@@ -22,13 +22,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export default function AdminOrders() {
   console.log('🔵 AdminOrders component mounting/rendering');
   
+  const navigate = useNavigate();
   const { user } = useAuth();
   console.log('🔵 AdminOrders user:', user?.email, 'role:', user?.role);
   
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [fulfillDialog, setFulfillDialog] = useState<{ orderId: string; isOpen: boolean }>({ orderId: '', isOpen: false });
   const [deliveryDate, setDeliveryDate] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
@@ -189,7 +189,7 @@ export default function AdminOrders() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button onClick={() => navigate('/order-management/create')}>
             <Plus className="h-4 w-4 mr-2" />
             Create Purchase Order
           </Button>
@@ -257,12 +257,6 @@ export default function AdminOrders() {
           onSuccess={refreshOrders}
         />
       )}
-
-      <CreatePurchaseOrderDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onSuccess={refreshOrders}
-      />
 
       <Dialog open={fulfillDialog.isOpen} onOpenChange={(open) => setFulfillDialog(prev => ({ ...prev, isOpen: open }))}>
         <DialogContent>

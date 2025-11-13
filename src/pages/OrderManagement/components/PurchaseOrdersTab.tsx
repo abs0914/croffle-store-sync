@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +8,15 @@ import { Plus, Search } from "lucide-react";
 import { PurchaseOrder } from "@/types/orderManagement";
 import { fetchPurchaseOrders, updatePurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
 import { useAuth } from "@/contexts/auth";
-import { CreatePurchaseOrderDialog } from "./CreatePurchaseOrderDialog";
 import { ViewPurchaseOrderDialog } from "./ViewPurchaseOrderDialog";
 import { OrderList } from "@/components/shared/orderManagement";
 
 export function PurchaseOrdersTab() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
 
   const loadPurchaseOrders = async () => {
@@ -63,7 +63,7 @@ export function PurchaseOrdersTab() {
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle>Purchase Orders</CardTitle>
-          <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
+          <Button onClick={() => navigate('/order-management/create')} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Create Purchase Order
           </Button>
@@ -90,12 +90,6 @@ export function PurchaseOrdersTab() {
           userRole={user?.role}
         />
       </CardContent>
-      
-      <CreatePurchaseOrderDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onSuccess={loadPurchaseOrders}
-      />
       
       {viewingOrder && (
         <ViewPurchaseOrderDialog
