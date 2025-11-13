@@ -69,14 +69,14 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
 
     console.log('Purchase order created:', purchaseOrder);
 
-    // Process items - properly handle commissary to inventory stock mapping
+    // Process items - reference commissary items directly without creating store inventory
     if (orderData.items.length > 0) {
       const purchaseOrderItems = [];
       
       for (const item of orderData.items) {
-        console.log('Processing item:', item);
+        console.log('Processing PO item:', item);
         
-        // The inventory_stock_id is actually a commissary_item_id, so we need to map it
+        // The inventory_stock_id parameter is actually a commissary_item_id
         const { data: commissaryItem, error: commissaryError } = await supabase
           .from('commissary_inventory')
           .select('*')
@@ -90,72 +90,11 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
 
         console.log('Found commissary item:', commissaryItem);
 
-        // Check if inventory stock exists for this item in the store
-        let { data: inventoryStock, error: inventoryError } = await supabase
-          .from('inventory_stock')
-          .select('*')
-          .eq('store_id', orderData.store_id)
-          .eq('item', commissaryItem.name)
-          .eq('unit', commissaryItem.unit)
-          .maybeSingle();
-
-        if (inventoryError && inventoryError.code !== 'PGRST116') {
-          console.error('Error checking inventory stock:', inventoryError);
-          continue;
-        }
-
-        console.log('Found existing inventory stock:', inventoryStock);
-
-        // If inventory stock doesn't exist, create it
-        if (!inventoryStock) {
-          console.log('Creating new inventory stock for:', commissaryItem.name);
-          
-          const { data: newInventoryStock, error: createError } = await supabase
-            .from('inventory_stock')
-            .insert({
-              store_id: orderData.store_id,
-              item: commissaryItem.name,
-              unit: commissaryItem.unit,
-              stock_quantity: 0,
-              cost: commissaryItem.unit_cost || 0,
-              is_active: true
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            // If duplicate key error (23505), it means the item was created by another request
-            // Just fetch it again instead of skipping
-            if (createError.code === '23505') {
-              console.log('Inventory stock already exists (race condition), fetching it...');
-              const { data: existingStock, error: fetchError } = await supabase
-                .from('inventory_stock')
-                .select('*')
-                .eq('store_id', orderData.store_id)
-                .eq('item', commissaryItem.name)
-                .eq('unit', commissaryItem.unit)
-                .single();
-              
-              if (fetchError || !existingStock) {
-                console.error('Failed to fetch existing inventory stock after duplicate error:', fetchError);
-                continue;
-              }
-              
-              inventoryStock = existingStock;
-              console.log('Found existing inventory stock after race condition:', inventoryStock);
-            } else {
-              console.error('Error creating inventory stock:', createError);
-              continue;
-            }
-          } else {
-            inventoryStock = newInventoryStock;
-            console.log('Created new inventory stock:', inventoryStock);
-          }
-        }
-
+        // Store the commissary item reference directly (no inventory_stock creation)
+        // inventory_stock_id field will hold the commissary_inventory.id for now
         purchaseOrderItems.push({
           purchase_order_id: purchaseOrder.id,
-          inventory_stock_id: inventoryStock?.id,
+          inventory_stock_id: item.inventory_stock_id, // This is the commissary_inventory.id
           item_name: commissaryItem.name, // Store item name for display
           quantity: item.quantity,
           unit_price: item.unit_price,
