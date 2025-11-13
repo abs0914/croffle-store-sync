@@ -149,11 +149,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Order Management - Store order management (Managers+) */}
+      {/* Order Management - Store order management (Cashiers+) */}
       <Route
         path="/order-management/*"
         element={
-          <ProtectedRoute requiredRole="manager" requireStoreAccess>
+          <ProtectedRoute allowedRoles={['admin', 'owner', 'manager', 'stock_user', 'cashier']} requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <OrderManagement />
