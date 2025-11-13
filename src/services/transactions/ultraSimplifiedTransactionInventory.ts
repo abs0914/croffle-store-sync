@@ -241,46 +241,36 @@ async function processRegularProduct(
       const currentStock = ingredient.inventory_stock.stock_quantity;
       
       // COMPREHENSIVE LOGGING for debugging
-      console.log(`📦 [STOCK CHECK] ${ingredientName}:`, {
+      console.log(`📦 [DEDUCTION START] ${ingredientName}:`, {
         ingredientId: ingredient.inventory_stock_id,
         recipeQuantity: ingredient.quantity,
         transactionQuantity: item.quantity,
         totalNeeded: deductQuantity,
         currentStock: currentStock,
-        sufficient: currentStock >= deductQuantity
+        sufficient: currentStock >= deductQuantity,
+        transactionId: transactionId
       });
       
-      // CRITICAL: Check stock availability BEFORE attempting deduction
-      if (currentStock < deductQuantity) {
-        const errorMsg = `Insufficient stock for ${ingredientName}: need ${deductQuantity}, have ${currentStock}`;
-        console.error(`❌ [INSUFFICIENT STOCK] ${errorMsg}`);
+      // CRITICAL FIX: Use only deductWithAudit - it handles BOTH stock update AND audit trail
+      // This prevents double deduction that was causing transaction failures
+      const deductionResult = await SimplifiedInventoryAuditService.deductWithAudit(
+        ingredient.inventory_stock_id,
+        deductQuantity,
+        transactionId,
+        ingredientName
+      );
+      
+      if (!deductionResult.success) {
+        const errorMsg = deductionResult.error || `Failed to deduct ${ingredientName}`;
+        console.error(`❌ [DEDUCTION FAILED] ${errorMsg}`);
         throw new Error(errorMsg);
       }
       
-      const newStock = currentStock - deductQuantity;
-
-      const { error: updateError } = await supabase
-        .from('inventory_stock')
-        .update({ stock_quantity: newStock })
-        .eq('id', ingredient.inventory_stock_id);
-
-      if (updateError) {
-        throw new Error(`Failed to deduct ${ingredient.inventory_stock.item}: ${updateError.message}`);
+      if (deductionResult.warning) {
+        console.warn(`⚠️ [DEDUCTION WARNING] ${ingredientName}: ${deductionResult.warning}`);
       }
 
-      console.log(`✅ Deducted ${deductQuantity} of ${ingredient.inventory_stock.item}`);
-      
-      // Create audit trail (non-blocking)
-      try {
-        await SimplifiedInventoryAuditService.deductWithAudit(
-          ingredient.inventory_stock_id,
-          deductQuantity,
-          transactionId,
-          ingredient.inventory_stock.item
-        );
-      } catch (auditError) {
-        console.warn(`⚠️ Audit failed but deduction succeeded for ${ingredient.inventory_stock.item}:`, auditError);
-      }
+      console.log(`✅ [DEDUCTION SUCCESS] ${ingredientName}: ${deductQuantity} deducted (${currentStock} → ${currentStock - deductQuantity})`)
       
       return ingredient.inventory_stock.item;
     });
@@ -288,21 +278,24 @@ async function processRegularProduct(
     // Wait for all deductions to complete in parallel
     const deductionResults = await Promise.allSettled(deductionPromises);
     
-    // Process results
+    // Process results - ANY failure should fail the entire transaction
     for (const deductionResult of deductionResults) {
       if (deductionResult.status === 'rejected') {
-        // Don't fail if it's just an audit issue - deduction already happened
-        const errorMsg = deductionResult.reason.message;
-        if (errorMsg.includes('audit') || errorMsg.includes('movement')) {
-          result.warnings.push(`Audit warning: ${errorMsg}`);
-          result.deductedCount++; // Deduction succeeded, just audit failed
-        } else {
-          result.errors.push(errorMsg);
-          result.success = false;
-        }
+        const errorMsg = deductionResult.reason?.message || 'Unknown deduction error';
+        console.error(`❌ [INGREDIENT DEDUCTION FAILED]`, errorMsg);
+        result.errors.push(errorMsg);
+        result.success = false;
       } else if (deductionResult.value) {
         result.deductedCount++;
+        console.log(`✅ [INGREDIENT DEDUCTED] ${deductionResult.value}`);
       }
+    }
+    
+    // CRITICAL: Log final deduction status
+    if (result.success) {
+      console.log(`✅ [PRODUCT SUCCESS] ${item.productName}: All ${result.deductedCount} ingredients deducted`);
+    } else {
+      console.error(`❌ [PRODUCT FAILED] ${item.productName}: ${result.errors.length} errors occurred`);
     }
 
     return result;
