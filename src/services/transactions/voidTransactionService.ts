@@ -180,8 +180,7 @@ export const voidTransaction = async (voidData: VoidRequestData) => {
     const { error: updateError } = await supabase
       .from('transactions')
       .update({ 
-        status: 'voided',
-        updated_at: nowInPhilippines().toISOString()
+        status: 'voided'
       })
       .eq('id', voidData.transactionId);
 
