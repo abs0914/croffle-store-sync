@@ -7,6 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious,
+  PaginationEllipsis
+} from "@/components/ui/pagination";
 import { Plus, Minus, AlertCircle, RefreshCw, ArrowLeft, Grid3x3, List } from "lucide-react";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
@@ -35,6 +44,8 @@ export default function CreatePurchaseOrder() {
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   const categories = [
     'Croffle Items',
@@ -120,6 +131,17 @@ export default function CreatePurchaseOrder() {
   const filteredItems = selectedCategory === 'all' 
     ? orderableItems 
     : orderableItems.filter(item => item.business_category === selectedCategory);
+
+  // Reset to page 1 when category changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   const handleSubmit = async () => {
     const storeId = currentStore?.id || user?.storeIds?.[0];
@@ -293,9 +315,11 @@ export default function CreatePurchaseOrder() {
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">No products found in this category</p>
                   </div>
-                ) : viewMode === 'card' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-96 overflow-y-auto p-1">
-                    {filteredItems.map((item) => (
+                ) : (
+                  <>
+                    {viewMode === 'card' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
+                        {paginatedItems.map((item) => (
                       <div key={item.id} className="border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <h4 className="font-medium text-sm flex-1">{item.name}</h4>
@@ -321,23 +345,23 @@ export default function CreatePurchaseOrder() {
                           <Plus className="h-3 w-3 mr-1" />
                           Add to Order
                         </Button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="max-h-96 overflow-y-auto">
-                    <table className="w-full">
-                      <thead className="bg-muted/50 sticky top-0">
-                        <tr>
-                          <th className="text-left p-3 text-sm font-medium">Product Name</th>
-                          <th className="text-left p-3 text-sm font-medium">Category</th>
-                          <th className="text-right p-3 text-sm font-medium">Stock</th>
-                          <th className="text-right p-3 text-sm font-medium">Unit Cost</th>
-                          <th className="text-center p-3 text-sm font-medium">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredItems.map((item) => (
+                    ) : (
+                      <div>
+                        <table className="w-full">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="text-left p-3 text-sm font-medium">Product Name</th>
+                              <th className="text-left p-3 text-sm font-medium">Category</th>
+                              <th className="text-right p-3 text-sm font-medium">Stock</th>
+                              <th className="text-right p-3 text-sm font-medium">Unit Cost</th>
+                              <th className="text-center p-3 text-sm font-medium">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedItems.map((item) => (
                           <tr key={item.id} className="border-b hover:bg-muted/30 transition-colors">
                             <td className="p-3 text-sm font-medium">{item.name}</td>
                             <td className="p-3">
@@ -364,13 +388,66 @@ export default function CreatePurchaseOrder() {
                                 Add
                               </Button>
                             </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </TabsContent>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="mt-6">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            // Show first page, last page, current page, and pages around current
+                            if (
+                              page === 1 ||
+                              page === totalPages ||
+                              (page >= currentPage - 1 && page <= currentPage + 1)
+                            ) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationLink
+                                    onClick={() => setCurrentPage(page)}
+                                    isActive={currentPage === page}
+                                    className="cursor-pointer"
+                                  >
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            } else if (page === currentPage - 2 || page === currentPage + 2) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            return null;
+                          })}
+                          
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
+                </>
+              )}
+            </TabsContent>
             </Tabs>
           )}
         </CardContent>
