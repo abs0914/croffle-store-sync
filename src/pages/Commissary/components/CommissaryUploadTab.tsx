@@ -86,28 +86,15 @@ export const CommissaryUploadTab = () => {
     }
   };
 
-  const downloadTemplate = () => {
-    const csvContent = `Category,ITEMS,Price,Unit,location
-Croffle Items,REGULAR CROISSANT,2100.00,1 Box/70pcs.,FRANCHISEE OUTSIDE CEBU
-SAUCES,Nutella,90.00,Pack of 20,FRANCHISEE OUTSIDE CEBU
-TOPPINGS,Biscoff,180.00,Pack of 32,FRANCHISEE OUTSIDE CEBU
-BOXES,Rectangle,65.00,Packs of 25,FRANCHISEE OUTSIDE CEBU
-MISCELLANEOUS,Chopstick,60.00,Pack of 100,FRANCHISEE OUTSIDE CEBU
-EQUIPMENT and SUPPLIES,Waffle Maker,6500.00,Per machine,FRANCHISEE OUTSIDE CEBU
-Coffee Items,Coffee Beans,1040.00,1kg,FRANCHISEE OUTSIDE CEBU`;
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', 'commissary_template.csv');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    toast.success("Template downloaded successfully");
+  const downloadTemplate = async () => {
+    try {
+      const { downloadCommissaryInventoryCSV } = await import('@/services/commissary/commissaryImportExport');
+      await downloadCommissaryInventoryCSV();
+      toast.success("Template downloaded with all current items");
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      toast.error("Failed to download template");
+    }
   };
 
   return (
@@ -190,12 +177,13 @@ Coffee Items,Coffee Beans,1040.00,1kg,FRANCHISEE OUTSIDE CEBU`;
               <span className="font-medium">CSV Format Requirements:</span>
             </div>
             <ul className="list-disc list-inside space-y-1 ml-6">
-              <li>Required columns: <strong>Category</strong>, <strong>ITEMS</strong> (name), <strong>Price</strong> (unit_cost), <strong>Unit</strong> (uom), <strong>location</strong></li>
+              <li>Required columns: <strong>name</strong>, <strong>sku</strong>, <strong>category</strong>, <strong>uom</strong>, <strong>unit_cost</strong>, <strong>current_stock</strong></li>
+              <li>Optional columns: <strong>minimum_threshold</strong>, <strong>storage_location</strong></li>
+              <li><strong>SKU is critical</strong>: If a SKU already exists, the current_stock will be ADDED to the existing stock (update mode)</li>
+              <li><strong>current_stock</strong>: Represents quantity to add. For existing SKUs, this adds to current stock. For new items, this sets initial stock.</li>
               <li>Category examples: Croffle Items, SAUCES, TOPPINGS, BOXES, MISCELLANEOUS, EQUIPMENT and SUPPLIES, Coffee Items</li>
-              <li>Categories are automatically mapped to database types (raw_materials, packaging_materials, supplies)</li>
               <li>UOM supports all formats: 1 Box/70pcs., Pack of 20, Pack of 32, 1 liter, 250g, Per piece, etc.</li>
-              <li>Price represents the cost per unit</li>
-              <li>Location examples: FRANCHISEE OUTSIDE CEBU, FRANCHISEE CEBU, BRANCHES, or custom storage locations</li>
+              <li>Download template includes all current items with their current quantities</li>
             </ul>
           </div>
         </CardContent>

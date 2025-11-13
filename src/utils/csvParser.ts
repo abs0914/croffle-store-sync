@@ -128,7 +128,7 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
       'category': ['category', 'type', 'item_type'],
       'uom': ['uom', 'unit', 'unit_of_measure', 'measure', 'units'],
       'unit_cost': ['unit_cost', 'cost', 'price', 'cost_per_unit'],
-      'current_stock': ['current_stock', 'stock', 'quantity', 'qty'],
+      'current_stock': ['current_stock', 'stock', 'quantity', 'qty', 'current_qty'],
       'minimum_threshold': ['minimum_threshold', 'min_threshold', 'reorder_point', 'minimum'],
       'supplier_name': ['supplier_name', 'supplier', 'vendor', 'vendor_name'],
       'sku': ['sku', 'code', 'item_code', 'product_code'],

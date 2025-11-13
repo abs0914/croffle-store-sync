@@ -52,14 +52,15 @@ export const RawIngredientUpload = () => {
           </Button>
         </div>
 
-        <div className="text-sm text-muted-foreground">
+         <div className="text-sm text-muted-foreground">
           <p className="font-medium mb-2">CSV Format Requirements:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Required columns: name, category, uom</li>
-            <li>Optional columns: unit_cost, current_stock, minimum_threshold, supplier_name, sku, storage_location</li>
+            <li>Required columns: name, category, uom, sku, current_stock</li>
+            <li>Optional columns: unit_cost, minimum_threshold, supplier_name, storage_location</li>
+            <li><strong>SKU is critical</strong>: Existing SKUs will UPDATE stock (adds quantity), new SKUs create items</li>
+            <li><strong>current_stock</strong>: Quantity to add to existing items or initial stock for new items</li>
             <li>Category must be: raw_materials, packaging_materials, or supplies</li>
             <li>UOM supports custom formats: "1 Box", "1 Kilo", "680 grams", "Pack of 50", etc.</li>
-            <li>Unit cost represents the cost per UOM unit</li>
             <li>Storage locations: Cold Storage, Dry Storage, Freezer, Room Temperature, Storage Room</li>
           </ul>
         </div>

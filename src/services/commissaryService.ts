@@ -132,57 +132,107 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
 
     const supplierMap = new Map(suppliers?.map(s => [s.name.toLowerCase(), s.id]) || []);
 
-    const processedIngredients = ingredients.map(ingredient => {
-      // Validate category values
-      const validCategories = ['raw_materials', 'packaging_materials', 'supplies', 'finished_goods'];
-      if (!validCategories.includes(ingredient.category)) {
-        console.warn(`Invalid category "${ingredient.category}" for ingredient "${ingredient.name}". Defaulting to "raw_materials".`);
-        ingredient.category = 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
+    // Track stats for reporting
+    let updatedCount = 0;
+    let createdCount = 0;
+    let errorCount = 0;
+
+    for (const ingredient of ingredients) {
+      try {
+        // Validate category values
+        const validCategories = ['raw_materials', 'packaging_materials', 'supplies', 'finished_goods'];
+        if (!validCategories.includes(ingredient.category)) {
+          console.warn(`Invalid category "${ingredient.category}" for ingredient "${ingredient.name}". Defaulting to "raw_materials".`);
+          ingredient.category = 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
+        }
+
+        // Normalize the unit value to match database constraints
+        const normalizedUnit = normalizeUnitValue(ingredient.uom);
+        console.log(`Normalizing unit "${ingredient.uom}" to "${normalizedUnit}" for ingredient "${ingredient.name}"`);
+
+        // Use the unit_cost directly from the ingredient
+        const calculatedUnitCost = ingredient.unit_cost || 0;
+
+        // Determine item_type based on category
+        let item_type: 'raw_material' | 'supply' | 'orderable_item' = 'raw_material';
+        if (ingredient.category === 'packaging_materials' || ingredient.category === 'supplies') {
+          item_type = 'supply';
+        } else if (ingredient.category === 'finished_goods') {
+          item_type = 'orderable_item';
+        }
+
+        // Check if item exists by SKU
+        if (ingredient.sku) {
+          const { data: existingItem } = await supabase
+            .from('commissary_inventory')
+            .select('id, current_stock')
+            .eq('sku', ingredient.sku)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (existingItem) {
+            // Update existing item's stock
+            const newStock = existingItem.current_stock + (ingredient.current_stock || 0);
+            
+            const { error: updateError } = await supabase
+              .from('commissary_inventory')
+              .update({
+                current_stock: newStock,
+                unit_cost: calculatedUnitCost,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingItem.id);
+
+            if (updateError) {
+              console.error(`Error updating item with SKU ${ingredient.sku}:`, updateError);
+              errorCount++;
+            } else {
+              console.log(`Updated stock for SKU ${ingredient.sku}: ${existingItem.current_stock} + ${ingredient.current_stock || 0} = ${newStock}`);
+              updatedCount++;
+            }
+            continue;
+          }
+        }
+
+        // Create new item if SKU doesn't exist or no SKU provided
+        const processedIngredient = {
+          name: ingredient.name,
+          category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
+          item_type: item_type,
+          unit: normalizedUnit,
+          unit_cost: calculatedUnitCost,
+          current_stock: ingredient.current_stock || 0,
+          minimum_threshold: ingredient.minimum_threshold || 0,
+          supplier_id: ingredient.supplier_name ? supplierMap.get(ingredient.supplier_name.toLowerCase()) : null,
+          sku: ingredient.sku,
+          storage_location: ingredient.storage_location,
+          business_category: ingredient.business_category,
+          is_active: true
+        };
+
+        const { error: insertError } = await supabase
+          .from('commissary_inventory')
+          .insert(processedIngredient);
+
+        if (insertError) {
+          console.error(`Error creating new item ${ingredient.name}:`, insertError);
+          errorCount++;
+        } else {
+          console.log(`Created new item: ${ingredient.name}`);
+          createdCount++;
+        }
+      } catch (itemError) {
+        console.error(`Error processing ingredient ${ingredient.name}:`, itemError);
+        errorCount++;
       }
-
-      // Normalize the unit value to match database constraints
-      const normalizedUnit = normalizeUnitValue(ingredient.uom);
-      console.log(`Normalizing unit "${ingredient.uom}" to "${normalizedUnit}" for ingredient "${ingredient.name}"`);
-
-      // Use the unit_cost directly from the ingredient
-      const calculatedUnitCost = ingredient.unit_cost || 0;
-
-      // Determine item_type based on category
-      let item_type: 'raw_material' | 'supply' | 'orderable_item' = 'raw_material';
-      if (ingredient.category === 'packaging_materials' || ingredient.category === 'supplies') {
-        item_type = 'supply';
-      } else if (ingredient.category === 'finished_goods') {
-        item_type = 'orderable_item';
-      }
-
-      return {
-        name: ingredient.name,
-        category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
-        item_type: item_type,
-        unit: normalizedUnit, // Use normalized unit value
-        unit_cost: calculatedUnitCost, // Use unit cost directly
-        current_stock: ingredient.current_stock || 0,
-        minimum_threshold: ingredient.minimum_threshold || 0,
-        supplier_id: ingredient.supplier_name ? supplierMap.get(ingredient.supplier_name.toLowerCase()) : null,
-        sku: ingredient.sku,
-        storage_location: ingredient.storage_location,
-        business_category: ingredient.business_category, // Preserve original business category
-        is_active: true
-      };
-    });
-
-    console.log('Processed ingredients before insert:', processedIngredients);
-
-    const { error } = await supabase
-      .from('commissary_inventory')
-      .insert(processedIngredients);
-
-    if (error) {
-      console.error('Database error during insert:', error);
-      throw error;
     }
+
+    const message = [];
+    if (createdCount > 0) message.push(`${createdCount} created`);
+    if (updatedCount > 0) message.push(`${updatedCount} updated`);
+    if (errorCount > 0) message.push(`${errorCount} failed`);
     
-    toast.success(`Successfully uploaded ${ingredients.length} raw ingredients`);
+    toast.success(`Upload complete: ${message.join(', ')}`);
     return true;
   } catch (error) {
     console.error('Error bulk uploading ingredients:', error);
