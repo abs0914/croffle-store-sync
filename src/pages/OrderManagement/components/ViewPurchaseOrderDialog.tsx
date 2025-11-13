@@ -46,7 +46,7 @@ export function ViewPurchaseOrderDialog({
 
   const loadOrderableItems = async () => {
     if (!currentStore) return;
-    const items = await fetchOrderableItems(currentStore.id);
+    const items = await fetchOrderableItems(currentStore.location_type, currentStore.ownership_type);
     setOrderableItems(items);
   };
 
