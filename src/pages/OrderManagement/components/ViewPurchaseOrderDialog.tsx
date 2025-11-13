@@ -208,7 +208,7 @@ export function ViewPurchaseOrderDialog({
                                 = ₱{((item.quantity * (item.unit_price || 0))).toFixed(2)}
                               </p>
                             </div>
-                            {hasPermission('admin') && order.status === 'pending' && (
+                            {(hasPermission('admin') || hasPermission('owner') || user?.role === 'manager') && order.status === 'pending' && (
                               <div className="flex gap-1">
                                 <Button
                                   variant="outline"
@@ -245,7 +245,7 @@ export function ViewPurchaseOrderDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-            {order.status === 'pending' && (hasPermission('admin') || hasPermission('owner')) && (
+            {order.status === 'pending' && (hasPermission('admin') || hasPermission('owner') || user?.role === 'manager') && (
               <>
                 <Button
                   variant="outline"
