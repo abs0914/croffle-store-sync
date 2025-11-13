@@ -160,7 +160,7 @@ export function ViewPurchaseOrderDialog({
                     <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex-1">
                         <p className="font-medium">
-                          {item.inventory_stock?.item || `Item ${index + 1}`}
+                          {item.item_name || item.inventory_stock?.item || `Item ${index + 1}`}
                         </p>
                         {item.specifications && (
                           <p className="text-sm text-muted-foreground">{item.specifications}</p>

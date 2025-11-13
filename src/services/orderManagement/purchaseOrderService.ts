@@ -155,7 +155,8 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
 
         purchaseOrderItems.push({
           purchase_order_id: purchaseOrder.id,
-          inventory_stock_id: inventoryStock.id,
+          inventory_stock_id: inventoryStock?.id,
+          item_name: commissaryItem.name, // Store item name for display
           quantity: item.quantity,
           unit_price: item.unit_price,
           specifications: item.specifications
