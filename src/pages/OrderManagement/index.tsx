@@ -52,13 +52,13 @@ function OrderManagementMain() {
 export default function OrderManagement() {
   const { user, hasPermission } = useAuth();
   
-  if (!user || (!hasPermission('manager') && !hasPermission('admin') && !hasPermission('owner'))) {
+  if (!user || (!hasPermission('manager') && !hasPermission('admin') && !hasPermission('owner') && !hasPermission('stock_user') && !hasPermission('cashier'))) {
     return (
       <div className="container mx-auto p-6">
         <Card>
           <CardContent className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">
-              You don't have permission to access Order Management. This feature is available to managers and above.
+              You don't have permission to access Order Management. This feature is available to cashiers and above.
             </p>
           </CardContent>
         </Card>
