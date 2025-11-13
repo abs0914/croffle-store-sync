@@ -8,29 +8,31 @@ import { Plus, Search } from "lucide-react";
 import { PurchaseOrder } from "@/types/orderManagement";
 import { fetchPurchaseOrders, updatePurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
 import { useAuth } from "@/contexts/auth";
+import { useStore } from "@/contexts/StoreContext";
 import { ViewPurchaseOrderDialog } from "./ViewPurchaseOrderDialog";
 import { OrderList } from "@/components/shared/orderManagement";
 
 export function PurchaseOrdersTab() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { currentStore } = useStore();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
 
   const loadPurchaseOrders = async () => {
-    if (!user?.storeIds?.[0]) return;
+    if (!currentStore?.id) return;
     
     setLoading(true);
-    const orders = await fetchPurchaseOrders(user.storeIds[0]);
+    const orders = await fetchPurchaseOrders(currentStore.id);
     setPurchaseOrders(orders);
     setLoading(false);
   };
 
   useEffect(() => {
     loadPurchaseOrders();
-  }, [user]);
+  }, [currentStore]);
 
   const handleApproveOrder = async (order: PurchaseOrder) => {
     await updatePurchaseOrder(order.id, {
