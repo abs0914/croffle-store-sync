@@ -131,7 +131,7 @@ export const USER_ROLE_DEFINITIONS: Record<string, UserRoleDefinition> = {
       inventory_management: true,
       commissary_inventory: false,
       production_management: false,
-      order_management: false,
+      order_management: true,
       expenses: false,
       recipe_management: false,
       reports: true,
