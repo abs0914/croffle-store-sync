@@ -4658,6 +4658,7 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
+          commissary_item_id: string | null
           created_at: string | null
           id: string
           inventory_stock_id: string | null
@@ -4668,6 +4669,7 @@ export type Database = {
           unit_price: number | null
         }
         Insert: {
+          commissary_item_id?: string | null
           created_at?: string | null
           id?: string
           inventory_stock_id?: string | null
@@ -4678,6 +4680,7 @@ export type Database = {
           unit_price?: number | null
         }
         Update: {
+          commissary_item_id?: string | null
           created_at?: string | null
           id?: string
           inventory_stock_id?: string | null
@@ -4688,6 +4691,13 @@ export type Database = {
           unit_price?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_order_items_inventory_stock_id_fkey"
             columns: ["inventory_stock_id"]

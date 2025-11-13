@@ -90,11 +90,10 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
 
         console.log('Found commissary item:', commissaryItem);
 
-        // Store the commissary item reference directly (no inventory_stock creation)
-        // inventory_stock_id field will hold the commissary_inventory.id for now
+        // Use the new commissary_item_id field (inventory_stock_id stays null)
         purchaseOrderItems.push({
           purchase_order_id: purchaseOrder.id,
-          inventory_stock_id: item.inventory_stock_id, // This is the commissary_inventory.id
+          commissary_item_id: item.inventory_stock_id, // Use the new commissary_item_id field
           item_name: commissaryItem.name, // Store item name for display
           quantity: item.quantity,
           unit_price: item.unit_price,

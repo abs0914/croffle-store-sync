@@ -26,7 +26,8 @@ export interface PurchaseOrder {
 export interface PurchaseOrderItem {
   id: string;
   purchase_order_id: string;
-  inventory_stock_id?: string; // Optional since it might fail to create due to race conditions
+  inventory_stock_id?: string; // Optional - for store inventory items
+  commissary_item_id?: string; // Optional - for commissary items
   item_name?: string; // Store item name for reliable display
   quantity: number;
   unit_price?: number;
