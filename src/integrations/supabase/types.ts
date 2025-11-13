@@ -4661,6 +4661,7 @@ export type Database = {
           created_at: string | null
           id: string
           inventory_stock_id: string | null
+          item_name: string | null
           purchase_order_id: string
           quantity: number
           specifications: string | null
@@ -4670,6 +4671,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           inventory_stock_id?: string | null
+          item_name?: string | null
           purchase_order_id: string
           quantity: number
           specifications?: string | null
@@ -4679,6 +4681,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           inventory_stock_id?: string | null
+          item_name?: string | null
           purchase_order_id?: string
           quantity?: number
           specifications?: string | null
