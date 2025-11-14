@@ -13,6 +13,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { SimplifiedInventoryAuditService } from '@/services/inventory/simplifiedInventoryAuditService';
 import { simplifiedMixMatchDeduction, batchCheckMixMatchProducts } from '@/services/inventory/simplifiedMixMatchService';
+import { extractBaseProductName } from '@/utils/productNameUtils';
 
 export interface TransactionItem {
   productId: string;
@@ -166,8 +167,9 @@ async function processRegularProduct(
   };
 
   try {
-    // CRITICAL FIX: Add comprehensive logging and cache-busting
-    console.log(`🔍 [INVENTORY CHECK] Fetching recipe for: ${item.productName} in store: ${storeId}`);
+    // Extract base product name for customized products (e.g., "Mini Croffle with Choco Flakes" -> "Mini Croffle")
+    const baseProductName = extractBaseProductName(item.productName);
+    console.log(`🔍 [INVENTORY CHECK] Fetching recipe for: ${item.productName} (base: ${baseProductName}) in store: ${storeId}`);
     
     // Get the product's recipe ingredients with FRESH query (cache-busting timestamp)
     const queryStart = performance.now();
@@ -194,7 +196,7 @@ async function processRegularProduct(
           )
         )
       `)
-      .eq('product_name', item.productName)
+      .eq('product_name', baseProductName)
       .eq('store_id', storeId)
       .maybeSingle();
     
