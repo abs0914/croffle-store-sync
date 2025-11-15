@@ -260,18 +260,78 @@ class StreamlinedTransactionService {
         throw new Error(`Transaction failed: ${criticalErrors.join(', ')}`);
       }
 
-      // Extract inventory result
+      // Extract inventory result with STRICT validation to prevent silent failures
       const inventoryResult = parallelResult.results.get('inventory_deduction')?.result;
-      if (inventoryResult && !inventoryResult.success) {
-        console.error('❌ CRITICAL: Inventory deduction failed:', inventoryResult.errors);
+      
+      // 🔒 CRITICAL FIX #1: Validate inventory result exists
+      if (!inventoryResult) {
+        const errorMsg = 'CRITICAL: Inventory deduction returned no result - this indicates a code execution failure';
+        console.error(`❌ ${errorMsg}`);
+        console.error('Parallel result keys:', Array.from(parallelResult.results.keys()));
+        console.error('Inventory operation result:', parallelResult.results.get('inventory_deduction'));
+        
+        await transactionErrorLogger.logInventoryError(
+          'inventory_result_undefined',
+          new Error(errorMsg),
+          {
+            ...context,
+            transactionId: transaction.id
+          }
+        );
         
         parallelTransactionProcessor.failOptimisticUpdate(
           transaction.id,
-          new Error(inventoryResult.errors.join(', '))
+          new Error(errorMsg)
         );
         
-        throw new Error(`Inventory deduction failed: ${inventoryResult.errors.join(', ')}`);
+        throw new Error(errorMsg);
       }
+      
+      // 🔒 CRITICAL FIX #1: Validate result structure is correct
+      if (typeof inventoryResult.success !== 'boolean') {
+        const errorMsg = 'CRITICAL: Inventory deduction returned malformed result (missing success boolean)';
+        console.error(`❌ ${errorMsg}`, inventoryResult);
+        
+        await transactionErrorLogger.logInventoryError(
+          'inventory_result_malformed',
+          new Error(errorMsg),
+          {
+            ...context,
+            transactionId: transaction.id
+          }
+        );
+        
+        parallelTransactionProcessor.failOptimisticUpdate(
+          transaction.id,
+          new Error(errorMsg)
+        );
+        
+        throw new Error(errorMsg);
+      }
+      
+      // 🔒 CRITICAL FIX #1: Check for inventory deduction failure
+      if (!inventoryResult.success) {
+        const errors = inventoryResult.errors || ['Unknown inventory deduction error'];
+        console.error('❌ CRITICAL: Inventory deduction failed:', errors);
+        
+        await transactionErrorLogger.logInventoryError(
+          'inventory_deduction_failed',
+          new Error(errors.join(', ')),
+          {
+            ...context,
+            transactionId: transaction.id
+          }
+        );
+        
+        parallelTransactionProcessor.failOptimisticUpdate(
+          transaction.id,
+          new Error(errors.join(', '))
+        );
+        
+        throw new Error(`Inventory deduction failed: ${errors.join(', ')}`);
+      }
+      
+      console.log('✅ Inventory result validation passed - deduction successful');
 
       // Complete optimistic update
       parallelTransactionProcessor.completeOptimisticUpdate(transaction.id, {
@@ -674,36 +734,66 @@ class StreamlinedTransactionService {
     // CRITICAL: Check for empty items before processing
     if (!items || items.length === 0) {
       console.error('❌ BLOCKED: Attempted inventory deduction with empty items array');
-      return {
-        success: false,
-        errors: ['No items provided for inventory deduction - transaction data may be corrupted']
-      };
+      throw new Error('No items provided for inventory deduction - transaction data may be corrupted');
     }
 
-    console.log(`🚨 DEBUG: About to format items for inventory...`);
-    
-    // PHASE 5: Use ultra simplified transaction inventory processing
-    const inventoryItems: UltraSimplifiedTransactionItem[] = items.map(item => ({
-      productId: item.productId,
-      productName: item.name, // StreamlinedTransactionItem uses 'name' property
-      quantity: item.quantity,
-      storeId: storeId
-    }));
-    
-    console.log(`🚨 DEBUG: Formatted inventory items:`, inventoryItems);
-    
-    console.log(`🚨 DEBUG: About to call processTransactionInventoryUltraSimplified...`);
-    const result = await processTransactionInventoryUltraSimplified(
-      transactionId,
-      inventoryItems,
-      userId  // ⭐ Use cached userId - no auth query!
-    );
-    console.log(`🚨 DEBUG: processTransactionInventoryUltraSimplified result:`, result);
+    try {
+      console.log(`🚨 DEBUG: About to format items for inventory...`);
+      
+      // PHASE 5: Use ultra simplified transaction inventory processing
+      const inventoryItems: UltraSimplifiedTransactionItem[] = items.map(item => ({
+        productId: item.productId,
+        productName: item.name, // StreamlinedTransactionItem uses 'name' property
+        quantity: item.quantity,
+        storeId: storeId
+      }));
+      
+      console.log(`🚨 DEBUG: Formatted inventory items:`, inventoryItems);
+      
+      console.log(`🚨 DEBUG: About to call processTransactionInventoryUltraSimplified...`);
+      const result = await processTransactionInventoryUltraSimplified(
+        transactionId,
+        inventoryItems,
+        userId  // ⭐ Use cached userId - no auth query!
+      );
+      console.log(`🚨 DEBUG: processTransactionInventoryUltraSimplified result:`, result);
 
-    return {
-      success: result.success,
-      errors: result.errors
-    };
+      // 🔒 CRITICAL FIX #2: Validate result structure before returning
+      if (!result || typeof result !== 'object') {
+        console.error('❌ CRITICAL: Inventory processing returned invalid result type');
+        throw new Error('Inventory processing returned invalid result - this indicates a system error');
+      }
+      
+      if (typeof result.success !== 'boolean') {
+        console.error('❌ CRITICAL: Inventory processing returned malformed success status', result);
+        throw new Error('Inventory processing returned malformed success status');
+      }
+      
+      if (!result.success) {
+        // 🔒 CRITICAL FIX #2: Ensure we have error details when failing
+        if (!result.errors || result.errors.length === 0) {
+          console.error('❌ CRITICAL: Inventory processing failed without providing error details');
+          throw new Error('Inventory processing failed without providing error details');
+        }
+        
+        console.error('❌ CRITICAL: Inventory processing failed with errors:', result.errors);
+        throw new Error(`Inventory processing failed: ${result.errors.join(', ')}`);
+      }
+
+      console.log('✅ Inventory deduction validation passed - returning success');
+      
+      return {
+        success: true,
+        errors: []
+      };
+      
+    } catch (error) {
+      console.error('❌ CRITICAL: processInventoryDeduction exception:', error);
+      
+      // 🔒 CRITICAL FIX #2: Re-throw to ensure transaction fails
+      // Never return { success: false } here - always throw to guarantee transaction rollback
+      throw error;
+    }
   }
 
   /**
