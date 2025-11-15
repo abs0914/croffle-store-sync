@@ -136,12 +136,26 @@ export async function processTransactionInventoryUltraSimplified(
       console.warn(`⚠️ [PERFORMANCE] Inventory deduction took ${totalTime.toFixed(2)}ms (>5s threshold)`);
     }
     
+    // 🔒 CRITICAL FIX #3: Re-throw errors instead of returning them
+    // This ensures transaction failures propagate correctly and don't get swallowed
+    if (!result.success) {
+      const errorMsg = result.errors.length > 0 
+        ? result.errors.join(', ') 
+        : 'Inventory deduction failed without specific error details';
+      console.error('❌ [PHASE 6] Throwing error to fail transaction:', errorMsg);
+      throw new Error(errorMsg);
+    }
+    
     return result;
   } catch (error) {
-    console.error('❌ [PHASE 6] Critical error:', error);
-    result.success = false;
-    result.errors.push(`Critical error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return result;
+    console.error('❌ [PHASE 6] Critical error in inventory processing:', error);
+    
+    // 🔒 CRITICAL FIX #3: Always re-throw - never swallow errors
+    // This guarantees transaction will fail if inventory deduction fails
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Critical inventory processing failure: ' + String(error));
   }
 }
 
