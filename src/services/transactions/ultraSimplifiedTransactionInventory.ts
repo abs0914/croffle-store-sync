@@ -160,6 +160,101 @@ export async function processTransactionInventoryUltraSimplified(
 }
 
 /**
+ * Deduct directly from inventory_stock for products without recipes (add-ons, biscuits, etc.)
+ */
+async function deductDirectFromInventory(
+  item: TransactionItem,
+  transactionId: string,
+  storeId: string
+): Promise<{
+  success: boolean;
+  deductedCount: number;
+  warnings: string[];
+}> {
+  const result = {
+    success: false,
+    deductedCount: 0,
+    warnings: [] as string[]
+  };
+
+  try {
+    // Try to find matching inventory item with fuzzy matching
+    // Remove common suffixes and match case-insensitively
+    const cleanProductName = item.productName
+      .replace(/\s+(biscuit|croffle|coffee)$/i, '')
+      .trim();
+    
+    console.log(`🔍 [DIRECT INVENTORY] Searching for: "${item.productName}" -> cleaned: "${cleanProductName}"`);
+    
+    const { data: inventoryItems, error: searchError } = await supabase
+      .from('inventory_stock')
+      .select('id, item, stock_quantity, unit')
+      .eq('store_id', storeId)
+      .ilike('item', `%${cleanProductName}%`)
+      .limit(5);
+    
+    if (searchError) {
+      console.error(`❌ [SEARCH ERROR] Failed to search inventory:`, searchError);
+      return result;
+    }
+    
+    if (!inventoryItems || inventoryItems.length === 0) {
+      console.warn(`⚠️ [NOT FOUND] No inventory item found matching "${cleanProductName}"`);
+      return result;
+    }
+    
+    // Use the first match (best match)
+    const inventoryItem = inventoryItems[0];
+    console.log(`✅ [MATCH FOUND] "${item.productName}" -> "${inventoryItem.item}" (${inventoryItem.stock_quantity} ${inventoryItem.unit})`);
+    
+    const deductQuantity = item.quantity;
+    const currentStock = inventoryItem.stock_quantity;
+    
+    if (currentStock < deductQuantity) {
+      console.error(`❌ [INSUFFICIENT STOCK] ${inventoryItem.item}: need ${deductQuantity}, have ${currentStock}`);
+      result.warnings.push(`Insufficient stock for ${item.productName}: need ${deductQuantity}, have ${currentStock}`);
+      return result;
+    }
+    
+    // Deduct from inventory
+    const newStock = currentStock - deductQuantity;
+    const { error: updateError } = await supabase
+      .from('inventory_stock')
+      .update({ stock_quantity: newStock })
+      .eq('id', inventoryItem.id);
+    
+    if (updateError) {
+      console.error(`❌ [UPDATE ERROR] Failed to update inventory:`, updateError);
+      return result;
+    }
+    
+    // Log the movement using the same RPC function as SimplifiedInventoryAuditService
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.rpc('insert_inventory_movement_safe', {
+      p_inventory_stock_id: inventoryItem.id,
+      p_movement_type: 'sale',
+      p_quantity_change: -deductQuantity,
+      p_previous_quantity: currentStock,
+      p_new_quantity: newStock,
+      p_reference_type: 'transaction',
+      p_reference_id: transactionId,
+      p_notes: `Direct deduction for ${item.productName} (no recipe)`,
+      p_created_by: user?.id || null
+    });
+    
+    console.log(`✅ [DEDUCTED] ${inventoryItem.item}: ${currentStock} -> ${newStock} (-${deductQuantity})`);
+    
+    result.success = true;
+    result.deductedCount = 1;
+    return result;
+    
+  } catch (error) {
+    console.error(`❌ [EXCEPTION] Direct inventory deduction failed:`, error);
+    return result;
+  }
+}
+
+/**
  * Process a regular (non-Mix & Match) product
  * Uses batched operations for better performance
  */
@@ -234,12 +329,25 @@ async function processRegularProduct(
     });
 
     if (!productData?.recipes?.recipe_ingredients) {
-      console.warn(`⚠️ [NO RECIPE] No recipe found for ${item.productName} in store ${storeId}`);
-      console.warn(`📋 [DEBUG INFO] Product data structure:`, JSON.stringify(productData, null, 2));
+      console.warn(`⚠️ [NO RECIPE] No recipe found for ${item.productName}, attempting direct inventory deduction`);
       
-      // CRITICAL: This should FAIL the transaction, not just warn
-      result.errors.push(`No recipe configuration found for ${item.productName}. Product cannot be sold until recipe is linked.`);
-      result.success = false;
+      // 🆕 FALLBACK: Try to deduct directly from inventory_stock (for add-ons, biscuits, etc.)
+      const directInventoryResult = await deductDirectFromInventory(
+        item,
+        transactionId,
+        storeId
+      );
+      
+      if (!directInventoryResult.success) {
+        console.error(`❌ [NO INVENTORY] No recipe or direct inventory found for ${item.productName}`);
+        result.errors.push(`No recipe configuration found for ${item.productName}. Product cannot be sold until recipe is linked.`);
+        result.success = false;
+        return result;
+      }
+      
+      console.log(`✅ [DIRECT DEDUCTION] Successfully deducted ${item.productName} from inventory`);
+      result.deductedCount = directInventoryResult.deductedCount;
+      result.warnings = directInventoryResult.warnings;
       return result;
     }
     
