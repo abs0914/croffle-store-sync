@@ -32,6 +32,7 @@ import { useAuth } from "@/contexts/auth";
 import { useUnifiedProducts } from "@/hooks/unified/useUnifiedProducts";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
+import { useOfflinePOS } from "@/hooks/useOfflinePOS";
 import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
 import { useBackgroundImageValidation } from "@/hooks/useBackgroundImageValidation";
 import { manualRefreshService } from "@/services/pos/manualRefreshService";
@@ -41,6 +42,7 @@ import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
 import { OptimizedPOSHeader } from "@/components/pos/OptimizedPOSHeader";
 import { POSDebugPanel } from "@/components/debug/POSDebugPanel";
+import { OfflineStatusBanner } from "@/components/offline/OfflineStatusBanner";
 
 import { QuickShiftAccess } from "@/components/pos/QuickShiftAccess";
 import { Button } from "@/components/ui/button";
@@ -123,6 +125,9 @@ export default function POS() {
     getCachedProducts,
     checkOfflineAvailability
   } = useOfflineMode(currentStore?.id || null);
+
+  // Enhanced offline-first POS system
+  const offlinePOS = useOfflinePOS(currentStore?.id || null);
 
   // Local state for active category filter - initialize to "all" to show all products
   const [activeCategory, setActiveCategory] = useState<string | null>("all");
@@ -429,6 +434,15 @@ export default function POS() {
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background">
 
+      {/* Offline Status Banner */}
+      <OfflineStatusBanner
+        isOnline={offlinePOS.isOnline}
+        isSyncing={offlinePOS.isSyncing}
+        pendingSync={offlinePOS.pendingSync}
+        cacheAge={offlinePOS.cacheAge}
+        onSync={offlinePOS.triggerSync}
+        className="m-2"
+      />
 
       {/* Header */}
       <div className="flex-shrink-0 bg-card border-b border-border shadow-sm">

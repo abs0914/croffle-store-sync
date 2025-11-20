@@ -6,6 +6,10 @@ import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { CapacitorMobileInit } from './mobile/capacitor-init'
+import { registerServiceWorker } from './utils/registerServiceWorker'
+
+// Register service worker for offline support
+registerServiceWorker().catch(console.error);
 
 // Create a client
 const queryClient = new QueryClient({
