@@ -66,3 +66,6 @@ verify_jwt = false
 
 [functions.repair-inventory-system]
 verify_jwt = false
+
+[functions.robinsons-transmission]
+verify_jwt = false
