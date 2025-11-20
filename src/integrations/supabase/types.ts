@@ -6025,6 +6025,72 @@ export type Database = {
           },
         ]
       }
+      robinsons_transmission_log: {
+        Row: {
+          created_at: string | null
+          eod_counter: number
+          error_message: string | null
+          file_content: string | null
+          file_name: string
+          id: string
+          record_count: number | null
+          retry_count: number | null
+          sftp_response: string | null
+          status: string
+          store_id: string
+          transmission_date: string
+          transmission_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          eod_counter: number
+          error_message?: string | null
+          file_content?: string | null
+          file_name: string
+          id?: string
+          record_count?: number | null
+          retry_count?: number | null
+          sftp_response?: string | null
+          status?: string
+          store_id: string
+          transmission_date: string
+          transmission_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          eod_counter?: number
+          error_message?: string | null
+          file_content?: string | null
+          file_name?: string
+          id?: string
+          record_count?: number | null
+          retry_count?: number | null
+          sftp_response?: string | null
+          status?: string
+          store_id?: string
+          transmission_date?: string
+          transmission_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "robinsons_transmission_log_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "robinsons_transmission_log_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_audit_log: {
         Row: {
           created_at: string | null
@@ -6699,6 +6765,13 @@ export type Database = {
           phone: string | null
           pos_version: string | null
           region: string | null
+          robinsons_enabled: boolean | null
+          robinsons_eod_counter: number | null
+          robinsons_sftp_host: string | null
+          robinsons_sftp_port: number | null
+          robinsons_sftp_username: string | null
+          robinsons_store_type: string | null
+          robinsons_tenant_id: string | null
           state: string | null
           store_location_photo_url: string | null
           supplier_address: string | null
@@ -6748,6 +6821,13 @@ export type Database = {
           phone?: string | null
           pos_version?: string | null
           region?: string | null
+          robinsons_enabled?: boolean | null
+          robinsons_eod_counter?: number | null
+          robinsons_sftp_host?: string | null
+          robinsons_sftp_port?: number | null
+          robinsons_sftp_username?: string | null
+          robinsons_store_type?: string | null
+          robinsons_tenant_id?: string | null
           state?: string | null
           store_location_photo_url?: string | null
           supplier_address?: string | null
@@ -6797,6 +6877,13 @@ export type Database = {
           phone?: string | null
           pos_version?: string | null
           region?: string | null
+          robinsons_enabled?: boolean | null
+          robinsons_eod_counter?: number | null
+          robinsons_sftp_host?: string | null
+          robinsons_sftp_port?: number | null
+          robinsons_sftp_username?: string | null
+          robinsons_store_type?: string | null
+          robinsons_tenant_id?: string | null
           state?: string | null
           store_location_photo_url?: string | null
           supplier_address?: string | null
