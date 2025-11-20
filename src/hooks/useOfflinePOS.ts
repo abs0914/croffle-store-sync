@@ -36,18 +36,11 @@ export function useOfflinePOS(storeId: string | null) {
       // Check cache age
       const age = await referenceDataService.getCacheAge(storeId);
       setCacheAge(age);
-
-      // Start auto-sync
-      offlineSyncService.startAutoSync();
       
       setIsInitialized(true);
     };
 
     init();
-
-    return () => {
-      offlineSyncService.stopAutoSync();
-    };
   }, [storeId]);
 
   // Update pending sync count
@@ -69,7 +62,7 @@ export function useOfflinePOS(storeId: string | null) {
     if (!isOnline || !storeId) return;
     setIsSyncing(true);
     try {
-      await offlineSyncService.triggerSync();
+      await offlineSyncService.syncAll();
     } finally {
       setIsSyncing(false);
     }
