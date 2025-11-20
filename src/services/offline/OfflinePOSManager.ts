@@ -134,9 +134,11 @@ export class OfflinePOSManager {
         await this.printQueueManager.initialize();
       }
 
-      // Set up service worker for web environments
-      if (!Capacitor.isNativePlatform()) {
+      // Set up service worker for web environments (production only)
+      if (!Capacitor.isNativePlatform() && !import.meta.env.DEV) {
         await this.initializeServiceWorker();
+      } else if (import.meta.env.DEV) {
+        console.log('ℹ️ Service Worker disabled in development mode');
       }
 
       // Set up cross-service communication
@@ -333,16 +335,56 @@ export class OfflinePOSManager {
           this.handleServiceWorkerMessage(event.data);
         });
 
-        // Register for background sync
-        if ('sync' in registration) {
-          await (registration as any).sync.register('offline-transactions-sync');
-          console.log('✅ Background sync registered');
+        // Wait for service worker to be active before registering background sync
+        await this.waitForServiceWorkerActive(registration);
+
+        // Register for background sync (only if supported and service worker is active)
+        if ('sync' in registration && registration.active) {
+          try {
+            await (registration as any).sync.register('offline-transactions-sync');
+            console.log('✅ Background sync registered');
+          } catch (syncError) {
+            console.warn('⚠️ Background sync not available:', syncError);
+          }
+        } else {
+          console.log('ℹ️ Background sync not supported, will use manual sync');
         }
 
       } catch (error) {
         console.error('❌ Service Worker registration failed:', error);
       }
     }
+  }
+
+  /**
+   * Wait for service worker to become active
+   */
+  private async waitForServiceWorkerActive(registration: ServiceWorkerRegistration): Promise<void> {
+    // If already active, return immediately
+    if (registration.active) {
+      return;
+    }
+
+    // Wait for installing or waiting worker to become active
+    const worker = registration.installing || registration.waiting;
+    if (!worker) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'activated') {
+          console.log('✅ Service Worker activated');
+          resolve();
+        }
+      });
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        console.warn('⚠️ Service Worker activation timeout');
+        resolve();
+      }, 10000);
+    });
   }
 
   /**
