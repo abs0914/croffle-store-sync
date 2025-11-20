@@ -57,6 +57,9 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   // Check if this is a BIR report that handles its own data fetching
   const isBIRReport = ['x_reading', 'z_reading', 'bir_ejournal', 'void_report'].includes(reportType);
 
+  // Check if this is a compliance report that handles its own rendering
+  const isComplianceReport = reportType === 'robinsons_compliance' || reportType === 'bir_backup';
+
   // Use selectedStoreId if available, fallback to storeId for data fetching
   const effectiveStoreId = selectedStoreId || storeId;
   
@@ -84,7 +87,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
 
   // Display toast notifications for success/failure (only for standard reports that use centralized data fetching)
   useEffect(() => {
-    if (!isSpecialCashierReport && !isBIRReport) {
+    if (!isSpecialCashierReport && !isBIRReport && !isComplianceReport) {
       if (error) {
         toast.error("Failed to load report data", {
           description: "Please check your connection and try again",
@@ -105,7 +108,23 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
         }
       }
     }
-  }, [data, error, isLoading, dataSource, isMobile, isSpecialCashierReport, isBIRReport]);
+  }, [data, error, isLoading, dataSource, isMobile, isSpecialCashierReport, isBIRReport, isComplianceReport]);
+
+  // Handle compliance reports that handle their own rendering
+  if (isComplianceReport) {
+    return (
+      <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring space-y-4" tabIndex={0}>
+        <ReportView
+          reportType={reportType}
+          data={null}
+          storeId={storeId}
+          selectedStoreId={effectiveStoreId}
+          isAllStores={effectiveStoreId === 'all'}
+          dateRange={dateRange}
+        />
+      </div>
+    );
+  }
 
   // Handle BIR reports that handle their own data fetching
   if (isBIRReport) {
