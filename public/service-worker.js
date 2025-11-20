@@ -159,4 +159,23 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Background Sync event (if supported)
+self.addEventListener('sync', (event) => {
+  console.log('[SW] Background sync event triggered:', event.tag);
+  
+  if (event.tag === 'offline-transactions-sync') {
+    event.waitUntil(
+      // Notify clients to trigger sync
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'BACKGROUND_SYNC_TRIGGERED',
+            tag: event.tag
+          });
+        });
+      })
+    );
+  }
+});
+
 console.log('[SW] Service worker loaded');
