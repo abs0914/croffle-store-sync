@@ -227,24 +227,46 @@ export class OfflineDatabase extends Dexie {
     
     this.version(1).stores({
       // Reference data - indexed by id and store_id
-      products: 'id, store_id, category_id, [store_id+is_available]',
-      categories: 'id, store_id, [store_id+is_active]',
-      inventory_stocks: 'id, store_id, [store_id+day_date]',
+      products: 'id, store_id, category_id, is_available',
+      categories: 'id, store_id, is_active',
+      inventory_stocks: 'id, store_id, day_date',
       recipes: 'id, product_catalog_id',
       store_configs: 'store_id',
 
       // Transactional data - indexed by id, store_id, and sync status
-      orders: 'id, store_id, device_id, [store_id+synced], [device_id+created_at], created_at',
+      orders: 'id, store_id, device_id, synced, created_at',
       order_items: 'id, order_id, product_id',
-      payments: 'id, order_id, [order_id+synced]',
-      inventory_events: 'id, store_id, device_id, inventory_stock_id, [store_id+synced], [device_id+created_at], order_id',
+      payments: 'id, order_id, synced',
+      inventory_events: 'id, store_id, device_id, inventory_stock_id, synced, order_id',
 
       // Outbox and sync
-      outbox: 'id, device_id, store_id, [store_id+synced], [priority+created_at], event_type',
-      business_days: 'id, [store_id+date], device_id, [store_id+device_id+date]',
-      sync_metadata: '[store_id+key]',
+      outbox: 'id, device_id, store_id, synced, priority, event_type, created_at',
+      business_days: 'id, store_id, date, device_id',
+      sync_metadata: 'key, store_id',
       device_config: 'device_id'
     });
+  }
+
+  /**
+   * Initialize database with error recovery
+   */
+  async initializeDatabase(): Promise<void> {
+    try {
+      await this.open();
+      console.log('✅ IndexedDB initialized successfully');
+    } catch (error: any) {
+      console.error('❌ IndexedDB initialization failed:', error);
+      
+      // If database is corrupted, delete and recreate
+      if (error.name === 'NotFoundError' || error.name === 'VersionError') {
+        console.warn('🔄 Corrupted database detected, recreating...');
+        await this.delete();
+        await this.open();
+        console.log('✅ IndexedDB recreated successfully');
+      } else {
+        throw error;
+      }
+    }
   }
 
   /**
@@ -298,3 +320,8 @@ export class OfflineDatabase extends Dexie {
 
 // Export singleton instance
 export const offlineDB = new OfflineDatabase();
+
+// Initialize database on module load
+offlineDB.initializeDatabase().catch(err => {
+  console.error('Fatal: Failed to initialize IndexedDB:', err);
+});
