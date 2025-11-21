@@ -96,6 +96,27 @@ export function useOptimizedInventoryValidation(storeId: string) {
       return result.isValid;
     } catch (error) {
       performanceMonitor.end(operationId, { success: false, error: String(error) });
+      
+      // Check if error is network-related and we're offline
+      const isNetworkError = error instanceof Error && 
+        (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'));
+      
+      if (isNetworkError || !navigator.onLine) {
+        console.log('⚠️ [IMMEDIATE VALIDATION] Network error while offline - allowing checkout', error);
+        setState({
+          isValidating: false,
+          validationResult: {
+            isValid: true,
+            errors: [],
+            warnings: ['Offline: Validation bypassed due to network error'],
+            itemValidations: new Map()
+          },
+          lastValidatedItemCount: items.length,
+          validationTime: null
+        });
+        return true; // Allow checkout when offline
+      }
+      
       console.error('❌ [IMMEDIATE VALIDATION] Error:', error);
       setState(prev => ({ ...prev, isValidating: false }));
       return false;
