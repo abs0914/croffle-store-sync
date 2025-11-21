@@ -319,20 +319,62 @@ export function useTransactionHandler(storeId: string) {
     
     let result;
     try {
-      console.log('🚀 [CALLING SERVICE] About to call streamlinedTransactionService.processTransaction');
-      result = await streamlinedTransactionService.processTransaction(streamlinedData, items);
-      console.log('✅ [SERVICE RETURNED] streamlinedTransactionService.processTransaction completed', {
-        hasResult: !!result,
-        resultType: typeof result,
-        resultValue: result
-      });
+      // Check if we're offline and should use offline transaction system
+      if (!navigator.onLine) {
+        console.log('📴 [OFFLINE MODE] Routing transaction through offline system with print queue support');
+        
+        // Import offline POS manager
+        const { OfflinePOSManager } = await import('@/services/offline/OfflinePOSManager');
+        const offlineManager = OfflinePOSManager.getInstance();
+        
+        // Prepare offline transaction data
+        const offlineTransactionData = {
+          ...streamlinedData,
+          items: items, // Pass full cart items for offline processing
+          customer: selectedCustomer,
+          store: currentStore,
+          cashierName: `${userId}`,
+          shouldPrint: true, // Enable print queuing for offline receipts
+          timestamp: new Date().toISOString()
+        };
+        
+        // Process through offline system (includes print queue)
+        const offlineTransactionId = await offlineManager.processOfflineTransaction(offlineTransactionData);
+        
+        console.log('✅ [OFFLINE] Transaction queued successfully:', offlineTransactionId);
+        toast.success('Transaction saved offline. Will sync when online.');
+        
+        // Create a minimal result object for compatibility
+        result = {
+          id: offlineTransactionId,
+          receiptNumber: `OFF-${Date.now()}`,
+          ...streamlinedData,
+          status: 'pending_sync'
+        } as any;
+      } else {
+        // Online - use regular streamlined service
+        console.log('🚀 [ONLINE] Processing transaction through streamlined service');
+        result = await streamlinedTransactionService.processTransaction(streamlinedData, items);
+        console.log('✅ [SERVICE RETURNED] streamlinedTransactionService.processTransaction completed', {
+          hasResult: !!result,
+          resultType: typeof result,
+          resultValue: result
+        });
+      }
     } catch (serviceError) {
-      console.error('❌ [SERVICE ERROR] streamlinedTransactionService.processTransaction threw error:', {
+      console.error('❌ [SERVICE ERROR] Transaction processing threw error:', {
         error: serviceError,
         message: serviceError instanceof Error ? serviceError.message : 'Unknown error',
-        stack: serviceError instanceof Error ? serviceError.stack : undefined
+        stack: serviceError instanceof Error ? serviceError.stack : undefined,
+        isOnline: navigator.onLine
       });
-      toast.error(serviceError instanceof Error ? serviceError.message : 'Transaction processing failed');
+      
+      // If online service fails, provide helpful message
+      const errorMessage = !navigator.onLine 
+        ? 'Offline transaction failed to queue'
+        : serviceError instanceof Error ? serviceError.message : 'Transaction processing failed';
+      
+      toast.error(errorMessage);
       return false;
     }
     
