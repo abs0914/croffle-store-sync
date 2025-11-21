@@ -225,6 +225,7 @@ export class OfflineDatabase extends Dexie {
   constructor() {
     super('OfflinePOSDB');
     
+    // Version 1: Initial schema
     this.version(1).stores({
       // Reference data - indexed by id and store_id
       products: 'id, store_id, category_id, is_available',
@@ -257,12 +258,31 @@ export class OfflineDatabase extends Dexie {
     } catch (error: any) {
       console.error('❌ IndexedDB initialization failed:', error);
       
-      // If database is corrupted, delete and recreate
-      if (error.name === 'NotFoundError' || error.name === 'VersionError') {
-        console.warn('🔄 Corrupted database detected, recreating...');
-        await this.delete();
-        await this.open();
-        console.log('✅ IndexedDB recreated successfully');
+      // Handle various database errors with proper recovery
+      if (error.name === 'NotFoundError' || 
+          error.name === 'VersionError' || 
+          error.name === 'DatabaseClosedError' ||
+          error.name === 'UpgradeError' ||
+          error.message?.includes('primary key')) {
+        console.warn('🔄 Database error detected, recreating...', error.name);
+        
+        try {
+          // Close any existing connection
+          if (this.isOpen()) {
+            this.close();
+          }
+          
+          // Delete the corrupted database
+          await this.delete();
+          console.log('✅ Old database deleted');
+          
+          // Recreate with fresh schema
+          await this.open();
+          console.log('✅ IndexedDB recreated successfully');
+        } catch (recreateError) {
+          console.error('❌ Failed to recreate database:', recreateError);
+          throw recreateError;
+        }
       } else {
         throw error;
       }

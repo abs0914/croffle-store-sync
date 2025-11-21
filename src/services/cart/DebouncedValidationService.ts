@@ -97,6 +97,39 @@ class DebouncedValidationService {
     this.pendingValidation = null;
     this.validationTimeout = null;
 
+    // Check if we're offline - if so, bypass validation
+    const isOffline = !navigator.onLine;
+    
+    if (isOffline) {
+      console.log('🔌 [DEBOUNCED] Offline mode - Bypassing validation');
+      const itemValidations = new Map<string, ItemValidation>();
+      
+      // Create valid results for all items
+      request.items.forEach(item => {
+        const itemKey = this.getItemKey(item);
+        itemValidations.set(itemKey, {
+          itemKey,
+          productId: item.productId,
+          isValid: true,
+          availableQuantity: 999,
+          requestedQuantity: item.quantity,
+          errors: [],
+          warnings: []
+        });
+      });
+      
+      const result: ValidationResult = {
+        isValid: true,
+        errors: [],
+        warnings: ['Operating in offline mode - validation will occur when online'],
+        itemValidations
+      };
+      
+      this.lastValidationResult = result;
+      request.resolve(result);
+      return;
+    }
+
     const operationId = `cart_validation_${Date.now()}`;
 
     try {
