@@ -137,11 +137,29 @@ const CartView = memo(function CartView({
     }
     
     try {
+      // Log offline status for debugging
+      console.log('🔍 [CHECKOUT] Starting validation', {
+        isOnline: navigator.onLine,
+        itemCount: currentCartItems.length,
+        storeId: currentStore?.id
+      });
+      
       // Step 1: Use IMMEDIATE validation for checkout (bypass debounce)
       const isValid = await validateCartImmediate(currentCartItems);
       
+      console.log('🔍 [CHECKOUT] Validation result', {
+        isValid,
+        errorsCount: errors.length,
+        errors: errors,
+        warningsCount: warnings.length
+      });
+      
       if (!isValid) {
-        toast.error(`Cannot proceed: ${errors.join(', ')}`);
+        const errorMsg = errors.length > 0 
+          ? `Cannot proceed: ${errors.join(', ')}`
+          : 'Cannot proceed: Validation failed';
+        console.error('❌ [CHECKOUT] Blocked:', errorMsg);
+        toast.error(errorMsg);
         return false;
       }
 

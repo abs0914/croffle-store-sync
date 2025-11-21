@@ -60,7 +60,13 @@ export function useOptimizedInventoryValidation(storeId: string) {
       storeId
     });
 
-    setState(prev => ({ ...prev, isValidating: true }));
+    // Clear previous validation state before starting new validation
+    setState({
+      isValidating: true,
+      validationResult: null,  // Clear old results
+      lastValidatedItemCount: 0,
+      validationTime: null
+    });
 
     try {
       const result = await debouncedValidationService.validateCartImmediate(storeId, items);
@@ -70,17 +76,21 @@ export function useOptimizedInventoryValidation(storeId: string) {
         isValid: result.isValid
       });
 
+      console.log('⚡ [IMMEDIATE VALIDATION] Complete', {
+        itemCount: items.length,
+        isValid: result.isValid,
+        errorsCount: result.errors.length,
+        errors: result.errors,
+        warningsCount: result.warnings.length,
+        warnings: result.warnings,
+        duration: `${duration?.toFixed(2)}ms`
+      });
+
       setState({
         isValidating: false,
         validationResult: result,
         lastValidatedItemCount: items.length,
         validationTime: duration
-      });
-
-      console.log('⚡ [IMMEDIATE VALIDATION] Complete', {
-        itemCount: items.length,
-        isValid: result.isValid,
-        duration: `${duration?.toFixed(2)}ms`
       });
 
       return result.isValid;
