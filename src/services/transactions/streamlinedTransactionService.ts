@@ -451,7 +451,12 @@ class StreamlinedTransactionService {
 
     if (error) {
       console.error('❌ Database insert error:', error);
-      throw new Error(error.message);
+      // Preserve original error details for better debugging
+      const errorMsg = error.message || 'Database transaction insert failed';
+      const enhancedError = new Error(errorMsg);
+      // Attach original error for network detection
+      (enhancedError as any).originalError = error;
+      throw enhancedError;
     }
 
     // Map database fields to Transaction interface
