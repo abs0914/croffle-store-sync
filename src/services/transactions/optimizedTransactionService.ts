@@ -32,6 +32,16 @@ export class OptimizedTransactionService {
     errors: string[];
     validatedItems: any[];
   }> {
+    // Skip validation when offline (assume valid - offline POS will handle)
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Skipping product validation');
+      return {
+        isValid: true,
+        errors: [],
+        validatedItems: items
+      };
+    }
+    
     try {
       const productIds = items.map(item => item.productId);
       

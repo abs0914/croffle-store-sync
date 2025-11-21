@@ -44,6 +44,13 @@ export async function deductInventoryForTransaction(
     warnings: []
   };
 
+  // Skip inventory deduction when offline (offline POS already queues deductions)
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping immediate inventory deduction (will sync later)');
+    result.warnings.push('Inventory deduction queued for synchronization');
+    return result;
+  }
+
   console.log(`🔄 STARTING INVENTORY DEDUCTION`);
   console.log(`   Transaction ID: ${transactionId}`);
   console.log(`   Store ID: ${storeId}`);

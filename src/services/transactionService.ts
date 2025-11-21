@@ -73,6 +73,12 @@ export const logRecipeUsage = async (
   transactionId?: string,
   notes?: string
 ): Promise<boolean> => {
+  // Skip recipe usage logging when offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping recipe usage log (will sync later)');
+    return true; // Return true to not block the transaction
+  }
+  
   try {
     const { error } = await supabase
       .from('recipe_usage_log')

@@ -18,6 +18,12 @@ interface CustomerRow {
  * Fetches a customer by phone number
  */
 export const fetchCustomerByPhone = async (phone: string): Promise<Customer | null> => {
+  // Skip customer lookup when offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping customer lookup');
+    return null;
+  }
+  
   try {
     const { data, error } = await supabase
       .from("customers")
@@ -61,6 +67,13 @@ export const fetchCustomerByPhone = async (phone: string): Promise<Customer | nu
  * Creates or updates a customer
  */
 export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { id?: string }): Promise<Customer | null> => {
+  // Skip customer operations when offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping customer creation/update');
+    toast.info('Customer data will be saved when online');
+    return null;
+  }
+  
   try {
     const { currentStore } = await import("@/contexts/StoreContext").then(m => m.useStore());
     const storeId = currentStore?.id || customer.storeId;
