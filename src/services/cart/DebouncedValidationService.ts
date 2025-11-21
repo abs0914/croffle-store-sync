@@ -251,8 +251,46 @@ class DebouncedValidationService {
       request.resolve(result);
     } catch (error) {
       performanceMonitor.end(operationId, { success: false, error: String(error) });
-      console.error('❌ [DEBOUNCED] Validation failed:', error);
-      request.reject(error);
+      
+      // Check if this is a network error (offline scenario)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isNetworkError = 
+        errorMessage.includes('Failed to fetch') || 
+        errorMessage.includes('NetworkError') ||
+        errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+        !navigator.onLine;
+      
+      if (isNetworkError) {
+        console.warn('⚠️ [DEBOUNCED] Network error detected - allowing offline operation', errorMessage);
+        
+        // Create valid results for all items (offline mode)
+        const itemValidations = new Map<string, ItemValidation>();
+        request.items.forEach(item => {
+          const itemKey = this.getItemKey(item);
+          itemValidations.set(itemKey, {
+            itemKey,
+            productId: item.productId,
+            isValid: true,
+            availableQuantity: 999,
+            requestedQuantity: item.quantity,
+            errors: [],
+            warnings: []
+          });
+        });
+        
+        const result: ValidationResult = {
+          isValid: true,
+          errors: [],
+          warnings: ['Offline mode - validation will occur when online'],
+          itemValidations
+        };
+        
+        this.lastValidationResult = result;
+        request.resolve(result);
+      } else {
+        console.error('❌ [DEBOUNCED] Validation failed:', error);
+        request.reject(error);
+      }
     }
   }
 
