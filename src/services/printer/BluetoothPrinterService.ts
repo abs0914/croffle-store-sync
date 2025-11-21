@@ -61,36 +61,55 @@ export class BluetoothPrinterService {
     cashierName?: string,
     autoOpenDrawer?: boolean
   ): Promise<boolean> {
+    console.log('🖨️ [BT-PRINTER] printReceipt called', {
+      isOnline: navigator.onLine,
+      transactionId: transaction.id,
+      receiptNumber: transaction.receiptNumber,
+      hasStore: !!store,
+      storeName: store?.name,
+      hasCustomer: !!customer
+    });
+
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
+      console.error('❌ [BT-PRINTER] No printer connected');
       throw new Error('No printer connected');
     }
 
+    console.log('🖨️ [BT-PRINTER] Printer connected:', printer.name);
+
     try {
+      console.log('🖨️ [BT-PRINTER] Formatting receipt...');
       const receiptData = PrinterTypeManager.formatReceipt(printer, transaction, customer, store, cashierName);
+      console.log('🖨️ [BT-PRINTER] Receipt formatted, length:', receiptData.length);
+      
+      console.log('🖨️ [BT-PRINTER] Sending data to printer...');
       const success = await this.sendDataToPrinter(printer, receiptData);
+      console.log('🖨️ [BT-PRINTER] Send result:', success);
 
       if (success) {
-        console.log('Receipt printed successfully');
+        console.log('✅ [BT-PRINTER] Receipt printed successfully');
         
         // Auto-open cash drawer if enabled, it's a cash transaction, and printer supports it
         if (autoOpenDrawer && transaction.paymentMethod === 'cash' && PrinterTypeManager.supportsCashDrawer(printer)) {
-          console.log('Auto-opening cash drawer for cash transaction...');
+          console.log('💰 [BT-PRINTER] Auto-opening cash drawer for cash transaction...');
           setTimeout(async () => {
             try {
               await this.openCashDrawer();
-              console.log('Cash drawer auto-opened successfully');
+              console.log('✅ [BT-PRINTER] Cash drawer auto-opened successfully');
             } catch (drawerError) {
-              console.error('Failed to auto-open cash drawer:', drawerError);
+              console.error('❌ [BT-PRINTER] Failed to auto-open cash drawer:', drawerError);
               // Don't fail the receipt printing if drawer fails
             }
           }, 500); // Small delay to ensure receipt finishes printing first
         }
+      } else {
+        console.error('❌ [BT-PRINTER] Failed to send receipt to printer');
       }
 
       return success;
     } catch (error) {
-      console.error('Failed to print receipt:', error);
+      console.error('❌ [BT-PRINTER] Failed to print receipt:', error);
       return false;
     }
   }

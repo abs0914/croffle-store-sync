@@ -84,28 +84,36 @@ export default function CompletedTransaction({
         printedReceipts.current.add(transaction.receiptNumber);
         
         try {
-          console.log('Auto-printing receipt to thermal printer...');
+          console.log('🖨️ [AUTO-PRINT] Starting print process...', {
+            isOnline: navigator.onLine,
+            receiptNumber: transaction.receiptNumber,
+            hasStore: !!stableStore,
+            storeName: stableStore?.name,
+            hasCustomer: !!stableCustomer,
+            isPrinterConnected: isConnected
+          });
           
           // Wait for connection to stabilize before printing
           await new Promise(resolve => setTimeout(resolve, 500));
           
           // Verify printer is still connected before attempting print
           if (!isConnected) {
-            console.warn('Printer disconnected before print could start');
+            console.warn('⚠️ [AUTO-PRINT] Printer disconnected before print could start');
             printedReceipts.current.delete(transaction.receiptNumber);
             return;
           }
           
+          console.log('🖨️ [AUTO-PRINT] Calling printReceipt...');
           await printReceipt(transaction, stableCustomer, stableStore, 'Cashier');
 
           // ✅ Clear cart AFTER successful printing
-          console.log('Receipt printed successfully, clearing cart...');
+          console.log('✅ [AUTO-PRINT] Receipt printed successfully, clearing cart...');
           clearCart();
 
           // Show brief success message and start countdown for auto-navigation
           setShowBriefSuccess(true);
         } catch (error) {
-          console.error('Auto-print failed:', error);
+          console.error('❌ [AUTO-PRINT] Print failed:', error);
           // Remove from printed set on failure so it can be retried
           printedReceipts.current.delete(transaction.receiptNumber);
           toast.error('Auto-print failed. Use manual print button if needed.');
