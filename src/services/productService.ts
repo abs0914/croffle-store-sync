@@ -12,6 +12,12 @@ export * from './product/productImages';
 
 // Fetch product variations
 export const fetchProductVariations = async (productId: string): Promise<ProductVariation[]> => {
+  // Return empty array when offline (POS should use cached data)
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Returning empty variations (use cached data)');
+    return [];
+  }
+  
   try {
     const { data, error } = await supabase
       .from("product_variations")
@@ -45,6 +51,12 @@ export const fetchProductVariations = async (productId: string): Promise<Product
 
 // Create inventory transaction
 export const createInventoryTransaction = async (transactionData: any) => {
+  // Skip transaction logging when offline (will be queued)
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping inventory transaction log (will sync later)');
+    return null;
+  }
+  
   try {
     const { data, error } = await supabase
       .from("inventory_transactions")

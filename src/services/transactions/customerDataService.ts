@@ -10,6 +10,12 @@ export const searchCustomers = async (
   query: string,
   storeId?: string | null
 ): Promise<Customer[]> => {
+  // Return empty array when offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping customer search');
+    return [];
+  }
+  
   try {
     // First, build the query
     let queryBuilder = supabase
@@ -62,6 +68,12 @@ export const searchCustomers = async (
  * Fetch customer purchase history
  */
 export const fetchCustomerPurchaseHistory = async (customerId: string): Promise<Transaction[]> => {
+  // Return empty array when offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping customer purchase history');
+    return [];
+  }
+  
   try {
     const { data, error } = await supabase
       .from("transactions")
@@ -131,6 +143,13 @@ export const registerStoreCustomer = async (
   customerData: Omit<Customer, "id">,
   storeId: string
 ): Promise<Customer | null> => {
+  // Skip when offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode - Skipping customer registration');
+    toast.info('Customer registration will be saved when online');
+    return null;
+  }
+  
   try {
     // Get the store name for the response
     const { data: storeData } = await supabase

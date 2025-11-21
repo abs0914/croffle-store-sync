@@ -23,6 +23,17 @@ export const CartValidationService = {
       };
     }
 
+    // When offline, assume all items are valid (will validate when online)
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Skipping cart validation (assuming all valid)');
+      return {
+        validItems: cartItems,
+        invalidItems: [],
+        removedCount: 0,
+        success: true
+      };
+    }
+
     const validItems: CartItem[] = [];
     const invalidItems: CartItem[] = [];
 
@@ -146,6 +157,12 @@ export const CartValidationService = {
     
     if (!cartItems || cartItems.length === 0) {
       return [];
+    }
+
+    // When offline, return items as-is
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Skipping cart refresh (returning existing items)');
+      return cartItems;
     }
 
     const refreshedItems: CartItem[] = [];
