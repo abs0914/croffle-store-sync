@@ -369,13 +369,70 @@ export function useTransactionHandler(storeId: string) {
         isOnline: navigator.onLine
       });
       
-      // If online service fails, provide helpful message
-      const errorMessage = !navigator.onLine 
-        ? 'Offline transaction failed to queue'
-        : serviceError instanceof Error ? serviceError.message : 'Transaction processing failed';
+      // Check if this is a network error (DNS resolution, connection failure, etc.)
+      const errorMessage = serviceError instanceof Error ? serviceError.message : String(serviceError);
+      const isNetworkError = 
+        errorMessage.includes('Failed to fetch') || 
+        errorMessage.includes('NetworkError') ||
+        errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+        errorMessage.includes('Network request failed') ||
+        !navigator.onLine;
       
-      toast.error(errorMessage);
-      return false;
+      // If it's a network error during "online" processing, route to offline mode
+      if (isNetworkError && navigator.onLine) {
+        console.log('📴 [NETWORK ERROR DETECTED] Routing to offline mode despite navigator.onLine=true');
+        
+        try {
+          // Import offline POS manager
+          const { OfflinePOSManager } = await import('@/services/offline/OfflinePOSManager');
+          const offlineManager = OfflinePOSManager.getInstance();
+          
+          // Ensure manager is initialized
+          try {
+            await offlineManager.initialize({ enableAutoSync: true });
+          } catch (initError) {
+            // Already initialized or initialization failed - continue anyway
+            console.log('ℹ️ Offline manager initialization status:', initError);
+          }
+          
+          // Prepare offline transaction data
+          const offlineTransactionData = {
+            ...streamlinedData,
+            items: items, // Pass full cart items for offline processing
+            customer: selectedCustomer,
+            store: currentStore,
+            cashierName: `${userId}`,
+            shouldPrint: true, // Enable print queuing for offline receipts
+            timestamp: new Date().toISOString()
+          };
+          
+          // Process through offline system (includes print queue)
+          const offlineTransactionId = await offlineManager.processOfflineTransaction(offlineTransactionData);
+          
+          console.log('✅ [OFFLINE FALLBACK] Transaction queued successfully:', offlineTransactionId);
+          toast.success('Network unavailable. Transaction saved offline and will sync when connection is restored.');
+          
+          // Create a minimal result object for compatibility
+          result = {
+            id: offlineTransactionId,
+            receiptNumber: `OFF-${Date.now()}`,
+            ...streamlinedData,
+            status: 'pending_sync'
+          } as any;
+        } catch (offlineError) {
+          console.error('❌ [OFFLINE FALLBACK FAILED]:', offlineError);
+          toast.error('Failed to save transaction offline. Please try again.');
+          return false;
+        }
+      } else {
+        // Not a network error, or already in offline mode - show error
+        const displayMessage = !navigator.onLine 
+          ? 'Offline transaction failed to queue'
+          : errorMessage || 'Transaction processing failed';
+        
+        toast.error(displayMessage);
+        return false;
+      }
     }
     
     console.log("🔍 HANDLER - CreateTransaction result:", {
