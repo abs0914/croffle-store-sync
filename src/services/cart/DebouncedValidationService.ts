@@ -335,59 +335,57 @@ class DebouncedValidationService {
   ): Promise<ValidationResult> {
     const operationId = `cart_validation_immediate_${Date.now()}`;
     
-    try {
-      // Check if we're offline
-      const isOffline = !navigator.onLine;
+    // Check if we're offline FIRST
+    const isOffline = !navigator.onLine;
+    
+    if (isOffline) {
+      console.log('🔌 [IMMEDIATE] Offline mode detected at start - Bypassing validation entirely');
+      const itemValidations = new Map<string, ItemValidation>();
       
-      // If offline, bypass validation (assume valid)
-      if (isOffline) {
-        console.log('🔌 [IMMEDIATE] Offline mode - Bypassing validation');
-        const itemValidations = new Map<string, ItemValidation>();
-        
-        // Create valid results for all items
-        items.forEach(item => {
-          const itemKey = this.getItemKey(item);
-          itemValidations.set(itemKey, {
-            itemKey,
-            productId: item.productId,
-            isValid: true,
-            availableQuantity: 999,
-            requestedQuantity: item.quantity,
-            errors: [],
-            warnings: []
-          });
-        });
-        
-        return {
+      items.forEach(item => {
+        const itemKey = this.getItemKey(item);
+        itemValidations.set(itemKey, {
+          itemKey,
+          productId: item.productId,
           isValid: true,
+          availableQuantity: 999,
+          requestedQuantity: item.quantity,
           errors: [],
-          warnings: ['Operating in offline mode - validation will occur when online'],
-          itemValidations
-        };
-      }
-      
-      // Clear any pending debounced validation
-      if (this.validationTimeout) {
-        clearTimeout(this.validationTimeout);
-        this.validationTimeout = null;
-      }
-
-      if (this.pendingValidation) {
-        this.pendingValidation.reject(new Error('Cancelled for immediate validation'));
-        this.pendingValidation = null;
-      }
-
-      console.log('⚡ [IMMEDIATE] Starting immediate validation', {
-        itemCount: items.length
+          warnings: []
+        });
       });
       
-      performanceMonitor.start(operationId, 'Cart Validation (Immediate)', {
-        itemCount: items.length,
-        storeId
-      });
+      return {
+        isValid: true,
+        errors: [],
+        warnings: ['Operating in offline mode - validation will occur when online'],
+        itemValidations
+      };
+    }
+    
+    // Clear any pending debounced validation
+    if (this.validationTimeout) {
+      clearTimeout(this.validationTimeout);
+      this.validationTimeout = null;
+    }
 
+    if (this.pendingValidation) {
+      this.pendingValidation.reject(new Error('Cancelled for immediate validation'));
+      this.pendingValidation = null;
+    }
+
+    console.log('⚡ [IMMEDIATE] Starting immediate validation', {
+      itemCount: items.length
+    });
+    
+    performanceMonitor.start(operationId, 'Cart Validation (Immediate)', {
+      itemCount: items.length,
+      storeId
+    });
+
+    try {
       // Create a temporary request and execute immediately
-      return new Promise((resolve, reject) => {
+      const result = await new Promise<ValidationResult>((resolve, reject) => {
         this.pendingValidation = {
           storeId,
           items,
@@ -395,8 +393,17 @@ class DebouncedValidationService {
           resolve,
           reject
         };
-        this.executeValidation();
+        
+        // Execute validation (it will call resolve/reject)
+        this.executeValidation().catch(err => {
+          // If executeValidation itself throws, reject the promise
+          reject(err);
+        });
       });
+      
+      performanceMonitor.end(operationId, { success: true });
+      return result;
+      
     } catch (error) {
       performanceMonitor.end(operationId, { success: false, error: String(error) });
       
@@ -409,7 +416,7 @@ class DebouncedValidationService {
         !navigator.onLine;
       
       if (isNetworkError) {
-        console.warn('⚠️ [IMMEDIATE VALIDATION] Network error - allowing offline operation', errorMessage);
+        console.warn('⚠️ [IMMEDIATE VALIDATION] Network error caught - allowing offline operation', errorMessage);
         
         const itemValidations = new Map<string, ItemValidation>();
         items.forEach(item => {
