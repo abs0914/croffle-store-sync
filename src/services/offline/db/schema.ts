@@ -341,7 +341,44 @@ export class OfflineDatabase extends Dexie {
 // Export singleton instance
 export const offlineDB = new OfflineDatabase();
 
-// Initialize database on module load
-offlineDB.initializeDatabase().catch(err => {
-  console.error('Fatal: Failed to initialize IndexedDB:', err);
+// Track initialization state
+let dbInitPromise: Promise<void> | null = null;
+let isInitialized = false;
+
+/**
+ * Ensure database is initialized before use
+ */
+export async function ensureDatabaseReady(): Promise<void> {
+  if (isInitialized) return;
+  
+  if (!dbInitPromise) {
+    dbInitPromise = offlineDB.initializeDatabase().then(() => {
+      isInitialized = true;
+      console.log('✅ Database ready for use');
+    }).catch(async (err) => {
+      console.error('❌ Fatal: Database initialization failed:', err);
+      
+      // Last resort: Force delete via IndexedDB API
+      try {
+        console.log('🔄 Attempting force delete of database...');
+        await indexedDB.deleteDatabase('OfflinePOSDB');
+        console.log('✅ Force delete successful, retrying initialization...');
+        
+        // Retry initialization
+        await offlineDB.open();
+        isInitialized = true;
+        console.log('✅ Database initialized after force delete');
+      } catch (forceError) {
+        console.error('❌ Force delete failed:', forceError);
+        throw new Error('Cannot initialize offline database. Please clear browser data and refresh.');
+      }
+    });
+  }
+  
+  return dbInitPromise;
+}
+
+// Start initialization immediately but don't block module load
+ensureDatabaseReady().catch(() => {
+  // Error already logged, just prevent unhandled rejection
 });

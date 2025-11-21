@@ -7,7 +7,7 @@
 
 import { Device } from '@capacitor/device';
 import { Capacitor } from '@capacitor/core';
-import { offlineDB } from './db/schema';
+import { offlineDB, ensureDatabaseReady } from './db/schema';
 
 class DeviceIdService {
   private deviceId: string | null = null;
@@ -20,6 +20,9 @@ class DeviceIdService {
     if (this.deviceId) {
       return this.deviceId;
     }
+
+    // Ensure database is ready
+    await ensureDatabaseReady();
 
     // Try to load from IndexedDB first
     const stored = await offlineDB.device_config.get({ device_id: await this.loadStoredDeviceId() } as any);
