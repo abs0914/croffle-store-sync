@@ -150,7 +150,7 @@ class StreamlinedTransactionService {
   async processTransaction(
     transactionData: StreamlinedTransactionData,
     cartItems?: any[]
-  ): Promise<Transaction | null> {
+  ): Promise<Transaction> {
     const operationId = `transaction_${Date.now()}`;
     
     console.log('🚀 STREAMLINED SERVICE CALLED!');
@@ -374,7 +374,8 @@ class StreamlinedTransactionService {
       const errorMessage = error instanceof Error ? error.message : 'Transaction processing failed';
       toast.error(`Transaction failed: ${errorMessage}`);
       
-      return null;
+      // Re-throw error to allow upstream handlers (like offline fallback) to catch it
+      throw error;
     }
   }
 
