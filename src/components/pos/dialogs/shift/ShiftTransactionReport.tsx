@@ -40,6 +40,12 @@ interface InventoryTransaction {
   reference_id: string;
 }
 async function fetchShiftTransactions(shiftId: string, storeId: string): Promise<Transaction[]> {
+  // Check if offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode: Cannot fetch shift transactions');
+    return [];
+  }
+  
   const {
     data: transactions,
     error
@@ -70,6 +76,12 @@ async function fetchShiftTransactions(shiftId: string, storeId: string): Promise
   })) as Transaction[] || [];
 }
 async function fetchShiftInventoryTransactions(shiftId: string, storeId: string) {
+  // Check if offline
+  if (!navigator.onLine) {
+    console.log('🔌 Offline mode: Cannot fetch inventory transactions');
+    return [];
+  }
+  
   // Get transactions from this shift and their related inventory movements
   const {
     data: shiftTransactions,

@@ -29,6 +29,21 @@ export class TransactionValidationService {
     items: Array<{ productId: string; productName: string; quantity: number }>,
     storeId: string
   ): Promise<ValidationResult> {
+    // Check if we're offline
+    const isOffline = !navigator.onLine;
+    
+    // If offline, skip validation (assume valid)
+    if (isOffline) {
+      console.log('🔌 Offline mode: Skipping product validation');
+      return {
+        isValid: true,
+        errors: [],
+        warnings: ['Operating in offline mode - validation will occur when online'],
+        missingProducts: [],
+        invalidProducts: []
+      };
+    }
+    
     try {
       console.log('🔍 Validating products for transaction:', { items: items.length, storeId });
       
@@ -197,6 +212,20 @@ export class TransactionValidationService {
     items: Array<{ productId: string; productName: string; quantity: number }>,
     storeId: string
   ): Promise<PreTransactionCheck> {
+    // Check if we're offline
+    const isOffline = !navigator.onLine;
+    
+    // If offline, allow transaction to proceed
+    if (isOffline) {
+      console.log('🔌 Offline mode: Bypassing pre-transaction check');
+      return {
+        canProceed: true,
+        blockers: [],
+        warnings: ['Operating in offline mode - full validation will occur when online'],
+        recommendations: []
+      };
+    }
+    
     try {
       console.log('🔍 Performing pre-transaction check...');
       
