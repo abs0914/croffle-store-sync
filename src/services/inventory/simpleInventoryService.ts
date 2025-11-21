@@ -474,6 +474,19 @@ export const validateInventoryAvailability = async (
   storeId: string,
   validationItems: Array<{ productId: string; quantity: number }>
 ): Promise<{ available: boolean; insufficientItems: string[] }> => {
+  // Check if we're offline
+  const isOffline = !navigator.onLine;
+  
+  // If offline, bypass server validation (assume valid if items are in cart)
+  if (isOffline) {
+    console.log('🔌 Offline mode: Bypassing inventory validation');
+    return {
+      available: true,
+      insufficientItems: []
+    };
+  }
+  
+  // Online: Perform normal validation
   const items = validationItems.map(v => ({
     productId: v.productId,
     productName: '',
