@@ -190,6 +190,14 @@ export function useThermalPrinter() {
       return false;
     }
 
+    console.log('🖨️ [PRINT-RECEIPT] Starting print...', {
+      isOnline: navigator.onLine,
+      hasTransaction: !!transaction,
+      receiptNumber: transaction?.receiptNumber,
+      hasStore: !!store,
+      storeName: store?.name
+    });
+
     // Validate connected printer state
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
@@ -200,17 +208,17 @@ export function useThermalPrinter() {
 
     setIsPrinting(true);
     try {
-      console.log(`Starting receipt print for transaction: ${transaction.receiptNumber}`);
+      console.log(`🖨️ [PRINT-RECEIPT] Sending to BluetoothPrinterService for: ${transaction.receiptNumber}`);
       toast.info('Sending receipt to printer...');
 
       const success = await BluetoothPrinterService.printReceipt(transaction, customer, store, cashierName);
 
       if (success) {
         toast.success('Receipt sent to printer successfully!');
-        console.log(`✅ Receipt printed successfully: ${transaction.receiptNumber}`);
+        console.log(`✅ [PRINT-RECEIPT] Print success: ${transaction.receiptNumber}`);
       } else {
         toast.error('Failed to send receipt to printer');
-        console.error(`❌ Receipt printing failed: ${transaction.receiptNumber}`);
+        console.error(`❌ [PRINT-RECEIPT] Print failed: ${transaction.receiptNumber}`);
       }
 
       return success;
