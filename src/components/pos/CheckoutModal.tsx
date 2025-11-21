@@ -102,6 +102,15 @@ export function CheckoutModal({
     setCanProceedWithPayment(false);
     
     try {
+      // Check if offline - allow proceeding with warning
+      if (!navigator.onLine) {
+        console.log('📴 [CHECKOUT] Offline mode - skipping validation');
+        setValidationWarnings(['Offline mode: Transaction will sync when online']);
+        setCanProceedWithPayment(true);
+        setIsValidating(false);
+        return;
+      }
+      
       const itemsToValidate = cartItems.map(item => ({
         productId: item.product.id,
         name: item.product.name,
@@ -129,8 +138,23 @@ export function CheckoutModal({
       }
     } catch (error) {
       console.error('Error in pre-payment validation:', error);
-      setValidationErrors(['Failed to validate products for sale']);
-      setCanProceedWithPayment(false);
+      
+      // Check if this is a network error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isNetworkError = 
+        errorMessage.includes('Failed to fetch') || 
+        errorMessage.includes('NetworkError') ||
+        errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+        !navigator.onLine;
+      
+      if (isNetworkError) {
+        console.log('📴 [CHECKOUT] Network error during validation - allowing offline transaction');
+        setValidationWarnings(['Network error: Transaction will be processed offline']);
+        setCanProceedWithPayment(true);
+      } else {
+        setValidationErrors(['Failed to validate products for sale']);
+        setCanProceedWithPayment(false);
+      }
     } finally {
       setIsValidating(false);
     }

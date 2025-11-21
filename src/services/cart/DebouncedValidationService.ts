@@ -147,6 +147,36 @@ class DebouncedValidationService {
       // Extract unique product IDs from cart
       const productIds = [...new Set(request.items.map(item => item.productId))];
       
+      // Double-check online status before network call
+      if (!navigator.onLine) {
+        console.log('📴 [DEBOUNCED] Offline detected before fetch - bypassing validation');
+        const itemValidations = new Map<string, ItemValidation>();
+        request.items.forEach(item => {
+          const itemKey = this.getItemKey(item);
+          itemValidations.set(itemKey, {
+            itemKey,
+            productId: item.productId,
+            isValid: true,
+            availableQuantity: 999,
+            requestedQuantity: item.quantity,
+            errors: [],
+            warnings: []
+          });
+        });
+        
+        const result: ValidationResult = {
+          isValid: true,
+          errors: [],
+          warnings: ['Offline mode - validation will occur when online'],
+          itemValidations
+        };
+        
+        this.lastValidationResult = result;
+        performanceMonitor.end(operationId, { success: true, offline: true });
+        request.resolve(result);
+        return;
+      }
+      
       // Fetch ONLY cart-specific data (not all store products!)
       // This reduces 2,444 recipe ingredients to ~10-20 for cart items
       const batchedData = await optimizedBatchProductService.fetchCartSpecificData(
@@ -401,13 +431,25 @@ class DebouncedValidationService {
         };
         
         // Execute validation (it will call resolve/reject)
-        this.executeValidation().catch(err => {
-          // If executeValidation itself throws, reject the promise
-          reject(err);
-        });
+        // Wrap in try-catch to ensure ANY error is caught
+        try {
+          this.executeValidation().catch(err => {
+            console.error('❌ [IMMEDIATE] executeValidation promise rejected:', err);
+            reject(err);
+          });
+        } catch (syncError) {
+          console.error('❌ [IMMEDIATE] executeValidation threw synchronous error:', syncError);
+          reject(syncError);
+        }
       });
       
-      performanceMonitor.end(operationId, { success: true });
+      const duration = performanceMonitor.end(operationId, { success: true });
+      console.log(`🔴 [PERFORMANCE] Cart Validation (Immediate): ${duration}ms`, {
+        itemCount: items.length,
+        storeId,
+        success: result.isValid
+      });
+      
       return result;
       
     } catch (error) {
