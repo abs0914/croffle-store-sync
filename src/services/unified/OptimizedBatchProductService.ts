@@ -590,6 +590,27 @@ export class OptimizedBatchProductService {
       return result;
     } catch (error) {
       console.error('❌ Error in cart-specific fetch:', error);
+      
+      // Check if this is a network error (offline scenario)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isNetworkError = 
+        errorMessage.includes('Failed to fetch') || 
+        errorMessage.includes('NetworkError') ||
+        errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+        !navigator.onLine;
+      
+      if (isNetworkError) {
+        console.warn('⚠️ Network error in batch fetch - returning empty data for offline mode', errorMessage);
+        
+        // Return empty but valid data structure for offline validation
+        return {
+          products: [],
+          inventory: [],
+          recipeIngredients: [],
+          fetchTime: performance.now() - startTime
+        };
+      }
+      
       throw error;
     }
   }
