@@ -19,6 +19,12 @@ export class BirComplianceService {
     transactionId?: string,
     receiptNumber?: string
   ): Promise<string | null> {
+    // Skip BIR logging when offline
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Skipping BIR audit logging');
+      return null;
+    }
+
     try {
       const { data, error } = await supabase.rpc('log_bir_audit', {
         p_store_id: storeId,
@@ -96,6 +102,15 @@ export class BirComplianceService {
     missingRequirements: string[];
     lastAuditDate?: string;
   }> {
+    // When offline, assume compliance is okay (optimistic)
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Assuming BIR compliance is valid');
+      return {
+        isCompliant: true,
+        missingRequirements: []
+      };
+    }
+
     try {
       // Get store information
       const { data: store, error: storeError } = await supabase
@@ -148,6 +163,12 @@ export class BirComplianceService {
     endDate?: string,
     limit: number = 100
   ): Promise<any[]> {
+    // Return empty array when offline
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Skipping audit logs fetch');
+      return [];
+    }
+
     try {
       let query = supabase
         .from('bir_audit_logs')
@@ -192,6 +213,15 @@ export class BirComplianceService {
     lastTransactionDate?: string;
     lastReceiptNumber?: string;
   }> {
+    // Return zeros when offline
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Skipping cumulative sales fetch');
+      return {
+        grandTotalSales: 0,
+        grandTotalTransactions: 0
+      };
+    }
+
     try {
       const { data, error } = await supabase
         .from('bir_cumulative_sales')
@@ -229,6 +259,12 @@ export class BirComplianceService {
     date: string,
     terminalId: string = 'TERMINAL-01'
   ): Promise<any | null> {
+    // Return null when offline
+    if (!navigator.onLine) {
+      console.log('🔌 Offline mode - Skipping E-Journal generation');
+      return null;
+    }
+
     try {
       // Get transactions for the date
       const startDate = `${date}T00:00:00`;
