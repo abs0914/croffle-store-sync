@@ -22,6 +22,14 @@ export function useBackgroundImageValidation(
 
   useEffect(() => {
     if (!enabled || images.length === 0) return;
+    
+    // Don't validate images when offline to prevent worker errors
+    if (!navigator.onLine) {
+      console.log('📴 Skipping image validation - offline');
+      // Mark all images as valid in offline mode
+      setValidImages(images.filter(img => img.url).map(img => img.id));
+      return;
+    }
 
     // Initialize worker
     try {

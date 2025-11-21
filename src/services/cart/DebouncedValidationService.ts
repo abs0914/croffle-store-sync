@@ -284,7 +284,13 @@ class DebouncedValidationService {
       performanceMonitor.end(operationId, { success: false, error: String(error) });
       
       // Check if this is a network error (offline scenario)
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      // Handle both Error objects and Supabase error objects with message property
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String((error as any).message)
+          : String(error);
+          
       const isNetworkError = 
         errorMessage.includes('Failed to fetch') || 
         errorMessage.includes('NetworkError') ||
@@ -408,7 +414,13 @@ class DebouncedValidationService {
       performanceMonitor.end(operationId, { success: false, error: String(error) });
       
       // Check if this is a network error
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      // Handle both Error objects and Supabase error objects with message property
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String((error as any).message)
+          : String(error);
+          
       const isNetworkError = 
         errorMessage.includes('Failed to fetch') || 
         errorMessage.includes('NetworkError') ||
