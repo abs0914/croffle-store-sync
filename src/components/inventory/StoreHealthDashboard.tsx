@@ -108,13 +108,6 @@ export function StoreHealthDashboard() {
           <AlertDescription>
             {healthReport.total_issues} inventory mapping {healthReport.total_issues === 1 ? 'issue' : 'issues'} detected across stores.
             Cross-store deductions are being blocked by Phase 1 validation.
-            <div className="mt-2">
-              <Link to="/admin/inventory/cross-store-repair">
-                <Button variant="outline" size="sm">
-                  Open Repair Tool
-                </Button>
-              </Link>
-            </div>
           </AlertDescription>
         </Alert>
       )}
