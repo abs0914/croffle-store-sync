@@ -1,11 +1,16 @@
 
 import { useState } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, FileText, TrendingDown, AlertTriangle, BarChart3 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Package, Calendar as CalendarIcon, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 import InventoryHeader from "./components/InventoryHeader";
 import { ProductsTable } from "./components/ProductsTable";
@@ -15,6 +20,7 @@ import { deleteProduct } from "@/services/product/productDelete";
 import { Product } from "@/types";
 import ProductForm from "./ProductForm";
 import { fetchInventoryReport } from "@/services/reports/inventoryReport";
+import { InventoryReportView } from "@/pages/Reports/components/reports/InventoryReportView";
 
 export default function Inventory() {
   return (
@@ -44,14 +50,18 @@ function InventoryMain() {
     error
   } = useProductData();
 
-  // Fetch inventory report for quick stats
-  const { data: inventoryReport } = useQuery({
-    queryKey: ['inventory-quick-report', currentStore?.id],
+  // Date range state for reports tab
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+    to: new Date().toISOString().split('T')[0]
+  });
+
+  // Fetch inventory report
+  const { data: reportData, isLoading: reportLoading, error: reportError, refetch: refetchReport } = useQuery({
+    queryKey: ['inventory-report', currentStore?.id, dateRange.from, dateRange.to],
     queryFn: () => {
       if (!currentStore?.id) return null;
-      const today = new Date().toISOString().split('T')[0];
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      return fetchInventoryReport(currentStore.id, thirtyDaysAgo, today);
+      return fetchInventoryReport(currentStore.id, dateRange.from, dateRange.to);
     },
     enabled: !!currentStore?.id,
   });
@@ -95,6 +105,34 @@ function InventoryMain() {
 
   const handleStockUpdated = () => {
     queryClient.invalidateQueries({ queryKey: ['products', currentStore?.id] });
+  };
+
+  const handleExportReport = () => {
+    if (!reportData) {
+      toast.error("No data to export");
+      return;
+    }
+    
+    const headers = ['Item Name', 'SKU', 'Initial Stock', 'Current Stock', 'Sold Units', 'Low Stock Threshold'];
+    const rows = reportData.inventoryItems.map(item => [
+      item.name,
+      item.sku,
+      item.initialStock,
+      item.currentStock,
+      item.soldUnits,
+      item.threshold
+    ]);
+    
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inventory-report-${dateRange.from}-to-${dateRange.to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast.success("Report exported successfully");
   };
 
   if (!currentStore) {
@@ -143,96 +181,154 @@ function InventoryMain() {
         showAddButton={true}
       />
 
-      {/* Quick Inventory Report Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{inventoryReport?.totalItems || products.length}</div>
-            <p className="text-xs text-muted-foreground">Active products in inventory</p>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="products" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="products">
+            <Package className="mr-2 h-4 w-4" />
+            Products
+          </TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-            <TrendingDown className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">{inventoryReport?.lowStockItems || 0}</div>
-            <p className="text-xs text-muted-foreground">Items below threshold</p>
-          </CardContent>
-        </Card>
+        <TabsContent value="products" className="space-y-4">
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="font-semibold text-blue-800 mb-2">Store-Level Products</h3>
+            <p className="text-sm text-blue-700">
+              Manage menu items and finished products available for sale in your store. This includes items that customers can purchase directly through your POS system.
+            </p>
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{inventoryReport?.outOfStockItems || 0}</div>
-            <p className="text-xs text-muted-foreground">Items need restocking</p>
-          </CardContent>
-        </Card>
+          {error && (
+            <div className="mb-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+              <h3 className="font-semibold text-destructive mb-2">Error Loading Products</h3>
+              <p className="text-sm text-destructive/80 mb-3">{error.message}</p>
+            </div>
+          )}
 
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">View Reports</CardTitle>
-            <BarChart3 className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => navigate('/admin/inventory/reports')}
-              className="w-full"
-              variant="outline"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Full Reports
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-semibold text-blue-800 mb-2">Store-Level Products</h3>
-        <p className="text-sm text-blue-700">
-          Manage menu items and finished products available for sale in your store. This includes items that customers can purchase directly through your POS system.
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
-          <h3 className="font-semibold text-destructive mb-2">Error Loading Products</h3>
-          <p className="text-sm text-destructive/80 mb-3">{error.message}</p>
-        </div>
-      )}
-
-      <SearchFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        categories={categories}
-        activeCategory={activeCategory}
-        onCategoryChange={setActiveCategory}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
-
-      <Card>
-        <CardContent className="p-4">
-          <ProductsTable 
-            products={filteredProducts}
-            isLoading={isLoading}
-            onEdit={handleEditProduct}
-            onView={handleViewProduct}
-            onDelete={handleDeleteProduct}
-            onStockAdjust={handleStockAdjustment}
-            onStockUpdated={handleStockUpdated}
+          <SearchFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            categories={categories}
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
           />
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <ProductsTable 
+                products={filteredProducts}
+                isLoading={isLoading}
+                onEdit={handleEditProduct}
+                onView={handleViewProduct}
+                onDelete={handleDeleteProduct}
+                onStockAdjust={handleStockAdjustment}
+                onStockUpdated={handleStockUpdated}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">From:</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !dateRange.from && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange.from ? format(new Date(dateRange.from), "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(dateRange.from)}
+                        onSelect={(date) => date && setDateRange(prev => ({ ...prev, from: date.toISOString().split('T')[0] }))}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">To:</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !dateRange.to && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange.to ? format(new Date(dateRange.to), "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(dateRange.to)}
+                        onSelect={(date) => date && setDateRange(prev => ({ ...prev, to: date.toISOString().split('T')[0] }))}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <Button onClick={() => refetchReport()} variant="outline">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
+
+                <Button onClick={handleExportReport} variant="outline" disabled={!reportData}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {reportLoading && (
+            <div className="text-center p-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading report...</p>
+            </div>
+          )}
+
+          {reportError && (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-center text-destructive">
+                  Failed to load inventory report. Please try again.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {reportData && (
+            <InventoryReportView 
+              data={reportData} 
+              dateRange={{ 
+                from: new Date(dateRange.from), 
+                to: new Date(dateRange.to) 
+              }}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
