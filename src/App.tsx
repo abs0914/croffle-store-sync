@@ -19,11 +19,6 @@ const queryClient = new QueryClient();
 function App() {
   console.log('App component rendering...');
   
-  // Import Phase 4 inventory testing for development
-  import('./services/inventory/phase4InventoryTest').then(module => {
-    console.log('🧪 Phase 4 Inventory Testing loaded - functions available in console');
-  });
-  
   
   return (
     <ErrorBoundary>

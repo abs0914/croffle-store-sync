@@ -13,7 +13,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RefreshCw, CheckCircle, AlertTriangle, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { runInventoryHealthCheck, SystemHealthReport, HealthCheckResult } from "@/services/inventory/inventoryHealthService";
 import { deployAndFixAllRecipeTemplates } from "@/services/recipeManagement/enhancedDeploymentService";
-import { validateInventoryDeductionSystem, validateSpecificItems } from "@/services/inventory/inventorySystemValidator";
 import { toast } from "sonner";
 
 interface InventoryHealthMonitorProps {
@@ -61,29 +60,8 @@ export const InventoryHealthMonitor: React.FC<InventoryHealthMonitorProps> = ({
   };
 
   const handleFullValidation = async () => {
-    setIsValidating(true);
-    try {
-      const report = await validateInventoryDeductionSystem(storeId, testItems);
-      
-      if (report.overallSuccess) {
-        toast.success(`✅ COMPLETE VALIDATION PASSED: All ${report.summary.total} checks successful`);
-      } else {
-        toast.error(`❌ VALIDATION FAILED: ${report.summary.failed}/${report.summary.total} checks failed`);
-      }
-      
-      // Show detailed results
-      console.log('🧪 FULL VALIDATION REPORT:', report);
-      
-      // Re-run health check after validation
-      setTimeout(() => {
-        runHealthCheck();
-      }, 2000);
-    } catch (error) {
-      console.error('Full validation failed:', error);
-      toast.error('Failed to run complete validation');
-    } finally {
-      setIsValidating(false);
-    }
+    // Legacy validation removed - using new AtomicInventoryService
+    toast.info('Full validation has been replaced with new atomic inventory system');
   };
 
   const handleQuickFix = async () => {
@@ -105,21 +83,8 @@ export const InventoryHealthMonitor: React.FC<InventoryHealthMonitorProps> = ({
   };
 
   const handleQuickItemCheck = async () => {
-    try {
-      const itemNames = testItems.map(item => item.name);
-      const result = await validateSpecificItems(storeId, itemNames);
-      
-      if (result.success) {
-        toast.success(`✅ All ${result.validItems.length} test items are valid`);
-      } else {
-        toast.warning(`⚠️ ${result.invalidItems.length}/${itemNames.length} items have issues: ${result.invalidItems.join(', ')}`);
-      }
-      
-      console.log('🧪 ITEM VALIDATION RESULT:', result);
-    } catch (error) {
-      console.error('Item validation failed:', error);
-      toast.error('Failed to validate items');
-    }
+    // Legacy item validation removed - using new AtomicInventoryService
+    toast.info('Item validation has been replaced with new atomic inventory system');
   };
 
   const toggleCheckExpansion = (component: string) => {

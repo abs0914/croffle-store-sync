@@ -8,8 +8,9 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { deductInventoryForTransactionEnhanced } from '@/services/inventory/enhancedInventoryDeductionService';
+// Legacy service removed - using AtomicInventoryService
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const MixMatchDeductionTester: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -43,60 +44,15 @@ const MixMatchDeductionTester: React.FC = () => {
   ];
 
   const runTest = async (scenario: any) => {
-    setIsLoading(true);
+    // Legacy test removed - using new AtomicInventoryService
+    toast.info('This test component has been replaced with the new atomic inventory system');
     
-    try {
-      const transactionId = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const storeId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef'; // Test store ID
-      
-      // Get current user for testing
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id || 'test-user-id';
-      
-      console.log(`🧪 TESTING: ${scenario.name}`);
-      
-      const result = await deductInventoryForTransactionEnhanced(
-        transactionId,
-        storeId,
-        [{
-          productId: scenario.productId,
-          productName: scenario.productName,
-          quantity: scenario.quantity
-        }],
-        userId
-      );
-      
-      const testResult = {
-        scenario: scenario.name,
-        success: result.success,
-        isMixMatch: result.isMixMatch,
-        deductedItems: result.deductedItems.map(item => ({
-          name: item.itemName,
-          quantity: item.quantityDeducted,
-          category: item.category
-        })),
-        skippedItems: result.skippedItems || [],
-        errors: result.errors,
-        debugInfo: result.debugInfo,
-        timestamp: new Date().toLocaleTimeString()
-      };
-      
-      setTestResults(prev => [...prev, testResult]);
-      
-      console.log(`✅ TEST COMPLETED: ${scenario.name}`, testResult);
-      
-    } catch (error) {
-      console.error(`❌ TEST FAILED: ${scenario.name}`, error);
-      
-      setTestResults(prev => [...prev, {
-        scenario: scenario.name,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toLocaleTimeString()
-      }]);
-    }
-    
-    setIsLoading(false);
+    setTestResults(prev => [...prev, {
+      scenario: scenario.name,
+      success: false,
+      error: 'Legacy testing removed - use AtomicInventoryService',
+      timestamp: new Date().toLocaleTimeString()
+    }]);
   };
 
   const clearResults = () => {
