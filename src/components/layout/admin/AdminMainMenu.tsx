@@ -12,7 +12,8 @@ import {
   Receipt,
   DollarSign,
   ChevronDown,
-  Warehouse
+  Warehouse,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -25,6 +26,12 @@ const menuItems = [
     title: "Dashboard",
     icon: LayoutDashboard,
     href: ROUTE_PATHS.ADMIN_ROOT,
+    permission: 'dashboard' as const,
+  },
+  {
+    title: "POS",
+    icon: CreditCard,
+    href: "/pos",
     permission: 'dashboard' as const,
   },
   {

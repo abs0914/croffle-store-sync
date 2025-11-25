@@ -12,7 +12,8 @@ import {
   Factory,
   User,
   LogOut,
-  Calculator
+  Calculator,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth";
@@ -23,6 +24,11 @@ const adminMenuItems = [
     title: "Dashboard",
     icon: LayoutDashboard,
     href: "/admin",
+  },
+  {
+    title: "POS",
+    icon: CreditCard,
+    href: "/pos",
   },
   {
     title: "Stores",
