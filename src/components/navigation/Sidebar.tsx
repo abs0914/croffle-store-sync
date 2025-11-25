@@ -8,10 +8,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { useStore } from "@/contexts/StoreContext";
+import { useOfflineMode } from "@/hooks/useOfflineMode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +55,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { currentStore, setCurrentStore, stores } = useStore();
+  const offlineMode = useOfflineMode(currentStore?.id || null);
 
   const isActive = (path?: string) => {
     if (!path) return false;
@@ -190,11 +193,18 @@ export function Sidebar() {
           <button
             key={index}
             onClick={() => item.path && navigate(item.path)}
-            className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent w-full text-left ${isActive(item.path) ? 'bg-secondary' : ''}`}
+            className={`flex items-center justify-between space-x-2 py-2 px-4 rounded-md hover:bg-accent w-full text-left ${isActive(item.path) ? 'bg-secondary' : ''}`}
             disabled={!item.path}
           >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
+            <div className="flex items-center space-x-2">
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+            </div>
+            {item.path === '/inventory/monitor' && offlineMode.pendingApprovals && offlineMode.pendingApprovals > 0 && (
+              <Badge variant="destructive" className="ml-auto">
+                {offlineMode.pendingApprovals}
+              </Badge>
+            )}
           </button>
         ))}
 

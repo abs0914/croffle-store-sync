@@ -14,6 +14,9 @@ import { toast } from 'sonner';
 import { EnhancedOfflineTransactionQueue, EnhancedOfflineTransaction, TransactionBatch } from '../storage/EnhancedOfflineTransactionQueue';
 import { EnhancedNetworkDetectionService, SyncRecommendation } from '../network/EnhancedNetworkDetectionService';
 import { streamlinedTransactionService } from '../../transactions/streamlinedTransactionService';
+import { AtomicInventoryService, DeductionItem } from '../../inventory/atomicInventoryService';
+import { OfflineQueueService } from '../../inventory/offlineQueueService';
+import { deviceIdService } from '../deviceIdService';
 
 export interface SyncResult {
   success: boolean;
@@ -355,9 +358,57 @@ export class IntelligentSyncManager {
   }
 
   /**
-   * Sync a single transaction
+   * Sync a single transaction with pre-validation
+   * Queues for manual approval if insufficient stock
    */
   private async syncSingleTransaction(transaction: EnhancedOfflineTransaction): Promise<void> {
+    console.log(`🔍 Pre-validating stock for offline transaction: ${transaction.receiptNumber}`);
+    
+    // Step 1: Convert items to deduction format for validation
+    const deductionItems: DeductionItem[] = transaction.items.map(item => ({
+      productId: item.productId,
+      productName: item.name,
+      quantity: item.quantity
+    }));
+    
+    // Step 2: Validate stock availability BEFORE processing
+    const validation = await AtomicInventoryService.validateStockAvailability(
+      transaction.storeId,
+      deductionItems
+    );
+    
+    // Step 3: If insufficient stock, queue for manual approval
+    if (!validation.isValid) {
+      console.log(`⚠️ Insufficient stock detected for ${transaction.receiptNumber}`);
+      console.log(`   Errors:`, validation.errors);
+      
+      const deviceId = await deviceIdService.getDeviceId();
+      
+      // Queue for manual approval instead of processing
+      await OfflineQueueService.queueTransaction(
+        transaction.id, // Will be replaced with real transaction ID after approval
+        transaction.storeId,
+        deviceId,
+        deductionItems,
+        'insufficient_stock'
+      );
+      
+      // Mark transaction as needing approval (don't mark as synced yet)
+      await this.transactionQueue.markTransactionFailed(
+        transaction.id,
+        'Insufficient stock - queued for manual approval'
+      );
+      
+      toast.warning('Transaction queued for approval', {
+        description: `${transaction.receiptNumber} has insufficient stock`
+      });
+      
+      return; // Don't proceed with sync
+    }
+    
+    // Step 4: Stock is sufficient - proceed with normal sync
+    console.log(`✅ Stock validation passed for ${transaction.receiptNumber}`);
+    
     // Convert enhanced transaction to streamlined format
     const streamlinedData = {
       storeId: transaction.storeId,
@@ -400,6 +451,8 @@ export class IntelligentSyncManager {
         transaction.id,
         result.id
       );
+      
+      console.log(`✅ Transaction ${transaction.receiptNumber} synced successfully`);
     } else {
       throw new Error('Transaction processing failed');
     }

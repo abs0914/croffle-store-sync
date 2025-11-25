@@ -4,6 +4,7 @@ import { offlineTransactionQueue } from '../services/offline/offlineTransactionQ
 import { offlineProductCache } from '../services/offline/offlineProductCache';
 import { offlineSyncService, SyncResult } from '../services/offline/offlineSyncService';
 import { OfflinePOSManager, OfflinePOSStatus } from '../services/offline/OfflinePOSManager';
+import { OfflineQueueService } from '../services/inventory/offlineQueueService';
 import { toast } from 'sonner';
 
 export interface OfflineModeStatus {
@@ -21,6 +22,10 @@ export interface OfflineModeStatus {
   failedTransactions?: number;
   activeConflicts?: number;
   printerConnected?: boolean;
+  
+  // Offline queue integration
+  pendingApprovals?: number;
+  insufficientStockTransactions?: number;
 }
 
 export function useOfflineMode(storeId: string | null) {
@@ -137,6 +142,26 @@ export function useOfflineMode(storeId: string | null) {
       offlineSyncService.removeSyncListener(handleSyncResult);
     };
   }, []);
+
+  // Update offline queue stats
+  useEffect(() => {
+    const updateQueueStats = async () => {
+      if (!storeId) return;
+      
+      const queueStats = await OfflineQueueService.getQueueStats(storeId);
+      setOfflineStatus(prev => ({
+        ...prev,
+        pendingApprovals: queueStats.insufficient_stock,
+        insufficientStockTransactions: queueStats.insufficient_stock
+      }));
+    };
+    
+    if (storeId) {
+      updateQueueStats();
+      const interval = setInterval(updateQueueStats, 10000); // Check every 10 seconds
+      return () => clearInterval(interval);
+    }
+  }, [storeId]);
 
   // Refresh status periodically
   useEffect(() => {
