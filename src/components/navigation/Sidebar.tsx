@@ -32,7 +32,8 @@ import {
   ShoppingBag,
   ClipboardList,
   Shield,
-  DollarSign
+  DollarSign,
+  Activity
 } from "lucide-react";
 import { 
   checkRouteAccess,
@@ -131,6 +132,12 @@ export function Sidebar() {
         path: ROUTE_PATHS.INVENTORY, 
         label: "Store Inventory", 
         icon: Package,
+        hidden: !checkRouteAccess(user?.role, ROUTE_PATHS.INVENTORY)
+      },
+      { 
+        path: '/inventory/monitor', 
+        label: "Inventory Monitor", 
+        icon: Activity,
         hidden: !checkRouteAccess(user?.role, ROUTE_PATHS.INVENTORY)
       },
       { path: ROUTE_PATHS.CUSTOMERS, label: "Customers", icon: Users },

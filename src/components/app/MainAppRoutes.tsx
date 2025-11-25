@@ -12,6 +12,7 @@ const Invoice = React.lazy(() => import('@/pages/Invoice'));
 const Products = React.lazy(() => import('@/pages/Products'));
 const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
+const AtomicInventoryDashboard = React.lazy(() => import('@/components/inventory/AtomicInventoryDashboard').then(m => ({ default: m.AtomicInventoryDashboard })));
 const OrderManagement = React.lazy(() => import('@/pages/OrderManagement/index'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
 const Expenses = React.lazy(() => import('@/pages/Expenses'));
@@ -115,6 +116,20 @@ export const MainAppRoutes = () => {
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <ProductForm />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Inventory Monitor - Atomic Inventory System Dashboard (Managers+) */}
+      <Route
+        path="/inventory/monitor"
+        element={
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <AtomicInventoryDashboard />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
