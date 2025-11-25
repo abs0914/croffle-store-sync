@@ -6,9 +6,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
-import { SimplifiedInventoryService } from "@/services/inventory/phase4InventoryService";
+import { AtomicInventoryService, DeductionItem } from "@/services/inventory/atomicInventoryService";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
-import { processTransactionInventoryUltraSimplified, TransactionItem as UltraSimplifiedTransactionItem } from "./ultraSimplifiedTransactionInventory";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
@@ -205,18 +204,31 @@ class StreamlinedTransactionService {
       
       const parallelResult = await parallelTransactionProcessor.executeParallel(
         [
-          {
+           {
             name: 'inventory_deduction',
             isCritical: true, // Failure causes rollback
             timeout: 30000, // 30 second timeout for inventory deduction with audit trails
             execute: async () => {
-              return await this.processInventoryDeduction(
-                transaction.id,
-                transactionData.storeId,
-                expandedItems, // ✅ Pass expanded items
-                transactionData.userId,
-                cartItems
-              );
+              // ✅ Use new atomic inventory service
+              const deductionItems: DeductionItem[] = expandedItems.map(item => ({
+                productId: item.productId,
+                productName: item.name,
+                quantity: item.quantity
+              }));
+
+              const result = await AtomicInventoryService.deductInventoryAtomic({
+                transactionId: transaction.id,
+                storeId: transactionData.storeId,
+                items: deductionItems,
+                userId: transactionData.userId,
+                idempotencyKey: `txn-${transaction.id}-${Date.now()}`
+              });
+
+              if (!result.success) {
+                throw new Error(`Inventory deduction failed: ${result.errors.join(', ')}`);
+              }
+
+              return { success: true, errors: [] };
             }
           },
           {
@@ -722,127 +734,6 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Process inventory deduction with user context
-   */
-  private async processInventoryDeduction(
-    transactionId: string,
-    storeId: string,
-    items: StreamlinedTransactionItem[],
-    userId: string,  // ⭐ Accept userId from cached auth context (required)
-    cartItems?: any[]
-  ): Promise<{ success: boolean; errors: string[] }> {
-    console.log('✅ Using cached auth context - no auth query needed');
-    console.log(`🔐 TRANSACTION CONTEXT: Cached user - ${userId}`);
-    console.log(`🚨 DEBUG: processInventoryDeduction CALLED at ${new Date().toISOString()}`);
-    console.log(`🚨 DEBUG: Transaction ID: ${transactionId}, Store ID: ${storeId}`);
-    console.log(`🚨 DEBUG: Items count: ${items.length}, Cart items: ${cartItems?.length || 0}`);
-
-    // CRITICAL: Check for empty items before processing
-    if (!items || items.length === 0) {
-      console.error('❌ BLOCKED: Attempted inventory deduction with empty items array');
-      throw new Error('No items provided for inventory deduction - transaction data may be corrupted');
-    }
-
-    try {
-      console.log(`🚨 DEBUG: About to format items for inventory...`);
-      
-      // PHASE 5: Use ultra simplified transaction inventory processing
-      const inventoryItems: UltraSimplifiedTransactionItem[] = items.map(item => ({
-        productId: item.productId,
-        productName: item.name, // StreamlinedTransactionItem uses 'name' property
-        quantity: item.quantity,
-        storeId: storeId
-      }));
-      
-      console.log(`🚨 DEBUG: Formatted inventory items:`, inventoryItems);
-      
-      console.log(`🚨 DEBUG: About to call processTransactionInventoryUltraSimplified...`);
-      const result = await processTransactionInventoryUltraSimplified(
-        transactionId,
-        inventoryItems,
-        userId  // ⭐ Use cached userId - no auth query!
-      );
-      console.log(`🚨 DEBUG: processTransactionInventoryUltraSimplified result:`, result);
-
-      // 🔒 CRITICAL FIX #2: Validate result structure before returning
-      if (!result || typeof result !== 'object') {
-        console.error('❌ CRITICAL: Inventory processing returned invalid result type');
-        throw new Error('Inventory processing returned invalid result - this indicates a system error');
-      }
-      
-      if (typeof result.success !== 'boolean') {
-        console.error('❌ CRITICAL: Inventory processing returned malformed success status', result);
-        throw new Error('Inventory processing returned malformed success status');
-      }
-      
-      if (!result.success) {
-        // 🔒 CRITICAL FIX #2: Ensure we have error details when failing
-        if (!result.errors || result.errors.length === 0) {
-          console.error('❌ CRITICAL: Inventory processing failed without providing error details');
-          throw new Error('Inventory processing failed without providing error details');
-        }
-        
-        console.error('❌ CRITICAL: Inventory processing failed with errors:', result.errors);
-        throw new Error(`Inventory processing failed: ${result.errors.join(', ')}`);
-      }
-
-      console.log('✅ Inventory deduction validation passed - returning success');
-      
-      return {
-        success: true,
-        errors: []
-      };
-      
-    } catch (error) {
-      console.error('❌ CRITICAL: processInventoryDeduction exception:', error);
-      
-      // 🔒 CRITICAL FIX #2: Re-throw to ensure transaction fails
-      // Never return { success: false } here - always throw to guarantee transaction rollback
-      throw error;
-    }
-  }
-
-  /**
-   * BIR compliance logging (non-critical)
-        success: result.success,
-        deductedItems: result.deductedItems?.length || 0,
-        skippedItems: result.skippedItems?.length || 0,
-        errors: result.errors?.length || 0,
-        isMixMatch: result.isMixMatch
-      });
-
-      // Enhanced success logging for monitoring
-      if (result.success) {
-        console.log(`✅ INVENTORY DEDUCTION SUCCESS for transaction ${transactionId}`);
-        console.log(`   Mix & Match product detected: ${result.isMixMatch}`);
-        console.log(`   Deducted ingredients:`, result.deductedItems.map(item => 
-          `${item.itemName}: -${item.quantityDeducted} units (new stock: ${item.newStock})${item.category ? ` [${item.category}]` : ''}`
-        ));
-        if (result.skippedItems && result.skippedItems.length > 0) {
-          console.log(`   Skipped ingredients:`, result.skippedItems);
-        }
-      } else {
-        console.error(`❌ INVENTORY DEDUCTION FAILED for transaction ${transactionId}`);
-        console.error(`   Errors:`, result.errors);
-      }
-
-      return {
-        success: result.success,
-        errors: result.errors
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';
-      console.error(`❌ CRITICAL: Inventory deduction system error for transaction ${transactionId}:`, error);
-      
-      // CRITICAL: Return failure to prevent transaction completion
-      return {
-        success: false,
-        errors: [errorMessage]
-      };
-    }
-  }
-
-  /**
    * Process recipe-based ingredients for Mix & Match products using recipe templates
    * Uses proper recipe templates with base ingredients + addon parsing
    */
@@ -1016,23 +907,37 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Rollback transaction on failure
+   * Rollback transaction on failure with inventory compensation
    */
   private async rollbackTransaction(transactionId: string): Promise<void> {
     try {
-      // Delete transaction items first
+      console.log(`🔄 Rolling back transaction ${transactionId} with inventory compensation`);
+
+      // ✅ NEW: Compensate inventory deductions first
+      const compensationResult = await AtomicInventoryService.compensateDeduction(transactionId);
+      if (compensationResult.success) {
+        console.log(`✅ Restored inventory for ${compensationResult.itemsRestored} items`);
+      } else {
+        console.warn(`⚠️ Inventory compensation had errors:`, compensationResult.errors);
+      }
+
+      // Delete transaction items
       await supabase
         .from('transaction_items')
         .delete()
         .eq('transaction_id', transactionId);
 
-      // Delete transaction
+      // Mark transaction as voided (don't delete for audit trail)
       await supabase
         .from('transactions')
-        .delete()
+        .update({ 
+          status: 'voided',
+          voided_at: new Date().toISOString(),
+          voided_reason: 'Transaction failed - rolled back with inventory compensation'
+        })
         .eq('id', transactionId);
 
-      console.log('✅ Transaction rollback completed');
+      console.log('✅ Transaction rollback with inventory compensation completed');
     } catch (error) {
       console.error('❌ Transaction rollback failed:', error);
     }
