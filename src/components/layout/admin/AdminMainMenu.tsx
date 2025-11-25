@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ROUTE_PATHS } from "@/contexts/auth/role-utils";
 import { useRolePermissions } from "@/contexts/RolePermissionsContext";
+import { useAuth } from "@/contexts/auth";
 
 // ROLE-BASED ADMIN MENU STRUCTURE
 const menuItems = [
@@ -119,7 +120,8 @@ const menuItems = [
 
 export function AdminMainMenu() {
   const location = useLocation();
-  const { hasPermission, userRole } = useRolePermissions();
+  const { user } = useAuth();
+  const { hasPermission } = useRolePermissions();
   const [openSections, setOpenSections] = React.useState<string[]>([]);
 
   const toggleSection = (title: string) => {
@@ -136,39 +138,18 @@ export function AdminMainMenu() {
   };
 
   const isActiveSectionItem = (items: { href: string; permission?: keyof import('@/types/rolePermissions').RolePermissions }[]) => {
-    return items.some(item => 
-      hasPermission(item.permission || 'dashboard') && isActiveLink(item.href)
-    );
+    return items.some(item => isActiveLink(item.href));
   };
 
-  // Filter menu items based on user permissions
-  const visibleMenuItems = menuItems.filter(item => {
-    // Always show dashboard if user has dashboard permission
-    if (item.title === "Dashboard" && hasPermission('dashboard')) {
-      return true;
-    }
-    
-    // Always show POS for everyone
-    if (item.title === "POS") {
-      return true;
-    }
-    
-    if (item.permission && !hasPermission(item.permission)) {
-      return false;
-    }
-    if (item.items) {
-      // Show section if user has access to at least one sub-item
-      return item.items.some(subItem => 
-        hasPermission(subItem.permission || 'dashboard')
-      );
-    }
-    return hasPermission(item.permission || 'dashboard');
-  });
+  // Show all menu items for authenticated admin users
+  // (they already passed AdminProtectedRoute validation)
+  const visibleMenuItems = user ? menuItems : [];
 
   console.log('🔍 AdminMainMenu render:', {
+    hasUser: !!user,
+    userRole: user?.role,
     totalMenuItems: menuItems.length,
     visibleMenuItems: visibleMenuItems.length,
-    userRole,
     menuTitles: visibleMenuItems.map(i => i.title)
   });
 
@@ -198,9 +179,7 @@ export function AdminMainMenu() {
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 space-y-1 mt-1">
-                {item.items
-                  .filter(subItem => hasPermission(subItem.permission || 'dashboard'))
-                  .map((subItem) => (
+                {item.items.map((subItem) => (
                   <Link
                     key={subItem.href}
                     to={subItem.href}
