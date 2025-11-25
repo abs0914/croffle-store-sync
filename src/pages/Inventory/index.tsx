@@ -1,20 +1,12 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Upload, FileText, Plus } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InventoryStats } from './components/inventoryManagement/InventoryStats';
 import { InventoryStockList } from './components/inventoryStock/InventoryStockList';
-import { InventoryReportView } from '../Reports/components/reports/InventoryReportView';
 import { AddStockItemForm } from './components/inventoryStock/AddStockItemForm';
 import { EditStockItemForm } from './components/inventoryStock/EditStockItemForm';
 import { StockAdjustmentModal } from './components/inventoryStock/StockAdjustmentModal';
 import { StockTransferModal } from './components/inventoryStock/StockTransferModal';
 import { useInventoryStockData } from './components/inventoryStock/useInventoryStockData';
-import { fetchInventoryReport } from '@/services/reports/inventoryReport';
-import { InventoryReport } from '@/types/reports';
-import { toast } from 'sonner';
-import { format, subDays } from 'date-fns';
-import { DateRange } from 'react-day-picker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -54,43 +46,6 @@ const InventoryPage = () => {
     deleteMutation
   } = useInventoryStockData();
 
-  const [activeTab, setActiveTab] = useState('inventory');
-  const [reportData, setReportData] = useState<InventoryReport | null>(null);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [dateRange, setDateRange] = useState({
-    from: subDays(new Date(), 30),
-    to: new Date()
-  });
-
-  const handleLoadReport = async () => {
-    if (!currentStore || !dateRange.from || !dateRange.to) {
-      toast.error('Please select a valid date range');
-      return;
-    }
-
-    setReportLoading(true);
-    try {
-      const data = await fetchInventoryReport(
-        currentStore.id,
-        format(dateRange.from, 'yyyy-MM-dd'),
-        format(dateRange.to, 'yyyy-MM-dd')
-      );
-      setReportData(data);
-    } catch (error) {
-      console.error('Error loading report:', error);
-      toast.error('Failed to load inventory report');
-    } finally {
-      setReportLoading(false);
-    }
-  };
-
-  // Load report when switching to Reports tab
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value === 'reports' && currentStore) {
-      handleLoadReport();
-    }
-  };
 
   if (!currentStore) {
     return (
@@ -135,33 +90,16 @@ const InventoryPage = () => {
       {/* Stats Cards */}
       <InventoryStats storeId={currentStore.id} />
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="inventory" className="mt-6">
-          <InventoryStockList
-            stockItems={stockItems}
-            isLoading={isLoading}
-            onEdit={openEditModal}
-            onStockAdjust={openStockModal}
-            onStockTransfer={openTransferModal}
-            onDelete={openDeleteConfirm}
-            hasMultipleStores={hasMultipleStores}
-          />
-        </TabsContent>
-
-        <TabsContent value="reports" className="mt-6">
-          <InventoryReportView
-            data={reportData}
-            dateRange={dateRange}
-            isAllStores={false}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* Inventory Table */}
+      <InventoryStockList
+        stockItems={stockItems}
+        isLoading={isLoading}
+        onEdit={openEditModal}
+        onStockAdjust={openStockModal}
+        onStockTransfer={openTransferModal}
+        onDelete={openDeleteConfirm}
+        hasMultipleStores={hasMultipleStores}
+      />
 
       {/* Modals */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
