@@ -161,7 +161,7 @@ export function AdminMainMenu() {
   });
 
   return (
-    <nav className="space-y-2">
+    <nav className="space-y-1 px-2">
       {visibleMenuItems.map((item) => {
         if (item.items) {
           const isOpen = openSections.includes(item.title);
@@ -172,20 +172,20 @@ export function AdminMainMenu() {
               <CollapsibleTrigger asChild>
                 <button
                   className={cn(
-                    "flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    "flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
                     hasActiveChild
                       ? "bg-croffle-accent text-white"
-                      : "text-gray-700 hover:bg-gray-100"
+                      : "text-croffle-text hover:bg-croffle-light"
                   )}
                 >
                   <div className="flex items-center">
-                    <item.icon className="h-4 w-4 mr-3" />
+                    <item.icon className="h-5 w-5 mr-3" />
                     {item.title}
                   </div>
                   <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
                 </button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="pl-6 space-y-1">
+              <CollapsibleContent className="pl-6 space-y-1 mt-1">
                 {item.items
                   .filter(subItem => hasPermission(subItem.permission || 'dashboard'))
                   .map((subItem) => (
@@ -193,10 +193,10 @@ export function AdminMainMenu() {
                     key={subItem.href}
                     to={subItem.href}
                     className={cn(
-                      "block px-3 py-2 text-sm rounded-md transition-colors",
+                      "block px-3 py-2 text-sm rounded-lg transition-colors",
                       isActiveLink(subItem.href)
                         ? "bg-croffle-accent text-white"
-                        : "text-gray-600 hover:bg-gray-100"
+                        : "text-croffle-text/80 hover:bg-croffle-light"
                     )}
                   >
                     {subItem.title}
@@ -212,13 +212,13 @@ export function AdminMainMenu() {
             key={item.href}
             to={item.href}
             className={cn(
-              "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
               isActiveLink(item.href)
                 ? "bg-croffle-accent text-white"
-                : "text-gray-700 hover:bg-gray-100"
+                : "text-croffle-text hover:bg-croffle-light"
             )}
           >
-            <item.icon className="h-4 w-4 mr-3" />
+            <item.icon className="h-5 w-5 mr-3" />
             {item.title}
           </Link>
         );
