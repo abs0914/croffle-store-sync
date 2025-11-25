@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { AtomicInventoryMonitor, InventoryHealth, DeductionMetrics, QueueMetrics } from '@/services/inventory/atomicInventoryMonitor';
 import { OfflineQueueManager } from './OfflineQueueManager';
+import { AtomicInventoryTestSuite } from './AtomicInventoryTestSuite';
 import { useStore } from '@/contexts/StoreContext';
 import { toast } from 'sonner';
 
@@ -168,11 +169,12 @@ export const AtomicInventoryDashboard: React.FC = () => {
       )}
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="health">Health Checks</TabsTrigger>
           <TabsTrigger value="queue">Queue Management</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="tests">Integration Tests</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -409,6 +411,11 @@ export const AtomicInventoryDashboard: React.FC = () => {
               )}
             </div>
           )}
+        </TabsContent>
+
+        {/* Integration Tests Tab */}
+        <TabsContent value="tests">
+          <AtomicInventoryTestSuite />
         </TabsContent>
       </Tabs>
 
