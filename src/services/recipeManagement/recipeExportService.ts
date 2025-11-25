@@ -14,7 +14,7 @@ export interface RecipeExportData {
   version?: number;
   yield_quantity?: number;
   ingredients?: Array<{
-    name: string;
+    ingredient_name: string;
     quantity: number;
     unit: string;
   }>;
@@ -83,7 +83,7 @@ export const exportRecipesToExcel = (recipes: RecipeExportData[]): void => {
           index === 0 ? baseData.version : '',
           index === 0 ? baseData.yield : '',
           index === 0 ? baseData.description : '',
-          ingredient.name,
+          ingredient.ingredient_name || 'Unknown',
           ingredient.quantity,
           ingredient.unit,
           index === 0 ? baseData.createdAt : '',
@@ -203,7 +203,7 @@ export const generateRecipeCSV = (recipes: RecipeExportData[]): string => {
           index === 0 ? baseData.version : '',
           index === 0 ? baseData.yield : '',
           index === 0 ? baseData.description : '""',
-          `"${ingredient.name.replace(/"/g, '""')}"`,
+          `"${(ingredient.ingredient_name || 'Unknown').replace(/"/g, '""')}"`,
           ingredient.quantity,
           `"${ingredient.unit.replace(/"/g, '""')}"`,
           index === 0 ? baseData.createdAt : '',
