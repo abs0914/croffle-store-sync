@@ -1,10 +1,11 @@
 
 import { useState } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Package } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Package, FileText, TrendingDown, AlertTriangle, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 import InventoryHeader from "./components/InventoryHeader";
 import { ProductsTable } from "./components/ProductsTable";
@@ -13,6 +14,7 @@ import { useProductData } from "./hooks/useProductData";
 import { deleteProduct } from "@/services/product/productDelete";
 import { Product } from "@/types";
 import ProductForm from "./ProductForm";
+import { fetchInventoryReport } from "@/services/reports/inventoryReport";
 
 export default function Inventory() {
   return (
@@ -41,6 +43,18 @@ function InventoryMain() {
     setActiveTab,
     error
   } = useProductData();
+
+  // Fetch inventory report for quick stats
+  const { data: inventoryReport } = useQuery({
+    queryKey: ['inventory-quick-report', currentStore?.id],
+    queryFn: () => {
+      if (!currentStore?.id) return null;
+      const today = new Date().toISOString().split('T')[0];
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      return fetchInventoryReport(currentStore.id, thirtyDaysAgo, today);
+    },
+    enabled: !!currentStore?.id,
+  });
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -128,6 +142,59 @@ function InventoryMain() {
         onAddItem={handleAddItem}
         showAddButton={true}
       />
+
+      {/* Quick Inventory Report Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{inventoryReport?.totalItems || products.length}</div>
+            <p className="text-xs text-muted-foreground">Active products in inventory</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+            <TrendingDown className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">{inventoryReport?.lowStockItems || 0}</div>
+            <p className="text-xs text-muted-foreground">Items below threshold</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">{inventoryReport?.outOfStockItems || 0}</div>
+            <p className="text-xs text-muted-foreground">Items need restocking</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">View Reports</CardTitle>
+            <BarChart3 className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate('/admin/inventory/reports')}
+              className="w-full"
+              variant="outline"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Full Reports
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="font-semibold text-blue-800 mb-2">Store-Level Products</h3>
