@@ -23,7 +23,8 @@ import {
   FileBarChart,
   Download,
   BookOpen,
-  Target
+  Target,
+  FileSpreadsheet
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -42,6 +43,7 @@ import { ProductIngredientMappingTab } from './ProductIngredientMappingTab';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { exportRecipesToExcel, downloadRecipeCSV, RecipeExportData } from '@/services/recipeManagement/recipeExportService';
 
 export const RecipeManagementTab: React.FC = () => {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -216,6 +218,39 @@ export const RecipeManagementTab: React.FC = () => {
     }
   };
 
+  const handleExportRecipes = (recipesToExport: any[], format: 'excel' | 'csv' = 'excel') => {
+    if (!recipesToExport || recipesToExport.length === 0) {
+      toast.error('No recipes to export');
+      return;
+    }
+
+    try {
+      // Convert templates to export format
+      const exportData: RecipeExportData[] = recipesToExport.map(template => ({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        category_name: template.category_name,
+        version: template.version,
+        yield_quantity: template.yield_quantity,
+        ingredients: template.ingredients || [],
+        created_at: template.created_at,
+        updated_at: template.updated_at
+      }));
+
+      if (format === 'excel') {
+        exportRecipesToExcel(exportData);
+        toast.success(`Exported ${exportData.length} recipe(s) to Excel`);
+      } else {
+        downloadRecipeCSV(exportData);
+        toast.success(`Exported ${exportData.length} recipe(s) to CSV`);
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export recipes');
+    }
+  };
+
   const filteredTemplates = templates.filter(template => {
     // Search filter
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -260,6 +295,14 @@ export const RecipeManagementTab: React.FC = () => {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => handleExportRecipes(filteredTemplates, 'excel')}
+                disabled={filteredTemplates.length === 0}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export to Excel
+              </Button>
               <Button variant="secondary" onClick={() => setShowMasterImport(true)}>
                 <BookOpen className="h-4 w-4 mr-2" />
                 Import Master Recipes
