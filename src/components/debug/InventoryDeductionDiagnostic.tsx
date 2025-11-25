@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { processTransactionInventoryWithMixMatchSupport } from '@/services/inventory/mixMatchInventoryIntegration';
+// Legacy service removed - using AtomicInventoryService
 interface FailedTransaction {
   id: string;
   receipt_number: string;
@@ -20,34 +20,9 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
   const [failedTransactions, setFailedTransactions] = useState<FailedTransaction[]>([]);
   const [diagnosticResult, setDiagnosticResult] = useState<string>('');
   const testInventoryDeduction = async () => {
-    setTesting(true);
-    try {
-      console.log('🧪 Testing inventory deduction with diagnostic transaction');
-
-      // Create a test transaction
-      const testItems = [{
-        name: 'Regular Croissant',
-        quantity: 1,
-        unit_price: 65,
-        total_price: 65
-      }];
-      const result = await processTransactionInventoryWithMixMatchSupport('test-diagnostic-' + Date.now(), 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-      // Replace with actual store ID
-      testItems);
-      if (result.success) {
-        setDiagnosticResult('✅ INVENTORY DEDUCTION SYSTEM IS NOW WORKING');
-        toast.success('Inventory deduction test passed!');
-      } else {
-        setDiagnosticResult(`❌ INVENTORY DEDUCTION STILL FAILING: ${result.errors.join(', ')}`);
-        toast.error('Inventory deduction test failed');
-      }
-    } catch (error) {
-      console.error('Diagnostic test failed:', error);
-      setDiagnosticResult(`❌ DIAGNOSTIC TEST ERROR: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      toast.error('Diagnostic test error');
-    } finally {
-      setTesting(false);
-    }
+    // Legacy test removed - using new AtomicInventoryService
+    toast.info('This diagnostic tool has been replaced with the new atomic inventory system');
+    setDiagnosticResult('⚠️ Legacy diagnostic removed - using AtomicInventoryService now');
   };
   const identifyFailedTransactions = async () => {
     setRecovering(true);
@@ -107,25 +82,8 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
         throw new Error('Failed to get transaction items');
       }
 
-      // Convert to format expected by inventory service
-      const transactionItems = items.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price
-      }));
-
-      // Process inventory deduction
-      const result = await processTransactionInventoryWithMixMatchSupport(transaction.id, 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-      // Replace with actual store ID
-      transactionItems);
-      if (result.success) {
-        toast.success(`✅ Recovered transaction ${transaction.receipt_number}`);
-        // Refresh the failed transactions list
-        await identifyFailedTransactions();
-      } else {
-        toast.error(`❌ Failed to recover ${transaction.receipt_number}: ${result.errors.join(', ')}`);
-      }
+      // Legacy recovery removed - manual correction needed
+      toast.info('Transaction recovery has been replaced with manual correction workflow');
     } catch (error) {
       console.error('Recovery failed:', error);
       toast.error(`Recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

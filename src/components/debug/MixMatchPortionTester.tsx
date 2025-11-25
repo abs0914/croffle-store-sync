@@ -8,8 +8,9 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { deductInventoryForTransactionEnhanced } from '@/services/inventory/enhancedInventoryDeductionService';
+// Legacy service removed - using AtomicInventoryService
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const MixMatchPortionTester: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -45,65 +46,16 @@ const MixMatchPortionTester: React.FC = () => {
   ];
 
   const runTest = async (scenario: any) => {
-    setIsLoading(true);
+    // Legacy test removed - using new AtomicInventoryService
+    toast.info('This test component has been replaced with the new atomic inventory system');
     
-    try {
-      const transactionId = `test-portion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const storeId = 'fd45e07e-7832-4f51-b46b-7ef604359b86'; // Sugbo Mercado IT Park store ID
-      
-      // Get current user for testing
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id || 'test-user-id';
-      
-      console.log(`🧪 PORTION TEST: ${scenario.name}`);
-      
-      const result = await deductInventoryForTransactionEnhanced(
-        transactionId,
-        storeId,
-        [{
-          productId: 'test-product-id', 
-          productName: scenario.productName,
-          quantity: 1
-        }],
-        userId
-      );
-      
-      const testResult = {
-        scenario: scenario.name,
-        success: result.success,
-        isMixMatch: result.isMixMatch,
-        deductedItems: result.deductedItems.map(item => ({
-          name: item.itemName,
-          quantity: item.quantityDeducted,
-          category: item.category,
-          expected: scenario.expectedDeductions.find(exp => 
-            exp.name.toLowerCase() === item.itemName.toLowerCase()
-          )?.quantity
-        })),
-        skippedItems: result.skippedItems || [],
-        errors: result.errors,
-        debugInfo: result.debugInfo,
-        timestamp: new Date().toLocaleTimeString(),
-        validation: validateResults(result, scenario)
-      };
-      
-      setTestResults(prev => [...prev, testResult]);
-      
-      console.log(`✅ PORTION TEST COMPLETED: ${scenario.name}`, testResult);
-      
-    } catch (error) {
-      console.error(`❌ PORTION TEST FAILED: ${scenario.name}`, error);
-      
-      setTestResults(prev => [...prev, {
-        scenario: scenario.name,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toLocaleTimeString(),
-        validation: { correct: false, issues: ['Test execution failed'] }
-      }]);
-    }
-    
-    setIsLoading(false);
+    setTestResults(prev => [...prev, {
+      scenario: scenario.name,
+      success: false,
+      error: 'Legacy testing removed - use AtomicInventoryService',
+      timestamp: new Date().toLocaleTimeString(),
+      validation: { correct: false, issues: ['Legacy system removed'] }
+    }]);
   };
 
   const validateResults = (result: any, scenario: any) => {
