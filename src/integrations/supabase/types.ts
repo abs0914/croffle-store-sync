@@ -1532,6 +1532,7 @@ export type Database = {
           notes: string | null
           recipe_ingredient_name: string
           recipe_ingredient_unit: string
+          store_id: string
           updated_at: string | null
         }
         Insert: {
@@ -1543,6 +1544,7 @@ export type Database = {
           notes?: string | null
           recipe_ingredient_name: string
           recipe_ingredient_unit: string
+          store_id: string
           updated_at?: string | null
         }
         Update: {
@@ -1554,9 +1556,25 @@ export type Database = {
           notes?: string | null
           recipe_ingredient_name?: string
           recipe_ingredient_unit?: string
+          store_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversion_mappings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "conversion_mappings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
@@ -2984,6 +3002,47 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_compensation_log: {
+        Row: {
+          compensated_at: string | null
+          created_at: string | null
+          deducted_quantity: number
+          id: string
+          inventory_stock_id: string
+          original_quantity: number
+          reason: string
+          transaction_id: string
+        }
+        Insert: {
+          compensated_at?: string | null
+          created_at?: string | null
+          deducted_quantity: number
+          id?: string
+          inventory_stock_id: string
+          original_quantity: number
+          reason: string
+          transaction_id: string
+        }
+        Update: {
+          compensated_at?: string | null
+          created_at?: string | null
+          deducted_quantity?: number
+          id?: string
+          inventory_stock_id?: string
+          original_quantity?: number
+          reason?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_compensation_log_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_conversions: {
         Row: {
           commissary_item_id: string | null
@@ -3034,6 +3093,38 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_deduction_idempotency: {
+        Row: {
+          created_at: string | null
+          deduction_data: Json
+          id: string
+          idempotency_key: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deduction_data: Json
+          id?: string
+          idempotency_key: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deduction_data?: Json
+          id?: string
+          idempotency_key?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_transaction"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -3274,6 +3365,7 @@ export type Database = {
           store_id: string
           unit: string
           updated_at: string | null
+          version: number
         }
         Insert: {
           conversion_ratio?: number | null
@@ -3297,6 +3389,7 @@ export type Database = {
           store_id: string
           unit: string
           updated_at?: string | null
+          version?: number
         }
         Update: {
           conversion_ratio?: number | null
@@ -3320,6 +3413,7 @@ export type Database = {
           store_id?: string
           unit?: string
           updated_at?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -3798,6 +3892,63 @@ export type Database = {
           },
           {
             foreignKeyName: "mix_match_ingredient_deductions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offline_transaction_queue: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          device_id: string
+          id: string
+          notes: string | null
+          processed_at: string | null
+          status: string | null
+          stock_validation_errors: Json | null
+          store_id: string
+          transaction_data: Json
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          device_id: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          status?: string | null
+          stock_validation_errors?: Json | null
+          store_id: string
+          transaction_data: Json
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          device_id?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          status?: string | null
+          stock_validation_errors?: Json | null
+          store_id?: string
+          transaction_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offline_transaction_queue_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "offline_transaction_queue_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
