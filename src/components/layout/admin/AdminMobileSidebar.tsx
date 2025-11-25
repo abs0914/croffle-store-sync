@@ -16,9 +16,9 @@ export const AdminMobileSidebar: React.FC<AdminMobileSidebarProps> = ({
 }) => {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-64 p-0 bg-croffle-background pt-20">
+      <SheetContent side="left" className="w-64 p-0 bg-croffle-background flex flex-col h-full">
         <AdminBrandHeader isMobile={true} />
-        <div className="flex-1 overflow-auto py-3" data-design-locked="true">
+        <div className="flex-1 overflow-auto py-3 px-2" data-design-locked="true">
           <AdminMainMenu />
         </div>
         <AdminUserProfile />
