@@ -119,7 +119,7 @@ const menuItems = [
 
 export function AdminMainMenu() {
   const location = useLocation();
-  const { hasPermission } = useRolePermissions();
+  const { hasPermission, userRole } = useRolePermissions();
   const [openSections, setOpenSections] = React.useState<string[]>([]);
 
   const toggleSection = (title: string) => {
@@ -148,6 +148,11 @@ export function AdminMainMenu() {
       return true;
     }
     
+    // Always show POS for everyone
+    if (item.title === "POS") {
+      return true;
+    }
+    
     if (item.permission && !hasPermission(item.permission)) {
       return false;
     }
@@ -158,6 +163,13 @@ export function AdminMainMenu() {
       );
     }
     return hasPermission(item.permission || 'dashboard');
+  });
+
+  console.log('🔍 AdminMainMenu render:', {
+    totalMenuItems: menuItems.length,
+    visibleMenuItems: visibleMenuItems.length,
+    userRole,
+    menuTitles: visibleMenuItems.map(i => i.title)
   });
 
   return (
