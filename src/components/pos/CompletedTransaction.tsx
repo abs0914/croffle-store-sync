@@ -40,85 +40,87 @@ export default function CompletedTransaction({
   const stableCustomer = useMemo(() => customer, [customer?.id, customer?.name]);
   const stableStore = useMemo(() => currentStore, [currentStore?.id, currentStore?.name]);
 
-  // Auto-print function
+  // Auto-print function - ONLY called after transaction completion
   const autoPrint = async (attempt = 1) => {
-    // Double-check we haven't printed this receipt
-    if (!printedReceipts.current.has(transaction.receiptNumber)) {
-      if (attempt === 1) {
-        printedReceipts.current.add(transaction.receiptNumber);
+    // Prevent duplicate prints
+    if (printedReceipts.current.has(transaction.receiptNumber)) {
+      console.log(`⏭️ Receipt ${transaction.receiptNumber} already in print queue, skipping...`);
+      return;
+    }
+    
+    // Mark as printing on first attempt
+    if (attempt === 1) {
+      printedReceipts.current.add(transaction.receiptNumber);
+      console.log(`📝 Marked receipt ${transaction.receiptNumber} for printing`);
+    }
+    
+    try {
+      setPrintStatus('printing');
+      setPrintAttempts(attempt);
+      
+      console.log(`🖨️ [AUTO-PRINT] Attempt ${attempt}/${maxPrintRetries}`, {
+        receiptNumber: transaction.receiptNumber,
+        isPrinterConnected: isConnected,
+        transactionTotal: transaction.total
+      });
+      
+      // Final printer check before print
+      if (!isConnected) {
+        throw new Error('Printer disconnected');
       }
       
-      try {
-        setPrintStatus('printing');
-        setPrintAttempts(attempt);
-        
-        console.log(`🖨️ [AUTO-PRINT] Starting print attempt ${attempt}/${maxPrintRetries}...`, {
-          isOnline: navigator.onLine,
-          receiptNumber: transaction.receiptNumber,
-          hasStore: !!stableStore,
-          storeName: stableStore?.name,
-          hasCustomer: !!stableCustomer,
-          isPrinterConnected: isConnected
-        });
-        
-        // Wait for connection to stabilize before printing
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Verify printer is still connected before attempting print
-        if (!isConnected) {
-          console.warn('⚠️ [AUTO-PRINT] Printer disconnected before print could start');
-          throw new Error('Printer disconnected');
-        }
-        
-        console.log(`🖨️ [AUTO-PRINT] Attempt ${attempt}: Calling printReceipt...`);
-        
-        // Show progress notification
-        toast.info(`Printing receipt (attempt ${attempt}/${maxPrintRetries})...`, {
+      // Only show toast on first attempt
+      if (attempt === 1) {
+        toast.info('Printing receipt...', {
           id: 'print-progress',
-          duration: 3000
+          duration: 2000
+        });
+      }
+      
+      const success = await printReceipt(transaction, stableCustomer, stableStore, 'Cashier');
+
+      if (!success) {
+        throw new Error('Print operation failed');
+      }
+
+      // ✅ Print successful
+      setPrintStatus('success');
+      console.log('✅ Receipt printed successfully');
+      clearCart();
+      
+      toast.dismiss('print-progress');
+      toast.success('Receipt printed!', { duration: 2000 });
+
+      setShowBriefSuccess(true);
+      
+    } catch (error) {
+      console.error(`❌ Print attempt ${attempt} failed:`, error);
+      
+      // Retry with exponential backoff
+      if (attempt < maxPrintRetries) {
+        const delays = [2000, 4000, 8000, 8000, 8000]; // 2s, 4s, 8s, 8s, 8s
+        const retryDelay = delays[attempt - 1] || 8000;
+        
+        console.log(`⏰ Retrying in ${retryDelay}ms...`);
+        
+        toast.warning(`Print retry ${attempt}/${maxPrintRetries}`, {
+          id: 'print-progress',
+          description: `Retrying in ${retryDelay/1000}s...`,
+          duration: retryDelay
         });
         
-        const success = await printReceipt(transaction, stableCustomer, stableStore, 'Cashier');
-
-        if (!success) {
-          throw new Error('Print operation returned false');
-        }
-
-        // ✅ Print successful
-        setPrintStatus('success');
-        console.log('✅ [AUTO-PRINT] Receipt printed successfully, clearing cart...');
-        clearCart();
+        setTimeout(() => autoPrint(attempt + 1), retryDelay);
+      } else {
+        // All retries failed
+        setPrintStatus('failed');
+        printedReceipts.current.delete(transaction.receiptNumber);
+        setShowPrintError(true);
         
         toast.dismiss('print-progress');
-        toast.success('Receipt printed successfully!');
-
-        // Show brief success message and start countdown for auto-navigation
-        setShowBriefSuccess(true);
-      } catch (error) {
-        console.error(`❌ [AUTO-PRINT] Print attempt ${attempt}/${maxPrintRetries} failed:`, error);
-        
-        // Retry logic with exponential backoff
-        if (attempt < maxPrintRetries) {
-          const retryDelay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Max 5s delay
-          console.log(`⏰ [AUTO-PRINT] Retrying in ${retryDelay}ms...`);
-          
-          toast.warning(`Print failed. Retrying in ${retryDelay/1000}s... (${attempt}/${maxPrintRetries})`, {
-            id: 'print-progress',
-            duration: retryDelay
-          });
-          
-          setTimeout(() => autoPrint(attempt + 1), retryDelay);
-        } else {
-          // Max retries reached - show error modal
-          setPrintStatus('failed');
-          printedReceipts.current.delete(transaction.receiptNumber);
-          setShowPrintError(true);
-          
-          toast.dismiss('print-progress');
-          toast.error(`Print failed after ${maxPrintRetries} attempts. Please check printer connection.`, {
-            duration: 10000
-          });
-        }
+        toast.error('Print failed', {
+          description: 'Please check printer connection',
+          duration: 10000
+        });
       }
     }
   };
@@ -156,18 +158,28 @@ export default function CompletedTransaction({
   useEffect(() => {
     // Skip printing process entirely if no printer is connected
     if (!isConnected || !transaction?.receiptNumber) {
+      console.log('⏭️ Skipping auto-print: printer not connected or no receipt number');
       return;
     }
     
     // Check if we've already printed this receipt
     if (printedReceipts.current.has(transaction.receiptNumber)) {
-      console.log(`Receipt ${transaction.receiptNumber} already printed, skipping...`);
+      console.log(`✅ Receipt ${transaction.receiptNumber} already printed, skipping...`);
       return;
     }
 
-    // Longer delay to ensure transaction is fully processed and connection is stable
-    const timer = setTimeout(() => autoPrint(1), 1500);
-    return () => clearTimeout(timer);
+    console.log(`🖨️ Scheduling auto-print for receipt ${transaction.receiptNumber} in 2 seconds...`);
+    
+    // Wait 2 seconds to ensure transaction is fully committed and printer is ready
+    const timer = setTimeout(() => {
+      console.log(`🖨️ Executing auto-print for receipt ${transaction.receiptNumber}`);
+      autoPrint(1);
+    }, 2000);
+    
+    return () => {
+      console.log(`🧹 Cleanup: Cancelling scheduled print for ${transaction.receiptNumber}`);
+      clearTimeout(timer);
+    };
   }, [isConnected, transaction?.receiptNumber]); // Removed unstable dependencies
 
   // Auto-navigation countdown when printer is connected
