@@ -5,6 +5,7 @@ import { Transaction, Customer } from "@/types";
 import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { useStore } from "@/contexts/StoreContext";
 import { useCart } from "@/contexts/cart/CartContext";
+import { PrintCoordinator } from "@/services/printer/PrintCoordinator";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { CheckCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
@@ -18,112 +19,64 @@ export default function CompletedTransaction({
   customer,
   startNewSale
 }: CompletedTransactionProps) {
-  const {
-    isConnected,
-    printReceipt
-  } = useThermalPrinter();
-  const {
-    currentStore
-  } = useStore();
+  const { isConnected } = useThermalPrinter();
+  const { currentStore } = useStore();
   const { clearCart } = useCart();
   const [countdown, setCountdown] = useState(3);
   const [showBriefSuccess, setShowBriefSuccess] = useState(false);
-  const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'failed'>('idle');
-  const [printAttempts, setPrintAttempts] = useState(0);
-  const [showPrintError, setShowPrintError] = useState(false);
   
-  // Track printed receipts to prevent duplicates
-  const printedReceipts = useRef(new Set<string>());
-  const maxPrintRetries = 5;
+  // Get PrintCoordinator instance
+  const printCoordinator = useRef(PrintCoordinator.getInstance()).current;
   
   // Stabilize object references to prevent unnecessary useEffect triggers
   const stableCustomer = useMemo(() => customer, [customer?.id, customer?.name]);
   const stableStore = useMemo(() => currentStore, [currentStore?.id, currentStore?.name]);
 
-  // Auto-print function - ONLY called after transaction completion
-  const autoPrint = async (attempt = 1) => {
-    // Prevent duplicate prints
-    if (printedReceipts.current.has(transaction.receiptNumber)) {
-      console.log(`⏭️ Receipt ${transaction.receiptNumber} already in print queue, skipping...`);
-      return;
-    }
-    
-    // Mark as printing on first attempt
-    if (attempt === 1) {
-      printedReceipts.current.add(transaction.receiptNumber);
-      console.log(`📝 Marked receipt ${transaction.receiptNumber} for printing`);
-    }
-    
-    try {
-      setPrintStatus('printing');
-      setPrintAttempts(attempt);
-      
-      console.log(`🖨️ [AUTO-PRINT] Attempt ${attempt}/${maxPrintRetries}`, {
+  // Auto-print using PrintCoordinator - single source of truth for all printing
+  useEffect(() => {
+    const autoPrint = async () => {
+      if (!transaction?.receiptNumber) {
+        return;
+      }
+
+      // Check if already printed using PrintCoordinator
+      if (printCoordinator.isPrinted(transaction.receiptNumber)) {
+        console.log('✅ Receipt already printed:', transaction.receiptNumber);
+        clearCart();
+        setShowBriefSuccess(true);
+        return;
+      }
+
+      // Check if currently printing
+      if (printCoordinator.isPrinting(transaction.receiptNumber)) {
+        console.log('⏳ Receipt currently being printed:', transaction.receiptNumber);
+        return;
+      }
+
+      // Wait for transaction to be fully committed
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      console.log('🖨️ Auto-printing receipt via PrintCoordinator:', transaction.id);
+
+      // Use PrintCoordinator for all printing - it handles retries, deduplication, and status tracking
+      const success = await printCoordinator.printReceipt({
+        transactionId: transaction.id,
         receiptNumber: transaction.receiptNumber,
-        isPrinterConnected: isConnected,
-        transactionTotal: transaction.total
+        transaction,
+        customer: stableCustomer || null,
+        store: stableStore,
+        cashierName: 'Cashier',
+        autoOpenDrawer: transaction.paymentMethod === 'cash'
       });
-      
-      // Final printer check before print
-      if (!isConnected) {
-        throw new Error('Printer disconnected');
-      }
-      
-      // Only show toast on first attempt
-      if (attempt === 1) {
-        toast.info('Printing receipt...', {
-          id: 'print-progress',
-          duration: 2000
-        });
-      }
-      
-      const success = await printReceipt(transaction, stableCustomer, stableStore, 'Cashier');
 
-      if (!success) {
-        throw new Error('Print operation failed');
+      if (success) {
+        clearCart();
+        setShowBriefSuccess(true);
       }
+    };
 
-      // ✅ Print successful
-      setPrintStatus('success');
-      console.log('✅ Receipt printed successfully');
-      clearCart();
-      
-      toast.dismiss('print-progress');
-      toast.success('Receipt printed!', { duration: 2000 });
-
-      setShowBriefSuccess(true);
-      
-    } catch (error) {
-      console.error(`❌ Print attempt ${attempt} failed:`, error);
-      
-      // Retry with exponential backoff
-      if (attempt < maxPrintRetries) {
-        const delays = [2000, 4000, 8000, 8000, 8000]; // 2s, 4s, 8s, 8s, 8s
-        const retryDelay = delays[attempt - 1] || 8000;
-        
-        console.log(`⏰ Retrying in ${retryDelay}ms...`);
-        
-        toast.warning(`Print retry ${attempt}/${maxPrintRetries}`, {
-          id: 'print-progress',
-          description: `Retrying in ${retryDelay/1000}s...`,
-          duration: retryDelay
-        });
-        
-        setTimeout(() => autoPrint(attempt + 1), retryDelay);
-      } else {
-        // All retries failed
-        setPrintStatus('failed');
-        printedReceipts.current.delete(transaction.receiptNumber);
-        setShowPrintError(true);
-        
-        toast.dismiss('print-progress');
-        toast.error('Print failed', {
-          description: 'Please check printer connection',
-          duration: 10000
-        });
-      }
-    }
-  };
+    autoPrint();
+  }, [transaction, stableCustomer, stableStore, printCoordinator, clearCart]);
 
   // Add defensive checks for transaction data
   React.useEffect(() => {
@@ -154,33 +107,6 @@ export default function CompletedTransaction({
     }
   }, [transaction, customer, currentStore, startNewSale]);
 
-  // Automatically print receipt when transaction completes and printer is connected
-  useEffect(() => {
-    // Skip printing process entirely if no printer is connected
-    if (!isConnected || !transaction?.receiptNumber) {
-      console.log('⏭️ Skipping auto-print: printer not connected or no receipt number');
-      return;
-    }
-    
-    // Check if we've already printed this receipt
-    if (printedReceipts.current.has(transaction.receiptNumber)) {
-      console.log(`✅ Receipt ${transaction.receiptNumber} already printed, skipping...`);
-      return;
-    }
-
-    console.log(`🖨️ Scheduling auto-print for receipt ${transaction.receiptNumber} in 2 seconds...`);
-    
-    // Wait 2 seconds to ensure transaction is fully committed and printer is ready
-    const timer = setTimeout(() => {
-      console.log(`🖨️ Executing auto-print for receipt ${transaction.receiptNumber}`);
-      autoPrint(1);
-    }, 2000);
-    
-    return () => {
-      console.log(`🧹 Cleanup: Cancelling scheduled print for ${transaction.receiptNumber}`);
-      clearTimeout(timer);
-    };
-  }, [isConnected, transaction?.receiptNumber]); // Removed unstable dependencies
 
   // Auto-navigation countdown when printer is connected
   useEffect(() => {
@@ -191,97 +117,6 @@ export default function CompletedTransaction({
       startNewSale();
     }
   }, [showBriefSuccess, countdown, startNewSale]);
-
-  // Handle manual retry
-  const handleManualRetry = async () => {
-    setShowPrintError(false);
-    setPrintAttempts(0);
-    printedReceipts.current.delete(transaction.receiptNumber);
-    autoPrint(1);
-  };
-
-  // Handle skip printing
-  const handleSkipPrinting = () => {
-    setShowPrintError(false);
-    setPrintStatus('success');
-    clearCart();
-    setShowBriefSuccess(true);
-    toast.info('Printing skipped. Transaction completed.');
-  };
-
-  // Show printing error modal
-  if (showPrintError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto p-6">
-        <Card className="w-full border-destructive">
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
-              <Printer className="h-8 w-8 text-destructive" />
-            </div>
-            
-            <div>
-              <h1 className="text-2xl font-bold text-destructive mb-2">Printing Failed</h1>
-              <p className="text-muted-foreground mb-2">
-                Transaction #{transaction.receiptNumber}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Failed to print receipt after {maxPrintRetries} attempts.
-              </p>
-            </div>
-
-            <div className="space-y-2 pt-4">
-              <Button 
-                onClick={handleManualRetry} 
-                className="w-full"
-                size="lg"
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Retry Printing
-              </Button>
-              
-              <Button 
-                onClick={handleSkipPrinting} 
-                variant="outline" 
-                className="w-full"
-                size="lg"
-              >
-                Skip & Continue
-              </Button>
-            </div>
-
-            <p className="text-xs text-muted-foreground pt-4">
-              Please check printer connection and power before retrying.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Show printing progress
-  if (isConnected && printStatus === 'printing') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto">
-        <div className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
-            <Printer className="h-8 w-8 text-blue-600" />
-          </div>
-          
-          <div>
-            <h1 className="text-2xl font-bold text-blue-600 mb-2">Printing Receipt...</h1>
-            <p className="text-gray-600 mb-2">Transaction #{transaction.receiptNumber}</p>
-            <p className="text-sm text-muted-foreground">
-              Attempt {printAttempts} of {maxPrintRetries}
-            </p>
-          </div>
-          
-          <div className="text-sm text-muted-foreground">
-            Please wait while we print your receipt
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Show brief success message if thermal printer is connected
   if (isConnected && showBriefSuccess) {

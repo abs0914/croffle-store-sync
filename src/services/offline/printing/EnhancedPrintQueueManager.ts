@@ -13,6 +13,7 @@
 import { toast } from 'sonner';
 import { BluetoothPrinterService } from '../../printer/BluetoothPrinterService';
 import { PrinterDiscovery } from '../../printer/PrinterDiscovery';
+import { PrintCoordinator } from '../../printer/PrintCoordinator';
 import { PlatformStorageManager } from '../storage/PlatformStorageManager';
 
 export interface PrintJob {
@@ -94,6 +95,7 @@ export class EnhancedPrintQueueManager {
   private isProcessing = false;
   private processingInterval: NodeJS.Timeout | null = null;
   private reconnectionInterval: NodeJS.Timeout | null = null;
+  private printCoordinator: PrintCoordinator;
   
   private jobCallbacks: Set<PrintJobCallback> = new Set();
   private statusCallbacks: Set<PrinterStatusCallback> = new Set();
@@ -112,6 +114,7 @@ export class EnhancedPrintQueueManager {
   private readonly QUEUE_SIZE_LIMIT = 100;
 
   private constructor() {
+    this.printCoordinator = PrintCoordinator.getInstance();
     // Initialize storage for print queue persistence
     const storageConfig = {
       dbName: 'CroffleOfflineDB',
@@ -338,22 +341,39 @@ export class EnhancedPrintQueueManager {
   }
 
   /**
-   * Print a receipt
+   * Print a receipt - delegates to PrintCoordinator to prevent duplicates
    */
   private async printReceipt(job: PrintJob): Promise<boolean> {
     try {
       const { data } = job.content;
       
-      // Use the existing BluetoothPrinterService
-      const success = await BluetoothPrinterService.printReceipt(
+      // Check if already printed via PrintCoordinator
+      if (job.receiptNumber && this.printCoordinator.isPrinted(job.receiptNumber)) {
+        console.log(`✅ [PRINT-QUEUE] Receipt ${job.receiptNumber} already printed, skipping`);
+        return true;
+      }
+
+      // Delegate to PrintCoordinator to prevent duplicate prints
+      if (job.receiptNumber) {
+        return await this.printCoordinator.printReceipt({
+          transactionId: job.transactionId || data.transaction?.id,
+          receiptNumber: job.receiptNumber,
+          transaction: data.transaction,
+          customer: data.customer,
+          store: data.store,
+          cashierName: data.cashierName,
+          autoOpenDrawer: job.autoOpenDrawer
+        });
+      }
+
+      // Fallback to direct printing if no receipt number
+      return await BluetoothPrinterService.printReceipt(
         data.transaction,
         data.customer,
         data.store,
         data.cashierName,
         job.autoOpenDrawer
       );
-
-      return success;
     } catch (error) {
       console.error('Receipt printing failed:', error);
       return false;

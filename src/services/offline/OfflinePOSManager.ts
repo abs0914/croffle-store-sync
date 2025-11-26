@@ -183,26 +183,9 @@ export class OfflinePOSManager {
       // Queue the transaction
       const transactionId = await this.transactionQueue.queueTransaction(transactionData);
       
-      // Add print job if printing is enabled
-      if (this.config.enablePrintQueue && transactionData.shouldPrint !== false) {
-        await this.printQueueManager.addPrintJob(
-          {
-            type: 'receipt',
-            data: {
-              transaction: transactionData,
-              customer: transactionData.customer,
-              store: transactionData.store,
-              cashierName: transactionData.cashierName
-            }
-          },
-          {
-            priority: transactionData.paymentMethod === 'cash' ? 'high' : 'medium',
-            autoOpenDrawer: transactionData.paymentMethod === 'cash',
-            transactionId,
-            receiptNumber: transactionData.receiptNumber
-          }
-        );
-      }
+      // Note: Print coordination is now handled by PrintCoordinator in CompletedTransaction
+      // This prevents duplicate print attempts between offline queue and direct printing
+      console.log('💳 [OFFLINE-POS] Transaction queued, printing handled by PrintCoordinator');
 
       // Trigger immediate sync if network conditions are good
       const networkStatus = this.networkService.getNetworkStatus();
