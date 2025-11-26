@@ -330,45 +330,63 @@ export class AtomicInventoryService {
   }
 
   /**
-   * Get recipe ingredients with PROPER store filtering (FIXES ISSUE #15)
+   * Get recipe ingredients with PROPER store filtering (FIXES NESTED FILTER ISSUE)
+   * Query recipe_ingredients directly and filter by store_id in application code
    */
   private static async getStoreIngredients(
     productId: string,
     storeId: string
   ): Promise<IngredientMapping[]> {
-    const { data, error } = await supabase
+    // Step 1: Get recipe_id from product_catalog
+    const { data: product, error: productError } = await supabase
       .from('product_catalog')
-      .select(`
-        recipe_id,
-        recipes!inner (
-          id,
-          name,
-          recipe_ingredients!inner (
-            id,
-            inventory_stock_id,
-            quantity,
-            unit,
-            inventory_stock!inner (
-              id,
-              item,
-              unit,
-              stock_quantity,
-              version,
-              store_id
-            )
-          )
-        )
-      `)
+      .select('recipe_id')
       .eq('id', productId)
-      .eq('recipes.recipe_ingredients.inventory_stock.store_id', storeId)
-      .eq('recipes.recipe_ingredients.inventory_stock.is_active', true)
       .single();
 
-    if (error || !data?.recipes?.recipe_ingredients) {
+    if (productError || !product?.recipe_id) {
+      throw new Error(`Product ${productId} not found or has no recipe`);
+    }
+
+    // Step 2: Get recipe_ingredients with inventory_stock info
+    const { data: ingredients, error: ingredientsError } = await supabase
+      .from('recipe_ingredients')
+      .select(`
+        id,
+        inventory_stock_id,
+        quantity,
+        unit,
+        inventory_stock!inner (
+          id,
+          item,
+          unit,
+          stock_quantity,
+          version,
+          store_id,
+          is_active
+        )
+      `)
+      .eq('recipe_id', product.recipe_id);
+
+    if (ingredientsError) {
+      throw new Error(`Failed to fetch ingredients for recipe ${product.recipe_id}: ${ingredientsError.message}`);
+    }
+
+    if (!ingredients || ingredients.length === 0) {
+      throw new Error(`No ingredients found for product ${productId}`);
+    }
+
+    // Step 3: Filter for this store and active items in application code
+    const storeIngredients = ingredients.filter((ing: any) => 
+      ing.inventory_stock?.store_id === storeId && 
+      ing.inventory_stock?.is_active === true
+    );
+
+    if (storeIngredients.length === 0) {
       throw new Error(`No ingredients found for product ${productId} in store ${storeId}`);
     }
 
-    return data.recipes.recipe_ingredients.map((ing: any) => ({
+    return storeIngredients.map((ing: any) => ({
       inventoryStockId: ing.inventory_stock.id,
       ingredientName: ing.inventory_stock.item,
       quantityNeeded: ing.quantity,
