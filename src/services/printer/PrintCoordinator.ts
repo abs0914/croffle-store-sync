@@ -131,6 +131,9 @@ export class PrintCoordinator {
           lastAttempt: Date.now()
         });
 
+        // Notify EnhancedPrintQueueManager to remove any queued jobs for this receipt
+        this.notifyPrintComplete(receiptNumber);
+
         // Show success toast only on first attempt or after retries
         if (currentAttempt === 1) {
           toast.success('Receipt printed successfully');
@@ -248,6 +251,21 @@ export class PrintCoordinator {
       localStorage.setItem('print-coordinator-status', JSON.stringify(statusArray));
     } catch (error) {
       console.warn('Failed to persist print status:', error);
+    }
+  }
+
+  /**
+   * Notify print queue manager that printing is complete
+   */
+  private notifyPrintComplete(receiptNumber: string): void {
+    try {
+      // Dynamically import to avoid circular dependency
+      import('@/services/offline/printing/EnhancedPrintQueueManager').then(({ EnhancedPrintQueueManager }) => {
+        const queueManager = EnhancedPrintQueueManager.getInstance();
+        queueManager.removeJobsByReceiptNumber(receiptNumber);
+      });
+    } catch (error) {
+      console.warn('[PRINT-COORDINATOR] Could not notify queue manager:', error);
     }
   }
 

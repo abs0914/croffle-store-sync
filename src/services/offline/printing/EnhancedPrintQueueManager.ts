@@ -228,6 +228,29 @@ export class EnhancedPrintQueueManager {
   }
 
   /**
+   * Remove jobs by receipt number (called when print is completed via PrintCoordinator)
+   */
+  async removeJobsByReceiptNumber(receiptNumber: string): Promise<void> {
+    try {
+      const jobsToRemove: string[] = [];
+      
+      for (const [jobId, job] of this.printQueue.entries()) {
+        if (job.receiptNumber === receiptNumber) {
+          jobsToRemove.push(jobId);
+        }
+      }
+      
+      for (const jobId of jobsToRemove) {
+        this.printQueue.delete(jobId);
+        await this.storageManager.removeItem(this.STORE_NAME, jobId);
+        console.log(`🗑️ Removed print job ${jobId} for receipt ${receiptNumber} (completed via PrintCoordinator)`);
+      }
+    } catch (error) {
+      console.error('Failed to remove jobs by receipt number:', error);
+    }
+  }
+
+  /**
    * Process the print queue
    */
   private async processQueue(): Promise<void> {
@@ -524,9 +547,27 @@ export class EnhancedPrintQueueManager {
   private async loadQueueFromStorage(): Promise<void> {
     try {
       const items = await this.storageManager.query({ store: this.STORE_NAME });
+      let loaded = 0;
+      let skipped = 0;
       
       for (const item of items) {
         const job = item.data as PrintJob;
+        
+        // Skip completed or failed jobs - they shouldn't be retried
+        if (job.status === 'completed' || job.status === 'failed') {
+          console.log(`⏭️ Skipping ${job.status} job: ${job.receiptNumber || job.id}`);
+          await this.storageManager.removeItem(this.STORE_NAME, job.id);
+          skipped++;
+          continue;
+        }
+        
+        // Check if already printed via PrintCoordinator
+        if (job.receiptNumber && this.printCoordinator.isPrinted(job.receiptNumber)) {
+          console.log(`✅ Job ${job.receiptNumber} already printed via PrintCoordinator, removing from queue`);
+          await this.storageManager.removeItem(this.STORE_NAME, job.id);
+          skipped++;
+          continue;
+        }
         
         // Reset printing status to pending on startup
         if (job.status === 'printing') {
@@ -534,9 +575,10 @@ export class EnhancedPrintQueueManager {
         }
         
         this.printQueue.set(job.id, job);
+        loaded++;
       }
 
-      console.log(`📦 Loaded ${this.printQueue.size} print jobs from storage`);
+      console.log(`📦 Loaded ${loaded} print jobs from storage (skipped ${skipped} completed/already-printed)`);
     } catch (error) {
       console.error('Failed to load print queue from storage:', error);
     }
