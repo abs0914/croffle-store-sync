@@ -106,9 +106,9 @@ export class EnhancedPrintQueueManager {
   };
   
   private readonly STORE_NAME = 'print_queue';
-  private readonly PROCESSING_INTERVAL = 2000; // 2 seconds
-  private readonly RECONNECTION_INTERVAL = 10000; // 10 seconds
-  private readonly MAX_RETRY_ATTEMPTS = 3;
+  private readonly PROCESSING_INTERVAL = 1500; // 1.5 seconds - faster processing
+  private readonly RECONNECTION_INTERVAL = 5000; // 5 seconds - check more frequently
+  private readonly MAX_RETRY_ATTEMPTS = 5; // More aggressive retries
   private readonly QUEUE_SIZE_LIMIT = 100;
 
   private constructor() {

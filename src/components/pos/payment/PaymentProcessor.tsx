@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { formatCurrency } from '@/utils/format';
 import PaymentMethods from './PaymentMethods';
+import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 
 interface PaymentProcessorProps {
   total: number;
@@ -17,6 +18,7 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
   itemCount,
   onPaymentComplete
 }) => {
+  const { isConnected: isPrinterConnected } = useThermalPrinter();
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet'>('cash');
   const [cashAmountTendered, setCashAmountTendered] = useState<number>(0);
   const [cardType, setCardType] = useState<string>('');
@@ -24,8 +26,15 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
   const [eWalletProvider, setEWalletProvider] = useState<string>('');
   const [eWalletReference, setEWalletReference] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPrinterWarning, setShowPrinterWarning] = useState(false);
 
   const handlePayment = async () => {
+    // Check printer connection first
+    if (!isPrinterConnected && !showPrinterWarning) {
+      setShowPrinterWarning(true);
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const paymentDetails: any = {};
@@ -54,6 +63,7 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
         setCardNumber('');
         setEWalletProvider('');
         setEWalletReference('');
+        setShowPrinterWarning(false);
       }
     } catch (error) {
       console.error('Payment processing error:', error);
@@ -90,7 +100,40 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
             ✅ Complimentary Transaction - No payment required
           </div>
         )}
+        {!isPrinterConnected && (
+          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+            ⚠️ Printer not connected - Receipt may not print automatically
+          </div>
+        )}
       </div>
+
+      {showPrinterWarning && !isPrinterConnected && (
+        <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg space-y-3">
+          <div className="flex items-start gap-2">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-900 mb-1">Printer Not Connected</h3>
+              <p className="text-sm text-yellow-800 mb-3">
+                The thermal printer is not connected. The receipt will not print automatically after this transaction.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowPrinterWarning(false)}
+                  className="flex-1 bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-yellow-700"
+                >
+                  Continue Without Printer
+                </button>
+                <button
+                  onClick={() => setShowPrinterWarning(false)}
+                  className="px-4 py-2 border border-yellow-600 rounded-lg text-yellow-700 hover:bg-yellow-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PaymentMethods
         total={total}
@@ -111,7 +154,7 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       <div className="mt-6 flex gap-3">
         <button
           onClick={handlePayment}
-          disabled={!canProceed() || isProcessing}
+          disabled={!canProceed() || (isProcessing && !showPrinterWarning)}
           className="flex-1 bg-primary text-primary-foreground py-3 px-4 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
         >
           {isProcessing ? 'Processing...' : `Complete Payment - ${formatCurrency(total)}`}
