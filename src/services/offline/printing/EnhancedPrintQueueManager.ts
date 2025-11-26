@@ -106,9 +106,9 @@ export class EnhancedPrintQueueManager {
   };
   
   private readonly STORE_NAME = 'print_queue';
-  private readonly PROCESSING_INTERVAL = 1500; // 1.5 seconds - faster processing
-  private readonly RECONNECTION_INTERVAL = 5000; // 5 seconds - check more frequently
-  private readonly MAX_RETRY_ATTEMPTS = 5; // More aggressive retries
+  private readonly PROCESSING_INTERVAL = 3000; // 3 seconds - prevent rapid retries during payment
+  private readonly RECONNECTION_INTERVAL = 10000; // 10 seconds - less aggressive reconnection
+  private readonly MAX_RETRY_ATTEMPTS = 3; // Fewer retries from queue (auto-print handles its own)
   private readonly QUEUE_SIZE_LIMIT = 100;
 
   private constructor() {
@@ -305,18 +305,8 @@ export class EnhancedPrintQueueManager {
         });
       } else {
         job.status = 'pending';
-        toast.warning(`Print retry: ${job.receiptNumber || job.type}`, {
-          description: `Attempt ${job.attempts}/${job.maxAttempts}`,
-          duration: 10000,
-          action: {
-            label: 'Cancel',
-            onClick: () => {
-              job.status = 'cancelled';
-              this.updateJob(job);
-              toast.success('Print job cancelled');
-            }
-          }
-        });
+        // Quieter retry notification to avoid spam during transaction completion
+        console.log(`⏰ Print job ${job.id} will retry (${job.attempts}/${job.maxAttempts})`);
       }
     } finally {
       await this.updateJob(job);
