@@ -300,12 +300,22 @@ export class EnhancedPrintQueueManager {
       if (job.attempts >= job.maxAttempts) {
         job.status = 'failed';
         toast.error(`Print failed: ${job.receiptNumber || job.type}`, {
-          description: `Max attempts reached (${job.attempts})`
+          description: `Max attempts reached (${job.attempts}). Check printer connection.`,
+          duration: 15000
         });
       } else {
         job.status = 'pending';
         toast.warning(`Print retry: ${job.receiptNumber || job.type}`, {
-          description: `Attempt ${job.attempts}/${job.maxAttempts}`
+          description: `Attempt ${job.attempts}/${job.maxAttempts}`,
+          duration: 10000,
+          action: {
+            label: 'Cancel',
+            onClick: () => {
+              job.status = 'cancelled';
+              this.updateJob(job);
+              toast.success('Print job cancelled');
+            }
+          }
         });
       }
     } finally {
