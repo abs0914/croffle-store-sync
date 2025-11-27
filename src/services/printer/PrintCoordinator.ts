@@ -61,7 +61,12 @@ export class PrintCoordinator {
   async printReceipt(request: PrintJobRequest): Promise<boolean> {
     const { receiptNumber, transactionId } = request;
     
-    console.log(`📋 [PRINT-COORDINATOR] Print request for receipt: ${receiptNumber}`);
+    console.log(`📋 [PRINT-COORDINATOR] Print request received`, {
+      receiptNumber,
+      transactionId,
+      timestamp: new Date().toISOString(),
+      existingStatus: this.printJobs.get(receiptNumber)?.status
+    });
 
     // Check if already printed successfully
     const existingStatus = this.printJobs.get(receiptNumber);
