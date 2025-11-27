@@ -89,15 +89,31 @@ export class BluetoothPrinterService {
         throw new Error(`Connection not ready for printing: ${validation.issues.join(', ')}`);
       }
       
-      console.log('✅ [BT-PRINTER] Connection validated, proceeding with print');
+      console.log('✅ [BT-PRINTER] Connection validated');
+      
+      // CRITICAL: Buffer stabilization delay after validation
+      // The test write succeeds but printer buffer needs time to be ready for large data
+      console.log('⏳ [BT-PRINTER] Waiting for printer buffer stabilization...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('✅ [BT-PRINTER] Buffer stabilized, proceeding with print');
 
       console.log('🖨️ [BT-PRINTER] Formatting receipt...');
       const receiptData = PrinterTypeManager.formatReceipt(printer, transaction, customer, store, cashierName);
-      console.log('🖨️ [BT-PRINTER] Receipt formatted, length:', receiptData.length);
+      console.log('📄 [BT-PRINTER] Receipt formatted successfully', {
+        dataLength: receiptData.length,
+        estimatedChunks: Math.ceil(new TextEncoder().encode(receiptData).length / 256),
+        receiptNumber: transaction.receiptNumber
+      });
       
-      console.log('🖨️ [BT-PRINTER] Sending data to printer...');
+      console.log('📡 [BT-PRINTER] Sending data to printer...', {
+        timestamp: new Date().toISOString(),
+        connectionType: printer.connectionType
+      });
       const success = await this.sendDataToPrinter(printer, receiptData);
-      console.log('🖨️ [BT-PRINTER] Send result:', success);
+      console.log('✅ [BT-PRINTER] Send completed', { 
+        success,
+        timestamp: new Date().toISOString()
+      });
 
       if (success) {
         console.log('✅ [BT-PRINTER] Receipt printed successfully');
