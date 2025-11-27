@@ -87,6 +87,7 @@ export class SystemResetService {
     }
     
     // Clear localStorage items related to recipes and inventory
+    // CRITICAL: Protect print-coordinator-status from cache clearing
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -95,11 +96,12 @@ export class SystemResetService {
         key.includes('inventory') || 
         key.includes('product') ||
         key.includes('cache')
-      )) {
+      ) && !key.includes('print-coordinator')) {
         keysToRemove.push(key);
       }
     }
     
+    console.log(`🗑️ Removing ${keysToRemove.length} cache keys (protecting print coordinator)`);
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
     console.log('✅ All caches cleared');

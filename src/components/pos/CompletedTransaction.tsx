@@ -53,10 +53,14 @@ export default function CompletedTransaction({
         return;
       }
 
-      // Wait for transaction to be fully committed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       console.log('🖨️ Auto-printing receipt via PrintCoordinator:', transaction.id);
+      console.log('📋 Transaction details:', { 
+        receiptNumber: transaction.receiptNumber, 
+        id: transaction.id,
+        total: transaction.total,
+        hasStore: !!stableStore,
+        hasCustomer: !!stableCustomer
+      });
 
       // Use PrintCoordinator for all printing - it handles retries, deduplication, and status tracking
       const success = await printCoordinator.printReceipt({
