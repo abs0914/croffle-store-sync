@@ -58,11 +58,19 @@ export class PrinterConnectionValidator {
         }
       }
 
-      // Check 3: Connection stability test
+      // Check 3: GATT characteristic availability (no test write to avoid disconnections)
       try {
-        await this.performStabilityTest(device);
+        const service = await device.gatt.getPrimaryService('49535343-fe7d-4ae5-8fa9-9fafd205e455');
+        const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+        
+        if (!characteristic) {
+          issues.push('Printer characteristic not available');
+          return { isHealthy: false, canPrint: false, issues };
+        }
+        
+        console.log('✅ [VALIDATOR] GATT characteristics available');
       } catch (error) {
-        issues.push('Connection stability test failed');
+        issues.push(`GATT service unavailable: ${error.message}`);
         return { isHealthy: false, canPrint: false, issues, signalStrength: 'unstable' };
       }
     }
@@ -81,34 +89,6 @@ export class PrinterConnectionValidator {
     return { isHealthy: true, canPrint: true, issues, signalStrength: 'strong' };
   }
 
-  /**
-   * Perform a small test write to verify connection stability
-   * This is critical - we send a tiny command and wait for success
-   */
-  private static async performStabilityTest(device: BluetoothDevice): Promise<void> {
-    console.log('🧪 [VALIDATOR] Performing stability test...');
-    
-    try {
-      // Get the printer service
-      const service = await device.gatt.getPrimaryService('49535343-fe7d-4ae5-8fa9-9fafd205e455');
-      
-      // Get write characteristic
-      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-      
-      // Send a minimal command (ESC @ - initialize printer - harmless)
-      const testCommand = new Uint8Array([0x1B, 0x40]);
-      
-      await characteristic.writeValueWithoutResponse(testCommand);
-      
-      // Wait to ensure command was processed
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      console.log('✅ [VALIDATOR] Stability test passed');
-    } catch (error) {
-      console.error('❌ [VALIDATOR] Stability test failed:', error);
-      throw new Error('Connection unstable - test write failed');
-    }
-  }
 
   /**
    * Quick connection check without test write
