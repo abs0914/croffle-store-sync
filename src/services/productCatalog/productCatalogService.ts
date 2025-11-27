@@ -37,21 +37,49 @@ const broadcastCacheInvalidation = async (productId: string, storeId: string, ev
 
 export const fetchProductCatalog = async (storeId: string): Promise<ProductCatalog[]> => {
   try {
-    // Use safe query without cross-table joins to avoid RLS issues
+    // Fetch products with recipe template images (centralized approach)
     const { data, error } = await supabase
       .from('product_catalog')
       .select(`
         id, product_name, description, price, category_id, store_id,
         image_url, is_available, product_status, recipe_id, display_order,
-        created_at, updated_at
+        created_at, updated_at,
+        recipe_templates!inner(image_url)
       `)
       .eq('store_id', storeId)
       .order('display_order', { ascending: true });
 
-    if (error) throw error;
+    // If join fails (RLS issue), fall back to simple query
+    if (error) {
+      console.warn('fetchProductCatalog: Join failed, using simple query:', error);
+      const { data: simpleData, error: simpleError } = await supabase
+        .from('product_catalog')
+        .select(`
+          id, product_name, description, price, category_id, store_id,
+          image_url, is_available, product_status, recipe_id, display_order,
+          created_at, updated_at
+        `)
+        .eq('store_id', storeId)
+        .order('display_order', { ascending: true });
+      
+      if (simpleError) throw simpleError;
+      
+      console.log(`✅ fetchProductCatalog: Retrieved ${(simpleData || []).length} products for store ${storeId}`);
+      return (simpleData || []) as any;
+    }
 
-    console.log(`✅ fetchProductCatalog: Retrieved ${(data || []).length} products for store ${storeId}`);
-    return (data || []) as any;
+    // Map products with recipe template images
+    const productsWithImages = (data || []).map(product => {
+      const recipeImageUrl = (product as any).recipe_templates?.image_url;
+      return {
+        ...product,
+        // Use recipe template image if available, otherwise use product image
+        effective_image_url: recipeImageUrl || product.image_url
+      };
+    });
+
+    console.log(`✅ fetchProductCatalog: Retrieved ${productsWithImages.length} products for store ${storeId}`);
+    return productsWithImages as any;
   } catch (error) {
     console.error('Error fetching product catalog:', error);
     toast.error('Failed to fetch product catalog');
