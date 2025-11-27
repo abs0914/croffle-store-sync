@@ -89,13 +89,7 @@ export class BluetoothPrinterService {
         throw new Error(`Connection not ready for printing: ${validation.issues.join(', ')}`);
       }
       
-      console.log('✅ [BT-PRINTER] Connection validated');
-      
-      // CRITICAL: Buffer stabilization delay after validation
-      // The test write succeeds but printer buffer needs time to be ready for large data
-      console.log('⏳ [BT-PRINTER] Waiting for printer buffer stabilization...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('✅ [BT-PRINTER] Buffer stabilized, proceeding with print');
+      console.log('✅ [BT-PRINTER] Connection validated, proceeding with print');
 
       console.log('🖨️ [BT-PRINTER] Formatting receipt...');
       const receiptData = PrinterTypeManager.formatReceipt(printer, transaction, customer, store, cashierName);
