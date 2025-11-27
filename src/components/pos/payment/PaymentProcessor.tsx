@@ -118,7 +118,11 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowPrinterWarning(false)}
+                  onClick={() => {
+                    setShowPrinterWarning(false);
+                    // Proceed with payment after dismissing warning
+                    handlePayment();
+                  }}
                   className="flex-1 bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-yellow-700"
                 >
                   Continue Without Printer
