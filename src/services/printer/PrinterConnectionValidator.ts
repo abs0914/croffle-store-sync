@@ -1,11 +1,12 @@
 /**
  * PRINTER CONNECTION VALIDATOR
- * 
+ *
  * Performs comprehensive connection health checks before printing
  * to detect unstable connections that would cause mid-print failures.
  */
 
 import { BluetoothPrinter } from '@/types/printer';
+import { BleClient } from '@capacitor-community/bluetooth-le';
 
 export interface ConnectionValidationResult {
   isHealthy: boolean;
@@ -15,61 +16,74 @@ export interface ConnectionValidationResult {
 }
 
 export class PrinterConnectionValidator {
-  
+
   /**
    * Comprehensive connection health check
    * Validates GATT connection, performs test write, and checks stability
+   * Will attempt reconnection if connection is lost but printer object exists
    */
   static async validateConnection(printer: BluetoothPrinter): Promise<ConnectionValidationResult> {
     const issues: string[] = [];
-    
-    console.log('🔍 [VALIDATOR] Starting connection health check...');
 
-    // Check 1: Printer object exists and is connected
-    if (!printer || !printer.isConnected) {
-      issues.push('Printer not connected');
+    console.log('🔍 [VALIDATOR] Starting connection health check...', {
+      hasPrinter: !!printer,
+      isConnected: printer?.isConnected,
+      connectionType: printer?.connectionType,
+      printerName: printer?.name
+    });
+
+    // Check 1: Printer object exists
+    if (!printer) {
+      issues.push('No printer object available');
       return { isHealthy: false, canPrint: false, issues };
     }
 
     // Check 2: Web Bluetooth GATT validation
     if (printer.connectionType === 'web' && printer.webBluetoothDevice) {
       const device = printer.webBluetoothDevice;
-      
+
       if (!device.gatt) {
         issues.push('GATT server not available');
         return { isHealthy: false, canPrint: false, issues };
       }
 
+      // Check actual GATT connection state (more reliable than isConnected flag)
       if (!device.gatt.connected) {
-        issues.push('GATT server disconnected');
-        
+        console.log('🔄 [VALIDATOR] GATT disconnected, attempting reconnection...');
+
         // Attempt reconnection
         try {
-          console.log('🔄 [VALIDATOR] Attempting GATT reconnection...');
           await device.gatt.connect();
-          
+
           // Wait for connection to stabilize
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Update the isConnected flag
+          printer.isConnected = true;
+
           console.log('✅ [VALIDATOR] GATT reconnected successfully');
-        } catch (error) {
+        } catch (error: any) {
           issues.push(`GATT reconnection failed: ${error.message}`);
+          printer.isConnected = false;
           return { isHealthy: false, canPrint: false, issues };
         }
+      } else {
+        // GATT is connected, ensure flag is in sync
+        printer.isConnected = true;
       }
 
       // Check 3: GATT characteristic availability (no test write to avoid disconnections)
       try {
         const service = await device.gatt.getPrimaryService('49535343-fe7d-4ae5-8fa9-9fafd205e455');
         const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-        
+
         if (!characteristic) {
           issues.push('Printer characteristic not available');
           return { isHealthy: false, canPrint: false, issues };
         }
-        
+
         console.log('✅ [VALIDATOR] GATT characteristics available');
-      } catch (error) {
+      } catch (error: any) {
         issues.push(`GATT service unavailable: ${error.message}`);
         return { isHealthy: false, canPrint: false, issues, signalStrength: 'unstable' };
       }
@@ -77,11 +91,17 @@ export class PrinterConnectionValidator {
 
     // Check 4: Capacitor BLE validation
     if (printer.connectionType === 'capacitor' && printer.device) {
-      // For Capacitor, we rely on the isConnected flag
-      // A more thorough check would require platform-specific APIs
+      // For Capacitor BLE, attempt reconnection if flag shows disconnected
       if (!printer.isConnected) {
-        issues.push('Capacitor BLE connection lost');
-        return { isHealthy: false, canPrint: false, issues };
+        console.log('🔄 [VALIDATOR] Capacitor BLE disconnected, attempting reconnection...');
+        try {
+          await BleClient.connect(printer.device.deviceId);
+          printer.isConnected = true;
+          console.log('✅ [VALIDATOR] Capacitor BLE reconnected successfully');
+        } catch (error: any) {
+          issues.push(`Capacitor BLE reconnection failed: ${error.message}`);
+          return { isHealthy: false, canPrint: false, issues };
+        }
       }
     }
 

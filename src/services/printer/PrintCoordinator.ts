@@ -93,10 +93,28 @@ export class PrintCoordinator {
     });
 
     // Check printer connection
-    const printer = PrinterDiscovery.getConnectedPrinter();
+    let printer = PrinterDiscovery.getConnectedPrinter();
+    console.log(`🔍 [PRINT-COORDINATOR] Printer check:`, {
+      receiptNumber,
+      hasPrinter: !!printer,
+      isConnected: printer?.isConnected,
+      printerName: printer?.name,
+      connectionType: printer?.connectionType
+    });
+
+    // If printer object exists but connection is lost, attempt restoration
+    if (printer && !printer.isConnected) {
+      console.log(`🔄 [PRINT-COORDINATOR] Printer exists but disconnected, attempting restore...`);
+      const restored = await PrinterDiscovery.restoreConnection();
+      if (restored) {
+        printer = PrinterDiscovery.getConnectedPrinter();
+        console.log(`✅ [PRINT-COORDINATOR] Connection restored, proceeding with print`);
+      }
+    }
+
     if (!printer?.isConnected) {
       console.warn(`⚠️ [PRINT-COORDINATOR] No printer connected for receipt ${receiptNumber}`);
-      
+
       // Mark as failed but don't retry immediately
       this.updateStatus(receiptNumber, {
         status: 'failed',
@@ -283,27 +301,28 @@ export class PrintCoordinator {
       if (stored) {
         const statusArray = JSON.parse(stored);
         this.printJobs = new Map(statusArray);
-        
-        // CRITICAL: Clear ALL completed jobs on load to prevent blocking new transactions
-        // Only persist pending/failed jobs for retry purposes
+
+        // CRITICAL: Clear completed AND printing jobs on load
+        // - Completed jobs don't need to be tracked anymore
+        // - Printing jobs from a previous session are stale (the print was interrupted)
         let clearedCount = 0;
         for (const [receiptNumber, status] of this.printJobs.entries()) {
-          if (status.status === 'completed') {
+          if (status.status === 'completed' || status.status === 'printing') {
             this.printJobs.delete(receiptNumber);
             this.printRequests.delete(receiptNumber);
             clearedCount++;
           }
         }
-        
+
         // Also clear old failed/pending jobs (older than 1 hour)
         this.clearOldJobs();
-        
+
         console.log(`📋 [PRINT-COORDINATOR] Loaded persisted statuses`, {
           total: statusArray.length,
-          clearedCompleted: clearedCount,
+          clearedCompletedAndStale: clearedCount,
           remaining: this.printJobs.size
         });
-        
+
         // Persist cleaned status
         this.persistStatus();
       }

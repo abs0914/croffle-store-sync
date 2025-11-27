@@ -441,11 +441,68 @@ export class PrinterDiscovery {
   }
   
   static getConnectedPrinter(): BluetoothPrinter | null {
+    if (!this.connectedPrinter) {
+      return null;
+    }
+
+    // For Web Bluetooth, verify GATT connection is actually alive
+    if (this.connectedPrinter.connectionType === 'web' && this.connectedPrinter.webBluetoothDevice) {
+      const gattConnected = this.connectedPrinter.webBluetoothDevice.gatt?.connected;
+      if (!gattConnected && this.connectedPrinter.isConnected) {
+        console.warn('⚠️ [PRINTER-DISCOVERY] GATT disconnected but isConnected flag was true - syncing state');
+        // Don't clear the printer - just update the flag so reconnection can happen
+        this.connectedPrinter.isConnected = false;
+      } else if (gattConnected && !this.connectedPrinter.isConnected) {
+        console.log('✅ [PRINTER-DISCOVERY] GATT connected but isConnected flag was false - syncing state');
+        this.connectedPrinter.isConnected = true;
+      }
+    }
+
     return this.connectedPrinter;
   }
-  
+
   static isConnected(): boolean {
-    return this.connectedPrinter?.isConnected || false;
+    const printer = this.getConnectedPrinter();
+    return printer?.isConnected || false;
+  }
+
+  /**
+   * Attempt to restore GATT connection if printer object exists but connection was lost
+   */
+  static async restoreConnection(): Promise<boolean> {
+    if (!this.connectedPrinter) {
+      console.log('❌ [PRINTER-DISCOVERY] No printer to restore');
+      return false;
+    }
+
+    if (this.connectedPrinter.isConnected) {
+      console.log('✅ [PRINTER-DISCOVERY] Printer already connected');
+      return true;
+    }
+
+    console.log('🔄 [PRINTER-DISCOVERY] Attempting to restore connection...');
+
+    try {
+      if (this.connectedPrinter.connectionType === 'web' && this.connectedPrinter.webBluetoothDevice) {
+        const gatt = this.connectedPrinter.webBluetoothDevice.gatt;
+        if (gatt && !gatt.connected) {
+          await gatt.connect();
+          this.connectedPrinter.isConnected = true;
+          console.log('✅ [PRINTER-DISCOVERY] GATT connection restored');
+          return true;
+        }
+      } else if (this.connectedPrinter.connectionType === 'capacitor' && this.connectedPrinter.device) {
+        await BleClient.connect(this.connectedPrinter.device.deviceId);
+        this.connectedPrinter.isConnected = true;
+        console.log('✅ [PRINTER-DISCOVERY] Capacitor BLE connection restored');
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ [PRINTER-DISCOVERY] Connection restore failed:', error);
+      return false;
+    }
+
+    return false;
   }
 
   private static startConnectionKeepAlive(): void {
