@@ -7,6 +7,8 @@ import { Transaction, Customer } from '@/types';
 import { Store } from '@/types/store';
 import { BIRComplianceService } from '@/services/bir/birComplianceService';
 import { BluetoothPermissionManager } from '@/services/permissions/BluetoothPermissionManager';
+import { BluetoothTransactionLock } from './BluetoothTransactionLock';
+import { PrinterConnectionValidator } from './PrinterConnectionValidator';
 
 export class BluetoothPrinterService {
   // Capacitor BLE UUIDs (for mobile apps)
@@ -16,9 +18,6 @@ export class BluetoothPrinterService {
   // Web Bluetooth UUIDs (for thermal printers like POS58)
   private static readonly WEB_BLUETOOTH_SERVICE_UUID = '49535343-fe7d-4ae5-8fa9-9fafd205e455';
   private static readonly WEB_BLUETOOTH_WRITE_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
-  
-  // Print queue to prevent concurrent writes
-  private static printQueue: Promise<boolean> = Promise.resolve(true);
   
   static async isAvailable(): Promise<boolean> {
     try {
@@ -78,7 +77,20 @@ export class BluetoothPrinterService {
 
     console.log('🖨️ [BT-PRINTER] Printer connected:', printer.name);
 
+    // CRITICAL: Suspend keep-alive during printing to prevent interference
+    PrinterDiscovery.suspendKeepAlive();
+
     try {
+      // Validate connection health before printing
+      console.log('🔍 [BT-PRINTER] Validating connection health...');
+      const validation = await PrinterConnectionValidator.validateConnection(printer);
+      
+      if (!validation.canPrint) {
+        throw new Error(`Connection not ready for printing: ${validation.issues.join(', ')}`);
+      }
+      
+      console.log('✅ [BT-PRINTER] Connection validated, proceeding with print');
+
       console.log('🖨️ [BT-PRINTER] Formatting receipt...');
       const receiptData = PrinterTypeManager.formatReceipt(printer, transaction, customer, store, cashierName);
       console.log('🖨️ [BT-PRINTER] Receipt formatted, length:', receiptData.length);
@@ -101,7 +113,7 @@ export class BluetoothPrinterService {
               console.error('❌ [BT-PRINTER] Failed to auto-open cash drawer:', drawerError);
               // Don't fail the receipt printing if drawer fails
             }
-          }, 500); // Small delay to ensure receipt finishes printing first
+          }, 1000); // Increased delay to ensure receipt finishes printing and cutting first
         }
       } else {
         console.error('❌ [BT-PRINTER] Failed to send receipt to printer');
@@ -111,6 +123,9 @@ export class BluetoothPrinterService {
     } catch (error) {
       console.error('❌ [BT-PRINTER] Failed to print receipt:', error);
       return false;
+    } finally {
+      // CRITICAL: Resume keep-alive after printing
+      PrinterDiscovery.resumeKeepAlive();
     }
   }
   
@@ -304,26 +319,33 @@ export class BluetoothPrinterService {
   }
 
   private static async sendDataToPrinter(printer: any, data: string): Promise<boolean> {
-    // Queue print jobs to prevent concurrent writes
-    return this.printQueue = this.printQueue.then(async () => {
-      try {
-        console.log(`Sending data to printer via ${printer.connectionType}...`);
+    // Acquire global transaction lock to prevent concurrent writes
+    const operationId = `print-${Date.now()}`;
+    const releaseLock = await BluetoothTransactionLock.acquire(operationId);
+    
+    try {
+      console.log(`🔒 [BT-PRINTER] Lock acquired, sending data via ${printer.connectionType}...`);
 
-        if (printer.connectionType === 'web' && printer.webBluetoothDevice) {
-          return await this.sendDataViaWebBluetooth(printer.webBluetoothDevice, data);
-        } else if (printer.connectionType === 'capacitor' && printer.device) {
-          return await this.sendDataViaCapacitorBLE(printer.device, data);
-        } else {
-          throw new Error('Invalid printer configuration for printing');
-        }
-      } catch (error) {
-        console.error('Failed to send data to printer:', error);
-        return false;
+      let success = false;
+      if (printer.connectionType === 'web' && printer.webBluetoothDevice) {
+        success = await this.sendDataViaWebBluetooth(printer.webBluetoothDevice, data, printer);
+      } else if (printer.connectionType === 'capacitor' && printer.device) {
+        success = await this.sendDataViaCapacitorBLE(printer.device, data);
+      } else {
+        throw new Error('Invalid printer configuration for printing');
       }
-    });
+
+      return success;
+    } catch (error) {
+      console.error('Failed to send data to printer:', error);
+      return false;
+    } finally {
+      releaseLock();
+      console.log('🔓 [BT-PRINTER] Lock released');
+    }
   }
   
-  private static async sendDataViaWebBluetooth(device: BluetoothDevice, data: string): Promise<boolean> {
+  private static async sendDataViaWebBluetooth(device: BluetoothDevice, data: string, printer: BluetoothPrinter): Promise<boolean> {
     try {
       // Validate connection state before proceeding
       if (!device.gatt) {
@@ -456,9 +478,10 @@ export class BluetoothPrinterService {
       console.log(`Using write characteristic: ${writeCharacteristic.uuid}`);
       console.log(`Characteristic properties:`, writeCharacteristic.properties);
 
-      // Use smaller chunk size for better compatibility
-      const maxChunkSize = 256; // Reduced from 512 for better compatibility
-      const chunkDelay = 150; // Increased delay for better reliability
+      // CRITICAL: Optimized chunk size and delays for thermal printer buffer
+      const maxChunkSize = 256; // Optimal size for most thermal printers
+      const chunkDelay = 300; // INCREASED: 300ms allows printer buffer to process each chunk
+      const bufferFlushDelay = 800; // NEW: Wait for printer to execute cut command
       const maxRetries = 3;
       const totalBytes = dataBytes.length;
 
@@ -504,11 +527,12 @@ export class BluetoothPrinterService {
           let chunkSuccess = false;
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-              // Verify connection before each chunk
+              // CRITICAL: Verify connection BEFORE sending chunk
               if (!device.gatt?.connected) {
-                throw new Error('Connection lost during transmission');
+                throw new Error('Connection lost before chunk transmission');
               }
 
+              // Send the chunk
               if (writeCharacteristic.properties.writeWithoutResponse) {
                 await writeCharacteristic.writeValueWithoutResponse(chunk);
               } else if (writeCharacteristic.properties.write) {
@@ -517,13 +541,29 @@ export class BluetoothPrinterService {
                 throw new Error('Characteristic does not support writing');
               }
 
+              // CRITICAL: Verify connection AFTER sending chunk to detect mid-chunk disconnection
+              if (!device.gatt?.connected) {
+                throw new Error('Connection lost during chunk transmission');
+              }
+
+              // Additional validation using printer object
+              if (!PrinterConnectionValidator.isStillConnected(printer)) {
+                throw new Error('Printer connection lost after chunk write');
+              }
+
               console.log(`✅ Chunk ${i + 1}/${numChunks} sent successfully`);
               chunkSuccess = true;
               break;
             } catch (chunkError) {
               console.error(`❌ Chunk ${i + 1}/${numChunks} attempt ${attempt}/${maxRetries} failed:`, chunkError);
               if (attempt < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 300));
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Verify connection is still valid before retry
+                if (!device.gatt?.connected) {
+                  throw new Error('Connection lost, cannot retry chunk');
+                }
               } else {
                 throw new Error(`Failed to send data chunk ${i + 1} after ${maxRetries} attempts: ${chunkError.message}`);
               }
@@ -534,13 +574,18 @@ export class BluetoothPrinterService {
             throw new Error(`Failed to send chunk ${i + 1}/${numChunks}`);
           }
 
-          // Longer delay between chunks to ensure printer can process
+          // CRITICAL: Delay between chunks to allow printer buffer processing
           if (i < numChunks - 1) {
             await new Promise(resolve => setTimeout(resolve, chunkDelay));
           }
         }
 
         console.log(`✅ All ${numChunks} chunks sent successfully`);
+        
+        // CRITICAL: Buffer flush delay - wait for printer to process final buffer
+        // This ensures the cut command (last bytes) is executed before we return success
+        console.log(`⏳ Waiting ${bufferFlushDelay}ms for printer buffer to flush and cut paper...`);
+        await new Promise(resolve => setTimeout(resolve, bufferFlushDelay));
       }
 
       console.log('✅ Data sent to thermal printer successfully via Web Bluetooth');

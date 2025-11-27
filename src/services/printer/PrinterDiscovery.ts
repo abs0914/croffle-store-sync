@@ -12,6 +12,7 @@ export class PrinterDiscovery {
   private static discoveredDevices: Map<string, BleDevice> = new Map();
   private static connectionKeepAlive: ReturnType<typeof setInterval> | null = null;
   private static isReconnecting: boolean = false;
+  private static keepAliveSuspended: boolean = false;
 
   static async initialize(): Promise<void> {
     try {
@@ -452,6 +453,12 @@ export class PrinterDiscovery {
     console.log('🔄 Starting Bluetooth keep-alive (no timeout disconnect)');
     
     this.connectionKeepAlive = setInterval(async () => {
+      // CRITICAL: Skip keep-alive if suspended during active print operation
+      if (this.keepAliveSuspended) {
+        console.log('⏸️ Keep-alive suspended (active print in progress)');
+        return;
+      }
+
       if (!this.connectedPrinter?.isConnected) {
         this.stopConnectionKeepAlive();
         return;
@@ -461,12 +468,15 @@ export class PrinterDiscovery {
         if (this.connectedPrinter.connectionType === 'web' && this.connectedPrinter.webBluetoothDevice) {
           const isConnected = this.connectedPrinter.webBluetoothDevice.gatt?.connected;
           if (!isConnected) {
+            console.log('🔄 Keep-alive: Reconnecting GATT...');
             await this.connectedPrinter.webBluetoothDevice.gatt?.connect();
-            console.log('✅ Bluetooth connection restored');
+            console.log('✅ Keep-alive: Bluetooth connection restored');
+          } else {
+            console.log('✅ Keep-alive: Connection healthy');
           }
         }
       } catch (error) {
-        console.warn('Keep-alive check failed:', error);
+        console.warn('⚠️ Keep-alive check failed:', error);
       }
     }, 120000); // Every 2 minutes
   }
@@ -476,6 +486,23 @@ export class PrinterDiscovery {
       clearInterval(this.connectionKeepAlive);
       this.connectionKeepAlive = null;
     }
+  }
+
+  /**
+   * Suspend keep-alive during active print operations to prevent interference
+   * CRITICAL: This prevents GATT reconnection attempts during printing
+   */
+  static suspendKeepAlive(): void {
+    console.log('⏸️ Suspending keep-alive (print operation starting)');
+    this.keepAliveSuspended = true;
+  }
+
+  /**
+   * Resume keep-alive after print operations complete
+   */
+  static resumeKeepAlive(): void {
+    console.log('▶️ Resuming keep-alive (print operation complete)');
+    this.keepAliveSuspended = false;
   }
 
   
