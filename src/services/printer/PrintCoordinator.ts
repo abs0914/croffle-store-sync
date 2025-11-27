@@ -284,10 +284,28 @@ export class PrintCoordinator {
         const statusArray = JSON.parse(stored);
         this.printJobs = new Map(statusArray);
         
-        // Clear old completed jobs on load
+        // CRITICAL: Clear ALL completed jobs on load to prevent blocking new transactions
+        // Only persist pending/failed jobs for retry purposes
+        let clearedCount = 0;
+        for (const [receiptNumber, status] of this.printJobs.entries()) {
+          if (status.status === 'completed') {
+            this.printJobs.delete(receiptNumber);
+            this.printRequests.delete(receiptNumber);
+            clearedCount++;
+          }
+        }
+        
+        // Also clear old failed/pending jobs (older than 1 hour)
         this.clearOldJobs();
         
-        console.log(`📋 [PRINT-COORDINATOR] Loaded ${this.printJobs.size} persisted print statuses`);
+        console.log(`📋 [PRINT-COORDINATOR] Loaded persisted statuses`, {
+          total: statusArray.length,
+          clearedCompleted: clearedCount,
+          remaining: this.printJobs.size
+        });
+        
+        // Persist cleaned status
+        this.persistStatus();
       }
     } catch (error) {
       console.warn('Failed to load persisted print status:', error);
