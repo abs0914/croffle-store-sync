@@ -2,18 +2,33 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Package, Menu, Expand } from 'lucide-react';
-import { useAuth } from '@/contexts/auth';
+import { useStore } from '@/contexts/StoreContext';
 import { useSidebar } from '@/components/ui/sidebar';
 
 
 // Import existing components
 import { StoreCatalogTab } from '@/components/Products/StoreCatalogTab';
 export default function Products() {
-  const {
-    user
-  } = useAuth();
+  const { currentStore } = useStore();
   const { toggleSidebar } = useSidebar();
-  const storeId = user?.storeIds?.[0] || '';
+  
+  if (!currentStore) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <p className="text-lg font-medium mb-2">No Store Selected</p>
+              <p className="text-muted-foreground">Please select a store from the dropdown to manage the catalog</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  const storeId = currentStore.id;
   
   return <div className="space-y-6">
       {/* Header */}
@@ -30,7 +45,7 @@ export default function Products() {
           <div>
             <h1 className="text-3xl font-bold">Product Catalog</h1>
             <p className="text-muted-foreground">
-              Manage product availability from your centrally deployed catalog
+              Managing catalog for: <span className="font-semibold">{currentStore.name}</span>
             </p>
           </div>
         </div>
