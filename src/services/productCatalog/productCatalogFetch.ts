@@ -8,27 +8,36 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
   try {
     console.log('🔍 fetchProductCatalogForPOS: Starting fetch for store:', storeId);
     
-    // Try a safe select without cross-table joins (avoids RLS failures)
+    // Fetch products with recipe template images (centralized approach)
     let { data, error } = await supabase
       .from("product_catalog")
       .select(`
-        id, product_name, description, price, category_id, store_id, image_url, is_available, product_status, recipe_id
+        id, 
+        product_name, 
+        description, 
+        price, 
+        category_id, 
+        store_id, 
+        image_url, 
+        is_available, 
+        product_status, 
+        recipe_id,
+        recipe_templates!inner(image_url)
       `)
       .eq("store_id", storeId)
-      // Do NOT filter by availability here; UI handles status/availability
       .order("display_order", { ascending: true });
 
-    // If that fails for any reason, attempt a minimal fallback query
+    // If that fails (likely RLS issue with join), fall back to simple query
     if (error) {
-      console.warn('fetchProductCatalogForPOS: falling back to minimal query due to error:', error);
-      const minimal = await supabase
+      console.warn('fetchProductCatalogForPOS: falling back to simple query:', error);
+      const { data: simpleData, error: simpleError } = await supabase
         .from("product_catalog")
         .select("id, product_name, description, price, category_id, store_id, image_url, is_available, product_status, recipe_id")
         .eq("store_id", storeId)
-        // Do not hide unavailable products in fallback either; UI will indicate status
         .order("display_order", { ascending: true });
-      data = minimal.data as any;
-      error = minimal.error as any;
+      
+      data = simpleData as any;
+      error = simpleError as any;
     }
     
     console.log('🔍 fetchProductCatalogForPOS: Query result:', { 
@@ -53,30 +62,36 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
     }
     
     // Map product_catalog data to Product interface for POS compatibility
-    const mappedProducts: Product[] = (data?.map(item => ({
-      id: item.id,
-      name: item.product_name,
-      description: item.description || undefined,
-      price: item.price,
-      category_id: item.category_id || undefined,
-      categoryId: item.category_id || undefined,
-      category: (item as any).category || undefined,
-      image_url: item.image_url || undefined, // Include image_url from product_catalog
-      image: item.image_url || undefined, // Map to frontend compatibility field
-      is_active: item.is_available,
-      isActive: item.is_available,
-      product_status: item.product_status as any, // Include enhanced status
-      store_id: item.store_id,
-      storeId: item.store_id,
-      sku: `PC-${item.id.substring(0, 8)}` as string, // Generate SKU from ID
-      barcode: undefined,
-      cost: undefined,
-      stock_quantity: 100, // Default stock for now since product_catalog doesn't track stock
-      stockQuantity: 100,
-      variations: [], // Product catalog doesn't have variations yet
-      recipe_id: item.recipe_id || null,
-      product_type: (item.recipe_id ? 'recipe' : 'direct') as 'recipe' | 'direct'
-    })) as Product[]) || [];
+    const mappedProducts: Product[] = (data?.map(item => {
+      // Get recipe template image URL if available (centralized approach)
+      const recipeImageUrl = (item as any).recipe_templates?.image_url;
+      const effectiveImageUrl = recipeImageUrl || item.image_url;
+      
+      return {
+        id: item.id,
+        name: item.product_name,
+        description: item.description || undefined,
+        price: item.price,
+        category_id: item.category_id || undefined,
+        categoryId: item.category_id || undefined,
+        category: (item as any).category || undefined,
+        image_url: effectiveImageUrl || undefined, // Prioritize recipe template image
+        image: effectiveImageUrl || undefined, // Map to frontend compatibility field
+        is_active: item.is_available,
+        isActive: item.is_available,
+        product_status: item.product_status as any,
+        store_id: item.store_id,
+        storeId: item.store_id,
+        sku: `PC-${item.id.substring(0, 8)}` as string,
+        barcode: undefined,
+        cost: undefined,
+        stock_quantity: 100,
+        stockQuantity: 100,
+        variations: [],
+        recipe_id: item.recipe_id || null,
+        product_type: (item.recipe_id ? 'recipe' : 'direct') as 'recipe' | 'direct'
+      };
+    }) as Product[]) || [];
 
     // Only enhance products that don't already have a category_id from database
     const productsNeedingEnhancement = mappedProducts.filter(p => !p.category_id);

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { X, Image } from 'lucide-react';
 import { unifiedProductService } from '@/services/product/unifiedProductService';
 import { uploadProductImage, deleteProductImage } from '@/services/productCatalog/productImageService';
+import { uploadRecipeTemplateImage, deleteRecipeTemplateImage } from '@/services/recipe/recipeImageService';
 import { ProductCatalog } from '@/services/productCatalog/types';
 import { fetchCategories } from '@/services/category/categoryFetch';
 import { Category } from '@/types';
@@ -116,15 +117,32 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     try {
       let imageUrl = currentImageUrl;
 
-      // Handle image upload if a new file is selected
+      // Handle image upload
       if (selectedFile) {
-        // Delete old image if it exists
-        if (currentImageUrl) {
-          await deleteProductImage(currentImageUrl);
-        }
+        // For products with recipe templates, upload to recipe template (centralized)
+        // For products without recipe templates, upload to product directly
+        const hasRecipeTemplate = !!(product as any).recipe_id;
         
-        // Upload new image
-        imageUrl = await uploadProductImage(selectedFile, product.id);
+        if (hasRecipeTemplate) {
+          console.log('📸 Uploading to recipe template (centralized)');
+          // Delete old recipe template image if needed
+          if (currentImageUrl) {
+            await deleteRecipeTemplateImage(currentImageUrl);
+          }
+          
+          // Upload to recipe template for consistency across all stores
+          imageUrl = await uploadRecipeTemplateImage(selectedFile, (product as any).recipe_id);
+          toast.success('Image updated for all stores using this product');
+        } else {
+          console.log('📸 Uploading to product directly (no recipe template)');
+          // Delete old product image if exists
+          if (currentImageUrl) {
+            await deleteProductImage(currentImageUrl);
+          }
+          
+          // Upload directly to product
+          imageUrl = await uploadProductImage(selectedFile, product.id);
+        }
       }
 
       const updates = {
