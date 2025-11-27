@@ -26,6 +26,7 @@ import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
 import { AdminPage } from '@/pages/Admin/AdminPage';
+import PriceUpdateRunner from '@/pages/Admin/PriceUpdateRunner';
 
 export const AdminAppRoutes = () => {
   console.log('🔵 AdminAppRoutes component loading...');
@@ -267,6 +268,18 @@ export const AdminAppRoutes = () => {
           <AdminProtectedRoute section="accounting">
             <AdminLayout>
               <GeneralLedger />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Price Update Runner - Utility Tool */}
+      <Route
+        path="/admin/price-update"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <PriceUpdateRunner />
             </AdminLayout>
           </AdminProtectedRoute>
         }
