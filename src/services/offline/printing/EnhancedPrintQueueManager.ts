@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { BluetoothPrinterService } from '../../printer/BluetoothPrinterService';
 import { PrinterDiscovery } from '../../printer/PrinterDiscovery';
 import { PrintCoordinator } from '../../printer/PrintCoordinator';
+import { BluetoothTransactionLock } from '../../printer/BluetoothTransactionLock';
 import { PlatformStorageManager } from '../storage/PlatformStorageManager';
 
 export interface PrintJob {
@@ -108,7 +109,7 @@ export class EnhancedPrintQueueManager {
   };
   
   private readonly STORE_NAME = 'print_queue';
-  private readonly PROCESSING_INTERVAL = 3000; // 3 seconds - prevent rapid retries during payment
+  private readonly PROCESSING_INTERVAL = 10000; // 10 seconds - reduced conflict with auto-print
   private readonly RECONNECTION_INTERVAL = 10000; // 10 seconds - less aggressive reconnection
   private readonly MAX_RETRY_ATTEMPTS = 3; // Fewer retries from queue (auto-print handles its own)
   private readonly QUEUE_SIZE_LIMIT = 100;
@@ -152,11 +153,17 @@ export class EnhancedPrintQueueManager {
     try {
       await this.storageManager.initialize();
       await this.loadQueueFromStorage();
+
+      // CRITICAL: Sync printer status from actual state BEFORE starting processing
       await this.checkPrinterStatus();
-      
+      console.log(`🖨️ [PRINT-QUEUE] Initial printer status: ${this.printerStatus.isConnected ? 'Connected' : 'Disconnected'}`, {
+        address: this.printerStatus.address,
+        name: this.printerStatus.name
+      });
+
       this.startProcessing();
       this.startReconnectionMonitoring();
-      
+
       console.log('✅ Enhanced Print Queue Manager initialized');
     } catch (error) {
       console.error('❌ Failed to initialize Print Queue Manager:', error);
@@ -256,6 +263,12 @@ export class EnhancedPrintQueueManager {
   private async processQueue(): Promise<void> {
     if (this.isProcessing) return;
 
+    // CRITICAL: Don't process if a print operation is already in progress (e.g., auto-print from CompletedTransaction)
+    if (BluetoothTransactionLock.isLocked()) {
+      console.log('⏸️ [PRINT-QUEUE] Skipping queue processing - print operation in progress');
+      return;
+    }
+
     try {
       this.isProcessing = true;
 
@@ -273,10 +286,11 @@ export class EnhancedPrintQueueManager {
         return;
       }
 
-      // Check printer connection
+      // Check printer connection - sync from actual state first
+      await this.checkPrinterStatus();
+
       if (!this.printerStatus.isConnected) {
-        console.log('🖨️ Printer not connected, attempting to reconnect...');
-        await this.attemptReconnection();
+        console.log('🖨️ [PRINT-QUEUE] Printer not connected, will retry on next cycle');
         return;
       }
 
@@ -369,11 +383,18 @@ export class EnhancedPrintQueueManager {
   private async printReceipt(job: PrintJob): Promise<boolean> {
     try {
       const { data } = job.content;
-      
+
       // Check if already printed via PrintCoordinator
       if (job.receiptNumber && this.printCoordinator.isPrinted(job.receiptNumber)) {
         console.log(`✅ [PRINT-QUEUE] Receipt ${job.receiptNumber} already printed, skipping`);
         return true;
+      }
+
+      // CRITICAL: Check if currently being printed by PrintCoordinator (race prevention)
+      // This prevents queue from trying to print while auto-print is in progress
+      if (job.receiptNumber && this.printCoordinator.isPrinting(job.receiptNumber)) {
+        console.log(`⏳ [PRINT-QUEUE] Receipt ${job.receiptNumber} currently printing via auto-print, deferring`);
+        return false; // Will retry on next queue cycle
       }
 
       // Delegate to PrintCoordinator to prevent duplicate prints
@@ -475,36 +496,49 @@ export class EnhancedPrintQueueManager {
 
   /**
    * Attempt to reconnect to printer
+   * NOTE: This method no longer tries to reconnect on its own.
+   * Instead, it syncs state from PrinterDiscovery which handles the actual connection.
+   * This prevents conflicts between the queue's reconnection logic and PrinterDiscovery.
    */
   private async attemptReconnection(): Promise<void> {
     if (this.printerStatus.isReconnecting) return;
 
     try {
       this.printerStatus.isReconnecting = true;
-      this.printerStatus.connectionAttempts++;
-      
-      console.log(`🔄 Attempting printer reconnection (attempt ${this.printerStatus.connectionAttempts})...`);
 
-      // Try to reconnect to the last known printer
-      if (this.printerStatus.address) {
-        // Note: connectToPrinter expects a BluetoothPrinter object, not just an address
-        // This needs proper implementation with PrinterDiscovery
-        console.log('Reconnection to printer address:', this.printerStatus.address);
-        const success = false; // Placeholder until proper reconnection is implemented
-        if (success) {
-          this.printerStatus.isConnected = true;
-          this.printerStatus.lastSeen = Date.now();
-          this.printerStatus.connectionAttempts = 0;
-          
-          console.log('✅ Printer reconnected successfully');
-          toast.success('Printer reconnected', {
+      console.log('🔄 [PRINT-QUEUE] Syncing printer state from PrinterDiscovery...');
+
+      // Simply sync state from PrinterDiscovery - don't try to reconnect ourselves
+      // This eliminates the race condition where both systems try to manage the connection
+      const connectedPrinter = PrinterDiscovery.getConnectedPrinter();
+
+      if (connectedPrinter && connectedPrinter.isConnected) {
+        const wasDisconnected = !this.printerStatus.isConnected;
+
+        this.printerStatus = {
+          isConnected: true,
+          address: connectedPrinter.id,
+          name: connectedPrinter.name,
+          lastSeen: Date.now(),
+          connectionAttempts: 0,
+          isReconnecting: false
+        };
+
+        if (wasDisconnected) {
+          console.log('✅ [PRINT-QUEUE] Printer state synced - now connected');
+          toast.success('Printer available', {
             description: 'Print queue will resume processing'
           });
         }
+      } else {
+        console.log('⚠️ [PRINT-QUEUE] No connected printer available via PrinterDiscovery');
+        this.printerStatus.isConnected = false;
+        this.printerStatus.connectionAttempts++;
       }
 
     } catch (error) {
-      console.error('Printer reconnection failed:', error);
+      console.error('Printer state sync failed:', error);
+      this.printerStatus.isConnected = false;
     } finally {
       this.printerStatus.isReconnecting = false;
       this.notifyStatusCallbacks();
