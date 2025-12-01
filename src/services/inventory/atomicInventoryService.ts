@@ -356,7 +356,7 @@ export class AtomicInventoryService {
         inventory_stock_id,
         quantity,
         unit,
-        inventory_stock!inner (
+        inventory_stock!recipe_ingredients_inventory_stock_id_fkey!inner (
           id,
           item,
           unit,
