@@ -177,7 +177,7 @@ export class SimplifiedInventoryAuditService {
             recipe_ingredients!inner (
               ingredient_name,
               quantity,
-              inventory_stock!inner (
+              inventory_stock!recipe_ingredients_inventory_stock_id_fkey!inner (
                 id
               )
             )
