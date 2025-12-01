@@ -5612,13 +5612,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_recipe_ingredients_inventory_stock"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "recipe_ingredients_inventory_stock_id_fkey"
             columns: ["inventory_stock_id"]
             isOneToOne: false
@@ -7900,13 +7893,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_recipe_ingredients_inventory_stock"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "inventory_stock_store_id_fkey"
             columns: ["inventory_store_id"]
             isOneToOne: false
@@ -8013,13 +7999,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_recipe_ingredients_inventory_stock"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "inventory_stock_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
@@ -8091,13 +8070,6 @@ export type Database = {
           updated_at: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_recipe_ingredients_inventory_stock"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "inventory_stock_store_id_fkey"
             columns: ["store_id"]
