@@ -206,7 +206,7 @@ class StreamlinedTransactionService {
         [
            {
             name: 'inventory_deduction',
-            isCritical: true, // Failure causes rollback
+            isCritical: false, // ✅ CHANGED: Non-critical - sale is sacrosanct, inventory issues queued for review
             timeout: 30000, // 30 second timeout for inventory deduction with audit trails
             execute: async () => {
               // ✅ Use new atomic inventory service
@@ -243,107 +243,38 @@ class StreamlinedTransactionService {
         transaction.id
       );
 
-      // Check parallel execution results
-      if (!parallelResult.success) {
-        const criticalErrors = parallelResult.criticalFailures.map(opName => {
-          const result = parallelResult.results.get(opName);
-          return result?.error?.message || 'Unknown error';
+      // ✅ NEW: Handle inventory failures gracefully - queue for review instead of throwing
+      const inventoryOperation = parallelResult.results.get('inventory_deduction');
+      const inventoryFailed = inventoryOperation?.error || !inventoryOperation?.result?.success;
+      
+      if (inventoryFailed) {
+        const errorMsg = inventoryOperation?.error?.message || 'Unknown inventory error';
+        console.warn('⚠️ Inventory deduction failed - queuing for manual review:', errorMsg);
+        
+        // Queue failed inventory for manual review (non-blocking)
+        await this.queueFailedInventoryDeduction(
+          transaction.id,
+          transactionData.storeId,
+          expandedItems,
+          errorMsg
+        ).catch(queueError => {
+          console.error('Failed to queue inventory failure:', queueError);
         });
-
-        console.error('❌ CRITICAL: Parallel operations failed:', criticalErrors);
-
-        // Log critical failures
-        await transactionErrorLogger.logInventoryError(
-          'parallel_processing_failed',
-          new Error(`Critical operations failed: ${criticalErrors.join(', ')}`),
-          {
-            ...context,
-            transactionId: transaction.id,
-            affectedItems: parallelResult.criticalFailures
-          }
-        );
-
-        // Mark optimistic update as failed
-        parallelTransactionProcessor.failOptimisticUpdate(
-          transaction.id,
-          new Error(criticalErrors.join(', '))
-        );
-
-        throw new Error(`Transaction failed: ${criticalErrors.join(', ')}`);
+        
+        // Show warning to staff but don't block transaction
+        toast.warning('Transaction saved. Inventory update pending manual review.', {
+          duration: 8000,
+          description: 'Please check inventory queue later'
+        });
       }
 
-      // Extract inventory result with STRICT validation to prevent silent failures
+      // ✅ Log inventory status (success or queued for review)
       const inventoryResult = parallelResult.results.get('inventory_deduction')?.result;
-      
-      // 🔒 CRITICAL FIX #1: Validate inventory result exists
-      if (!inventoryResult) {
-        const errorMsg = 'CRITICAL: Inventory deduction returned no result - this indicates a code execution failure';
-        console.error(`❌ ${errorMsg}`);
-        console.error('Parallel result keys:', Array.from(parallelResult.results.keys()));
-        console.error('Inventory operation result:', parallelResult.results.get('inventory_deduction'));
-        
-        await transactionErrorLogger.logInventoryError(
-          'inventory_result_undefined',
-          new Error(errorMsg),
-          {
-            ...context,
-            transactionId: transaction.id
-          }
-        );
-        
-        parallelTransactionProcessor.failOptimisticUpdate(
-          transaction.id,
-          new Error(errorMsg)
-        );
-        
-        throw new Error(errorMsg);
+      if (inventoryResult?.success) {
+        console.log('✅ Inventory deduction completed successfully');
+      } else {
+        console.log('⚠️ Inventory deduction queued for manual review');
       }
-      
-      // 🔒 CRITICAL FIX #1: Validate result structure is correct
-      if (typeof inventoryResult.success !== 'boolean') {
-        const errorMsg = 'CRITICAL: Inventory deduction returned malformed result (missing success boolean)';
-        console.error(`❌ ${errorMsg}`, inventoryResult);
-        
-        await transactionErrorLogger.logInventoryError(
-          'inventory_result_malformed',
-          new Error(errorMsg),
-          {
-            ...context,
-            transactionId: transaction.id
-          }
-        );
-        
-        parallelTransactionProcessor.failOptimisticUpdate(
-          transaction.id,
-          new Error(errorMsg)
-        );
-        
-        throw new Error(errorMsg);
-      }
-      
-      // 🔒 CRITICAL FIX #1: Check for inventory deduction failure
-      if (!inventoryResult.success) {
-        const errors = inventoryResult.errors || ['Unknown inventory deduction error'];
-        console.error('❌ CRITICAL: Inventory deduction failed:', errors);
-        
-        await transactionErrorLogger.logInventoryError(
-          'inventory_deduction_failed',
-          new Error(errors.join(', ')),
-          {
-            ...context,
-            transactionId: transaction.id
-          }
-        );
-        
-        parallelTransactionProcessor.failOptimisticUpdate(
-          transaction.id,
-          new Error(errors.join(', '))
-        );
-        
-        throw new Error(`Inventory deduction failed: ${errors.join(', ')}`);
-      }
-      
-      console.log('✅ Inventory result validation passed - deduction successful');
 
       // Complete optimistic update
       parallelTransactionProcessor.completeOptimisticUpdate(transaction.id, {
@@ -950,6 +881,57 @@ class StreamlinedTransactionService {
     return lowerName.includes(' with ') || 
            lowerName.includes('croffle overload') || 
            lowerName.includes('mini croffle');
+  }
+
+  /**
+   * Queue failed inventory deduction for manual review
+   * Ensures sale completes while inventory issues are tracked for later resolution
+   */
+  private async queueFailedInventoryDeduction(
+    transactionId: string,
+    storeId: string,
+    items: StreamlinedTransactionItem[],
+    errorMessage: string
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('failed_inventory_queue')
+        .insert({
+          transaction_id: transactionId,
+          store_id: storeId,
+          items: JSON.stringify(items),
+          error_message: errorMessage,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        });
+
+      if (error) {
+        // If table doesn't exist, log to console for manual tracking
+        console.error('⚠️ Failed to queue inventory failure (table may not exist):', error);
+        console.error('MANUAL REVIEW NEEDED - Transaction:', transactionId);
+        console.error('Items:', JSON.stringify(items));
+        console.error('Error:', errorMessage);
+        
+        // Also log to error logger for visibility
+        await transactionErrorLogger.logInventoryError(
+          'inventory_queue_failed',
+          new Error(`Failed to queue: ${error.message}. Original error: ${errorMessage}`),
+          {
+            storeId,
+            transactionId,
+            step: 'queue_failed_inventory',
+            operationId: `queue_${Date.now()}`,
+            itemCount: items.length,
+            timestamp: new Date().toISOString()
+          }
+        );
+      } else {
+        console.log('✅ Inventory failure queued for manual review:', transactionId);
+      }
+    } catch (queueError) {
+      // Non-blocking - just log the error
+      console.error('❌ Failed to queue inventory deduction failure:', queueError);
+    }
   }
 }
 
