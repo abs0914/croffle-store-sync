@@ -894,7 +894,8 @@ class StreamlinedTransactionService {
     errorMessage: string
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      // Use type assertion since table was just created and types may not be regenerated yet
+      const { error } = await (supabase as any)
         .from('failed_inventory_queue')
         .insert({
           transaction_id: transactionId,
