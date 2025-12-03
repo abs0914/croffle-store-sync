@@ -206,29 +206,36 @@ class StreamlinedTransactionService {
         [
            {
             name: 'inventory_deduction',
-            isCritical: false, // ✅ CHANGED: Non-critical - sale is sacrosanct, inventory issues queued for review
-            timeout: 30000, // 30 second timeout for inventory deduction with audit trails
+            isCritical: false, // ✅ Non-critical - sale is sacrosanct, inventory issues queued for review
+            timeout: 30000,
             execute: async () => {
-              // ✅ Use new atomic inventory service
-              const deductionItems: DeductionItem[] = expandedItems.map(item => ({
-                productId: item.productId,
-                productName: item.name,
-                quantity: item.quantity
-              }));
+              try {
+                const deductionItems: DeductionItem[] = expandedItems.map(item => ({
+                  productId: item.productId,
+                  productName: item.name,
+                  quantity: item.quantity
+                }));
 
-              const result = await AtomicInventoryService.deductInventoryAtomic({
-                transactionId: transaction.id,
-                storeId: transactionData.storeId,
-                items: deductionItems,
-                userId: transactionData.userId,
-                idempotencyKey: `txn-${transaction.id}-${Date.now()}`
-              });
+                const result = await AtomicInventoryService.deductInventoryAtomic({
+                  transactionId: transaction.id,
+                  storeId: transactionData.storeId,
+                  items: deductionItems,
+                  userId: transactionData.userId,
+                  idempotencyKey: `txn-${transaction.id}-${Date.now()}`
+                });
 
-              if (!result.success) {
-                throw new Error(`Inventory deduction failed: ${result.errors.join(', ')}`);
+                // Return result object - never throw, just report status
+                return { 
+                  success: result.success, 
+                  errors: result.errors || [],
+                  message: result.success ? 'Inventory updated' : result.errors.join(', ')
+                };
+              } catch (inventoryError) {
+                // Catch ALL errors and return as failed result - never throw
+                console.error('⚠️ Inventory deduction error caught:', inventoryError);
+                const errorMsg = inventoryError instanceof Error ? inventoryError.message : 'Unknown inventory error';
+                return { success: false, errors: [errorMsg], message: errorMsg };
               }
-
-              return { success: true, errors: [] };
             }
           },
           {
@@ -243,16 +250,21 @@ class StreamlinedTransactionService {
         transaction.id
       );
 
-      // ✅ NEW: Handle inventory failures gracefully - queue for review instead of throwing
+      // ✅ Handle inventory failures gracefully - queue for review instead of throwing
       const inventoryOperation = parallelResult.results.get('inventory_deduction');
-      const inventoryFailed = inventoryOperation?.error || !inventoryOperation?.result?.success;
+      const inventoryResult = inventoryOperation?.result;
+      const inventoryFailed = !inventoryResult?.success;
       
       if (inventoryFailed) {
-        const errorMsg = inventoryOperation?.error?.message || 'Unknown inventory error';
+        // Get error message from result.message, result.errors, or fallback
+        const errorMsg = inventoryResult?.message || 
+                        inventoryResult?.errors?.join(', ') || 
+                        inventoryOperation?.error?.message || 
+                        'Unknown inventory error';
         console.warn('⚠️ Inventory deduction failed - queuing for manual review:', errorMsg);
         
         // Queue failed inventory for manual review (non-blocking)
-        await this.queueFailedInventoryDeduction(
+        this.queueFailedInventoryDeduction(
           transaction.id,
           transactionData.storeId,
           expandedItems,
@@ -264,32 +276,32 @@ class StreamlinedTransactionService {
         // Show warning to staff but don't block transaction
         toast.warning('Transaction saved. Inventory update pending manual review.', {
           duration: 8000,
-          description: 'Please check inventory queue later'
+          description: errorMsg.substring(0, 100)
         });
       }
 
       // ✅ Log inventory status (success or queued for review)
-      const inventoryResult = parallelResult.results.get('inventory_deduction')?.result;
       if (inventoryResult?.success) {
         console.log('✅ Inventory deduction completed successfully');
+        toast.success('Transaction completed! Inventory updated.');
       } else {
         console.log('⚠️ Inventory deduction queued for manual review');
       }
 
       // Complete optimistic update
       parallelTransactionProcessor.completeOptimisticUpdate(transaction.id, {
-        inventorySuccess: true,
+        inventorySuccess: inventoryResult?.success || false,
         birLogged: !parallelResult.nonCriticalFailures.includes('bir_logging')
       });
 
-      console.log('✅ [PHASE 3] Parallel operations completed successfully', {
+      console.log('✅ [PHASE 3] Parallel operations completed', {
         inventoryDuration: parallelResult.results.get('inventory_deduction')?.duration.toFixed(2) + 'ms',
         birDuration: parallelResult.results.get('bir_logging')?.duration.toFixed(2) + 'ms',
+        inventorySuccess: inventoryResult?.success,
         nonCriticalFailures: parallelResult.nonCriticalFailures
       });
 
-      toast.success('Transaction completed successfully');
-      console.log('🎉 Atomic transaction processing completed successfully');
+      console.log('🎉 Transaction processing completed - returning transaction for printing');
       
       return transaction;
 
