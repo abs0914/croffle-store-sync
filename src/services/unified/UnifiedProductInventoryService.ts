@@ -387,25 +387,27 @@ class UnifiedProductInventoryService {
         };
       }
 
-      // Product has recipe - fetch recipe and ingredients with less restrictive conditions
+      // Product has recipe - fetch recipe and ingredients
       console.log(`🧾 DEBUG: Fetching recipe data for product ${productInfo.product_name} with recipe_id: ${productInfo.recipe_id}`);
       
+      // ✅ FIX: Use recipe_ingredients table directly instead of view to avoid FK ambiguity
       const { data: recipeData, error: recipeError } = await supabase
         .from('recipes')
         .select(`
           id,
           name,
           is_active,
-          recipe_ingredients_with_names (
+          recipe_ingredients (
             id,
             inventory_stock_id,
-            ingredient_name,
             quantity,
+            unit,
             inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
               id,
               item,
               stock_quantity,
-              is_active
+              is_active,
+              store_id
             )
           )
         `)
@@ -431,9 +433,9 @@ class UnifiedProductInventoryService {
         };
       }
 
-      console.log(`📋 DEBUG: Recipe ${recipeData.name} found with ${recipeData.recipe_ingredients_with_names?.length || 0} ingredients`);
+      console.log(`📋 DEBUG: Recipe ${recipeData.name} found with ${recipeData.recipe_ingredients?.length || 0} ingredients`);
 
-      const ingredients = recipeData.recipe_ingredients_with_names || [];
+      const ingredients = recipeData.recipe_ingredients || [];
       
       if (ingredients.length === 0) {
         console.log(`⚠️ DEBUG: Recipe ${recipeData.name} has no ingredients`);
@@ -458,14 +460,15 @@ class UnifiedProductInventoryService {
 
       // Check each ingredient
       for (const ingredient of ingredients) {
-        console.log(`🥄 DEBUG: Checking ingredient ${ingredient.ingredient_name}:`, {
+        const ingredientName = ingredient.inventory_stock?.item || 'Unknown';
+        console.log(`🥄 DEBUG: Checking ingredient ${ingredientName}:`, {
           inventory_stock_id: ingredient.inventory_stock_id,
           required_quantity: ingredient.quantity,
           has_inventory_stock: !!ingredient.inventory_stock
         });
 
         if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
-          console.warn(`⚠️ DEBUG: Ingredient ${ingredient.ingredient_name} not mapped to inventory or inventory stock missing`);
+          console.warn(`⚠️ DEBUG: Ingredient ${ingredientName} not mapped to inventory or inventory stock missing`);
           // Mark as insufficient if ingredient has no inventory mapping
           hasInsufficientStock = true;
           minAvailableQuantity = 0;
@@ -485,7 +488,7 @@ class UnifiedProductInventoryService {
         const requiredPerUnit = ingredient.quantity;
         const possibleUnits = Math.floor(availableStock / requiredPerUnit);
 
-        console.log(`📊 DEBUG: Ingredient ${ingredient.ingredient_name} calculation:`, {
+        console.log(`📊 DEBUG: Ingredient ${stock.item} calculation:`, {
           availableStock,
           requiredPerUnit,
           possibleUnits,
