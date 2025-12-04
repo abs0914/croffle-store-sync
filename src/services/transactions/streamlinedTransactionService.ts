@@ -124,7 +124,9 @@ class StreamlinedTransactionService {
         canProceed
       };
     } catch (error) {
-      console.error('❌ Pre-payment validation failed:', error);
+      // ✅ SALE IS SACROSANCT: Validation errors should NOT block sales
+      // If validation system fails, allow transaction to proceed with warning
+      console.error('❌ Pre-payment validation failed (allowing transaction to proceed):', error);
       
       await transactionErrorLogger.logError(
         'VALIDATION_SYSTEM_ERROR',
@@ -133,11 +135,12 @@ class StreamlinedTransactionService {
         'system_validation'
       );
 
+      // Return canProceed: true so sales are never blocked by validation errors
       return {
-        isValid: false,
-        errors: [`Validation system error: ${error instanceof Error ? error.message : 'Unknown error'}`],
-        warnings: [],
-        canProceed: false
+        isValid: true, // ✅ Allow transaction to proceed
+        errors: [],
+        warnings: [`Validation check skipped: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        canProceed: true // ✅ CRITICAL: Sale must proceed
       };
     }
   }
