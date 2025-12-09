@@ -9091,6 +9091,7 @@ export type Database = {
         Returns: boolean
       }
       transfer_inventory_stock:
+        | { Args: never; Returns: undefined }
         | {
             Args: {
               p_item: string
@@ -9103,7 +9104,6 @@ export type Database = {
             }
             Returns: boolean
           }
-        | { Args: never; Returns: undefined }
       trigger_auto_close_shifts: { Args: never; Returns: Json }
       try_cast_jsonb: { Args: { txt: string }; Returns: Json }
       update_cumulative_sales: {

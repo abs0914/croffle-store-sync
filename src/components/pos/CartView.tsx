@@ -1,6 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { CartItem, Customer } from '@/types';
 import PaymentProcessor from './payment/PaymentProcessor';
+import { OnlineDeliveryConfirmation } from './OnlineDeliveryConfirmation';
 import { CustomerSelector } from './CustomerSelector';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { OrderTypeSelector } from './OrderTypeSelector';
@@ -270,17 +271,48 @@ const CartView = memo(function CartView({
       }} />
         </div>}
 
-      {/* Payment Dialog */}
-      {isPaymentDialogOpen && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg">
-            <PaymentProcessor total={calculations.finalTotal} itemCount={cartItems.length} onPaymentComplete={handlePaymentCompleteWithInventoryValidation} />
-            <div className="p-4 border-t">
-              <button onClick={() => setIsPaymentDialogOpen(false)} className="w-full py-2 px-4 bg-gray-200 rounded hover:bg-gray-300">
-                Cancel
-              </button>
-            </div>
+      {/* Payment Dialog - Show simplified confirmation for online delivery orders */}
+      {isPaymentDialogOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg w-full max-w-lg">
+            {orderType === 'online_delivery' && deliveryPlatform ? (
+              <OnlineDeliveryConfirmation
+                total={calculations.finalTotal}
+                itemCount={cartItems.length}
+                platform={deliveryPlatform}
+                orderNumber={deliveryOrderNumber}
+                onConfirm={async () => {
+                  // For online delivery, payment is already made via app
+                  // Use e-wallet with platform as provider, exact total as amount
+                  const success = await handlePaymentCompleteWithInventoryValidation(
+                    'e-wallet',
+                    calculations.finalTotal,
+                    { provider: deliveryPlatform }
+                  );
+                  return success;
+                }}
+                onCancel={() => setIsPaymentDialogOpen(false)}
+              />
+            ) : (
+              <>
+                <PaymentProcessor 
+                  total={calculations.finalTotal} 
+                  itemCount={cartItems.length} 
+                  onPaymentComplete={handlePaymentCompleteWithInventoryValidation} 
+                />
+                <div className="p-4 border-t">
+                  <button 
+                    onClick={() => setIsPaymentDialogOpen(false)} 
+                    className="w-full py-2 px-4 bg-muted rounded hover:bg-muted/80"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        </div>}
+        </div>
+      )}
     </div>;
 });
 
