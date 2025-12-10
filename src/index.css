@@ -261,3 +261,43 @@
     justify-content: center;
   }
 }
+
+/* Print styles for Invoice page */
+@media print {
+  /* Hide non-receipt elements */
+  body > *:not(.print-receipt-content) {
+    visibility: hidden;
+  }
+  
+  /* Hide header, sidebar, navigation, buttons */
+  header,
+  nav,
+  aside,
+  [data-sidebar],
+  .no-print,
+  button,
+  [role="button"] {
+    display: none !important;
+  }
+
+  /* Style the receipt content for printing */
+  .print-receipt-content {
+    visibility: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0 auto;
+    padding: 5mm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+  }
+
+  /* Page setup for thermal receipt */
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
