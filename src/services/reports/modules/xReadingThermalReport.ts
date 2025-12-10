@@ -121,14 +121,23 @@ export async function fetchXReadingForThermal(
         cashierName = await getCashierName(shiftData.user_id);
       }
 
+      // Helper to get non-empty string value
+      const getValidString = (primary: string | null | undefined, ...fallbacks: (string | null | undefined)[]): string => {
+        if (primary && primary.trim()) return primary;
+        for (const fallback of fallbacks) {
+          if (fallback && fallback.trim()) return fallback;
+        }
+        return 'Not Configured';
+      };
+
       // If no transactions found, return zero data
       if (!transactions || transactions.length === 0) {
-      return {
-        // Business Info
-        businessName: birConfig?.business_name || storeData?.name || 'Store',
-        businessAddress: birConfig?.business_address || storeData?.address || '',
-        taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
-        tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
+        return {
+          // Business Info
+          businessName: birConfig?.business_name || storeData?.name || 'Store',
+          businessAddress: birConfig?.business_address || storeData?.address || '',
+          taxpayerName: getValidString(birConfig?.taxpayer_name, storeData?.owner_name, storeData?.business_name),
+          tin: getValidString(birConfig?.tin, storeData?.tin, storeData?.tax_id),
           
           // Machine Info
           machineId: birConfig?.machine_identification_number || 'MACHINE-001',
@@ -222,8 +231,8 @@ export async function fetchXReadingForThermal(
         // Business Info
         businessName: birConfig?.business_name || storeData?.name || 'Store',
         businessAddress: birConfig?.business_address || storeData?.address || '',
-        taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
-        tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
+        taxpayerName: getValidString(birConfig?.taxpayer_name, storeData?.owner_name, storeData?.business_name),
+        tin: getValidString(birConfig?.tin, storeData?.tin, storeData?.tax_id),
         
         // Machine Info
         machineId: birConfig?.machine_identification_number || storeData?.machine_serial_number || 'MACHINE-001',

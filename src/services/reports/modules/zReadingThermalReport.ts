@@ -3,6 +3,15 @@ import { BIRZReadingData } from "./enhancedZReadingReport";
 import { fetchStoreInfo, handleReportError } from "../utils/reportUtils";
 import { executeWithValidSession } from "@/contexts/auth/session-utils";
 
+// Helper to get non-empty string value
+const getValidString = (primary: string | null | undefined, ...fallbacks: (string | null | undefined)[]): string => {
+  if (primary && primary.trim()) return primary;
+  for (const fallback of fallbacks) {
+    if (fallback && fallback.trim()) return fallback;
+  }
+  return 'Not Configured';
+};
+
 // Fetch Z-Reading data in the correct format for thermal printing
 export async function fetchZReadingForThermal(
   storeId: string,
@@ -71,8 +80,8 @@ export async function fetchZReadingForThermal(
           // Business Info
           businessName: birConfig?.business_name || storeData?.name || 'Store',
           businessAddress: birConfig?.business_address || storeData?.address || '',
-          tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
-          taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
+          tin: getValidString(birConfig?.tin, storeData?.tin, storeData?.tax_id),
+          taxpayerName: getValidString(birConfig?.taxpayer_name, storeData?.owner_name, storeData?.business_name),
           
           // Machine Info
           machineId: birConfig?.machine_identification_number || 'MACHINE-001',
@@ -212,8 +221,8 @@ export async function fetchZReadingForThermal(
         // Business Info
         businessName: birConfig?.business_name || storeData?.name || 'Store',
         businessAddress: birConfig?.business_address || storeData?.address || '',
-        tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
-        taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
+        tin: getValidString(birConfig?.tin, storeData?.tin, storeData?.tax_id),
+        taxpayerName: getValidString(birConfig?.taxpayer_name, storeData?.owner_name, storeData?.business_name),
         
         // Machine Info
         machineId: birConfig?.machine_identification_number || 'MACHINE-001',
