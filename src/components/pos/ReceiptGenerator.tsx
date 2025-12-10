@@ -204,6 +204,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         netAmount: transaction.total || 0,
         vatAmount: transaction.tax || 0,
         paymentMethod: transaction.paymentMethod || 'Cash',
+        discountType: (transaction as any).discount_type || (transaction as any).discountType || '',
         seniorDiscount: (transaction as any).senior_discount || 0,
         pwdDiscount: (transaction as any).pwd_discount || 0,
         amountTendered: transaction.amountTendered,
