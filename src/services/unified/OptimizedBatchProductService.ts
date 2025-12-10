@@ -290,8 +290,17 @@ export class OptimizedBatchProductService {
     }
 
     // If we have recipe ingredients loaded but this product has none, it's missing recipe data
+    // PHILOSOPHY: Per transaction-priority memory, missing recipe data should NOT block transactions
+    // Log for debugging but allow checkout to proceed
     if (ingredients.length === 0) {
-      return { quantity: 0, status: 'no_recipe', requirements: [] };
+      console.warn('⚠️ [AVAILABILITY] Product has recipe but no ingredients found - allowing checkout:', {
+        productId,
+        productName: product.productName,
+        recipeId: product.recipeId,
+        totalIngredientsInBatch: batchedData.recipeIngredients.length
+      });
+      // Return available with warning instead of blocking
+      return { quantity: 100, status: 'available', requirements: [] };
     }
 
     const requirements: Array<{
