@@ -185,7 +185,9 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         receiptNumber: transaction.receiptNumber || 'N/A',
         businessDate: transaction.createdAt ? format(new Date(transaction.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         transactionTime: transaction.createdAt ? format(new Date(transaction.createdAt), 'HH:mm:ss') : format(new Date(), 'HH:mm:ss'),
-        storeName: currentStore?.business_name || currentStore?.name || 'Store',
+        storeName: currentStore?.business_name 
+          ? `${currentStore.business_name}${currentStore.name ? ` - ${currentStore.name}` : ''}`
+          : (currentStore?.name || 'Store'),
         storeAddress: currentStore?.address || '',
         storeTin: currentStore?.tin || '',
         cashierName: (transaction as any).cashier_name || 'Cashier',
