@@ -255,6 +255,7 @@ serve(async (req) => {
         success: sftpSuccess,
         message: responseMessage,
         filename,
+        fileContent,
         recordCount: transactions.length,
         eodCounter: currentEODCounter,
         status: sftpSuccess ? 'success' : 'pending',
