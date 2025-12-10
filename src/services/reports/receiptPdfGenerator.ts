@@ -75,17 +75,15 @@ export class ReceiptPdfGenerator {
   }
 
   private addHeader(receipt: ReceiptData): void {
-    // Store name
-    this.doc.setFontSize(12);
+    // Store name - wrap if too long
+    this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
-    this.addCenteredText(receipt.storeName, this.currentY);
-    this.currentY += 5;
+    this.addWrappedCenteredText(receipt.storeName, this.currentY);
     
-    // Store address
-    this.doc.setFontSize(8);
+    // Store address - wrap if too long
+    this.doc.setFontSize(7);
     this.doc.setFont('helvetica', 'normal');
-    this.addCenteredText(receipt.storeAddress, this.currentY);
-    this.currentY += 4;
+    this.addWrappedCenteredText(receipt.storeAddress, this.currentY);
     
     // TIN
     this.addCenteredText(`TIN: ${receipt.storeTin}`, this.currentY);
@@ -271,6 +269,18 @@ Thank you!`;
     const textWidth = this.doc.getTextWidth(text);
     const x = (this.pageWidth - textWidth) / 2;
     this.doc.text(text, x, y);
+  }
+
+  private addWrappedCenteredText(text: string, startY: number): void {
+    const maxWidth = this.pageWidth - (this.margin * 2);
+    const lines = this.doc.splitTextToSize(text, maxWidth);
+    
+    lines.forEach((line: string) => {
+      const textWidth = this.doc.getTextWidth(line);
+      const x = (this.pageWidth - textWidth) / 2;
+      this.doc.text(line, x, this.currentY);
+      this.currentY += 4;
+    });
   }
 
   private addSeparator(): void {
