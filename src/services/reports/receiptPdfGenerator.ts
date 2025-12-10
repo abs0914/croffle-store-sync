@@ -71,8 +71,6 @@ export class ReceiptPdfGenerator {
   }
 
   private addHeader(receipt: ReceiptData): void {
-    const centerX = this.pageWidth / 2;
-    
     // Store name
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
@@ -87,11 +85,18 @@ export class ReceiptPdfGenerator {
     
     // TIN
     this.addCenteredText(`TIN: ${receipt.storeTin}`, this.currentY);
-    this.currentY += 6;
+    this.currentY += 5;
+    
+    // SALES INVOICE title
+    this.doc.setFontSize(10);
+    this.doc.setFont('helvetica', 'bold');
+    this.addCenteredText('SALES INVOICE', this.currentY);
+    this.currentY += 5;
     
     // Receipt details
     this.doc.setFontSize(7);
-    this.addLeftText(`Receipt: ${receipt.receiptNumber}`, this.currentY);
+    this.doc.setFont('helvetica', 'normal');
+    this.addLeftText(`SI No: ${receipt.receiptNumber}`, this.currentY);
     this.currentY += 3;
     this.addLeftText(`Date: ${format(new Date(receipt.businessDate), 'MM/dd/yyyy')}`, this.currentY);
     this.currentY += 3;
@@ -112,12 +117,12 @@ export class ReceiptPdfGenerator {
       this.addLeftText(item.description, this.currentY);
       this.currentY += 3;
       
-      // Quantity, price, total
-      const line = `${item.quantity} x ₱${item.unitPrice.toFixed(2)} = ₱${item.lineTotal.toFixed(2)}`;
+      // Quantity, price, total - use P instead of ₱ for PDF compatibility
+      const line = `${item.quantity} x P${item.unitPrice.toFixed(2)} = P${item.lineTotal.toFixed(2)}`;
       this.addLeftText(line, this.currentY);
       
       if (item.itemDiscount > 0) {
-        this.addRightText(`-₱${item.itemDiscount.toFixed(2)}`, this.currentY);
+        this.addRightText(`-P${item.itemDiscount.toFixed(2)}`, this.currentY);
       }
       
       this.currentY += 3;
@@ -184,7 +189,7 @@ export class ReceiptPdfGenerator {
     this.addSeparator();
     this.addCenteredText('Thank you for your business!', this.currentY);
     this.currentY += 4;
-    this.addCenteredText('This serves as your Official Receipt', this.currentY);
+    this.addCenteredText('This serves as your Official Sales Invoice', this.currentY);
     this.currentY += 3;
     this.addCenteredText(`Generated: ${format(new Date(), 'MM/dd/yyyy HH:mm:ss')}`, this.currentY);
     
@@ -195,7 +200,8 @@ export class ReceiptPdfGenerator {
 
   private addTotalLine(label: string, amount: number): void {
     this.addLeftText(label, this.currentY);
-    this.addRightText(`₱${amount.toFixed(2)}`, this.currentY);
+    // Use P instead of ₱ for PDF font compatibility
+    this.addRightText(`P${Math.abs(amount).toFixed(2)}`, this.currentY);
     this.currentY += 3;
   }
 

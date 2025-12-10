@@ -299,8 +299,8 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           )}
           
           <div className="mt-2">
-            <h3 className="font-bold">SALES RECEIPT</h3>
-            <p>Receipt #: {transaction.receiptNumber}</p>
+            <h3 className="font-bold">SALES INVOICE</h3>
+            <p>SI #: {transaction.receiptNumber}</p>
             <p>Date: {transaction.createdAt ? format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a') : 'Unknown Date'}</p>
             {currentStore?.machine_accreditation_number && (
               <p className="text-xs">Machine ACC: {currentStore.machine_accreditation_number}</p>
