@@ -11,6 +11,7 @@ import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
+import { ReceiptPdfGenerator, ReceiptData } from "@/services/reports/receiptPdfGenerator";
 
 interface ReceiptGeneratorProps {
   transaction: Transaction;
@@ -61,59 +62,166 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
       return;
     }
     
-    // Add print-specific styling
+    // Add print-specific styling with proper HTML preservation
     printWindow.document.write(`
       <html>
         <head>
           <title>Receipt ${transaction.receiptNumber}</title>
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
             body {
-              font-family: 'Courier New', monospace;
+              font-family: 'Courier New', Courier, monospace;
               width: 80mm;
+              max-width: 80mm;
               margin: 0 auto;
-              padding: 5mm;
-              text-align: center;
+              padding: 10px;
+              font-size: 12px;
+              line-height: 1.4;
+              color: #000;
+              background: #fff;
             }
             .receipt-header {
               text-align: center;
               margin-bottom: 10px;
             }
-            .receipt-title {
-              font-size: 16px;
+            h2 {
+              font-size: 14px;
               font-weight: bold;
+              margin-bottom: 4px;
             }
-            .receipt-item {
+            h3 {
+              font-size: 13px;
+              font-weight: bold;
+              margin: 8px 0 4px;
+            }
+            p {
+              font-size: 11px;
+              margin: 2px 0;
+            }
+            hr, [data-slot="separator"] {
+              border: none;
+              border-top: 1px dashed #000;
+              margin: 8px 0;
+            }
+            .flex {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 5px;
+              align-items: flex-start;
             }
-            .receipt-total {
+            .font-bold, .font-medium {
               font-weight: bold;
-              margin-top: 10px;
-              border-top: 1px solid #000;
-              padding-top: 5px;
             }
-            .receipt-footer {
+            .text-center {
               text-align: center;
-              margin-top: 20px;
-              font-size: 12px;
             }
-            .divider {
-              border-top: 1px dashed #000;
-              margin: 10px 0;
+            .text-right {
+              text-align: right;
+            }
+            .text-xs {
+              font-size: 10px;
+            }
+            .text-sm {
+              font-size: 11px;
+            }
+            .text-green-600 {
+              color: #16a34a;
+            }
+            .text-red-600 {
+              color: #dc2626;
+            }
+            .text-blue-600 {
+              color: #2563eb;
+            }
+            .text-muted-foreground {
+              color: #666;
+            }
+            .mt-2 { margin-top: 8px; }
+            .mt-4 { margin-top: 16px; }
+            .mb-1 { margin-bottom: 4px; }
+            .mb-2 { margin-bottom: 8px; }
+            .mb-4 { margin-bottom: 16px; }
+            .ml-2 { margin-left: 8px; }
+            .space-y-1 > * + * { margin-top: 4px; }
+            .w-16 { width: 50px; display: inline-block; text-align: center; }
+            .w-20 { width: 60px; display: inline-block; text-align: right; }
+            .pt-2 { padding-top: 8px; }
+            .border-t { border-top: 1px solid #000; }
+            .capitalize { text-transform: capitalize; }
+            svg { display: inline-block; }
+            /* Hide non-printable elements */
+            button, .no-print { display: none !important; }
+            /* QR code styling */
+            .qr-container { display: flex; justify-content: center; margin: 8px 0; }
+            /* Ensure items display properly */
+            .item-row { margin-bottom: 8px; }
+            @media print {
+              body { width: 80mm; margin: 0; padding: 5mm; }
+              @page { size: 80mm auto; margin: 0; }
             }
           </style>
         </head>
         <body>
-          ${content.textContent || ''}
+          ${content.innerHTML || ''}
         </body>
       </html>
     `);
     
     printWindow.document.close();
     printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+
+  const handleDownload = () => {
+    try {
+      // Map transaction data to ReceiptData format
+      const receiptData: ReceiptData = {
+        receiptNumber: transaction.receiptNumber || 'N/A',
+        businessDate: transaction.createdAt ? format(new Date(transaction.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        transactionTime: transaction.createdAt ? format(new Date(transaction.createdAt), 'HH:mm:ss') : format(new Date(), 'HH:mm:ss'),
+        storeName: currentStore?.business_name || currentStore?.name || 'Store',
+        storeAddress: currentStore?.address || '',
+        storeTin: currentStore?.tin || '',
+        cashierName: (transaction as any).cashier_name || 'Cashier',
+        items: (transaction.items || []).map(item => ({
+          description: item.name || 'Unknown Item',
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || 0,
+          lineTotal: item.totalPrice || (item.quantity * item.unitPrice) || 0,
+          itemDiscount: 0,
+          vatExemptFlag: false,
+        })),
+        grossAmount: transaction.subtotal || 0,
+        discountAmount: transaction.discount || 0,
+        netAmount: transaction.total || 0,
+        vatAmount: transaction.tax || 0,
+        paymentMethod: transaction.paymentMethod || 'Cash',
+        seniorDiscount: (transaction as any).senior_discount || 0,
+        pwdDiscount: (transaction as any).pwd_discount || 0,
+      };
+
+      const generator = new ReceiptPdfGenerator();
+      const pdfDataUri = generator.generateReceipt(receiptData);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = pdfDataUri;
+      link.download = `Receipt-${transaction.receiptNumber || 'unknown'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Receipt downloaded successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to download receipt');
+    }
   };
 
   const handleThermalPrint = async () => {
@@ -472,7 +580,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         <Button 
           variant="outline" 
           className="w-full flex items-center justify-center"
-          onClick={() => toast.info("Download functionality coming soon!")}
+          onClick={handleDownload}
         >
           <Download className="mr-2 h-4 w-4" />
           Download Receipt
