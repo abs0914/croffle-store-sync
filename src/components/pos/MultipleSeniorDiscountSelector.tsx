@@ -36,10 +36,11 @@ export default function MultipleSeniorDiscountSelector({
   // Check for croffle combo eligibility
   const comboResult = useMemoizedCroffleCombo(cartItems);
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
-  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary'>('pwd');
+  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom'>('regular');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
   const [complimentaryReason, setComplimentaryReason] = useState('');
   const [approverName, setApproverName] = useState('');
+  const [customPercentage, setCustomPercentage] = useState<number>(10);
   const [totalDiners, setTotalDiners] = useState<number>(currentTotalDiners || Math.max(currentSeniorDiscounts.length, 1));
   const {
     user
@@ -48,8 +49,7 @@ export default function MultipleSeniorDiscountSelector({
   // BIR mandated discounts
   const SENIOR_DISCOUNT_RATE = 0.20; // 20% for senior citizens
   const PWD_DISCOUNT_RATE = 0.20; // 20% for PWDs
-  const EMPLOYEE_DISCOUNT_RATE = 0.15; // 15% for employees
-  const LOYALTY_DISCOUNT_RATE = 0.10; // 10% for loyal customers
+  const REGULAR_DISCOUNT_RATE = 0.05; // 5% for regular discount
 
   const addSeniorDiscount = () => {
     const newDiscount: SeniorDiscount = {
@@ -136,7 +136,8 @@ export default function MultipleSeniorDiscountSelector({
         amount: 0,
         // Will be calculated by the service
         idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined,
-        justification: justificationText
+        justification: justificationText,
+        customPercentage: otherDiscountType === 'custom' ? customPercentage : undefined
       };
     }
     onApplyDiscounts(finalSeniorDiscounts, finalOtherDiscount, totalDiners);
@@ -240,6 +241,10 @@ export default function MultipleSeniorDiscountSelector({
             {discountMode === 'other' && <div className="space-y-4">
                 <RadioGroup value={otherDiscountType} onValueChange={(val: any) => setOtherDiscountType(val)} className="space-y-2">
                   <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="regular" id="regular" />
+                    <Label htmlFor="regular">Regular (5%)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <RadioGroupItem value="pwd" id="pwd" />
                     <Label htmlFor="pwd">PWD (20%)</Label>
                   </div>
@@ -252,14 +257,34 @@ export default function MultipleSeniorDiscountSelector({
                     <Label htmlFor="loyalty">Loyalty (10%)</Label>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="custom" id="custom" />
+                    <Label htmlFor="custom">Custom %</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <RadioGroupItem value="promo" id="promo" />
-                    <Label htmlFor="promo">Promo (Custom)</Label>
+                    <Label htmlFor="promo">Promo (Custom Amount)</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="complimentary" id="complimentary" />
                     <Label htmlFor="complimentary">Complimentary (100%)</Label>
                   </div>
                 </RadioGroup>
+
+                {otherDiscountType === 'custom' && <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Label htmlFor="customPercent">Discount Percentage</Label>
+                    <Input 
+                      id="customPercent" 
+                      type="number" 
+                      min="1" 
+                      max="100" 
+                      value={customPercentage} 
+                      onChange={e => setCustomPercentage(Math.min(100, Math.max(1, Number(e.target.value))))} 
+                      placeholder="Enter discount percentage" 
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Discount: {formatCurrency(subtotal * (customPercentage / 100))} ({customPercentage}%)
+                    </p>
+                  </div>}
 
                 {otherDiscountType === 'pwd' && <div className="space-y-2">
                     <Label htmlFor="pwdId">PWD ID Number (Required)</Label>

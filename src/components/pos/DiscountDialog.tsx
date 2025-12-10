@@ -14,7 +14,7 @@ interface DiscountDialogProps {
   onClose: () => void;
   onApplyDiscount: (
     discountAmount: number,
-    discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent',
+    discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent' | 'regular' | 'custom',
     idNumber?: string,
     justification?: string
   ) => void;
@@ -27,7 +27,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   onApplyDiscount,
   currentTotal
 }) => {
-  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent'>('senior');
+  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent' | 'regular' | 'custom'>('senior');
   const [discountPercentage, setDiscountPercentage] = useState(20);
   const [idNumber, setIdNumber] = useState('');
   const [justification, setJustification] = useState('');
@@ -35,20 +35,22 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   const { user } = useAuth();
 
   const discountTypes = {
-    senior: { label: 'Senior Citizen', defaultPercent: 20 },
-    pwd: { label: 'PWD', defaultPercent: 20 },
-    employee: { label: 'Employee', defaultPercent: 10 },
-    loyalty: { label: 'Loyalty', defaultPercent: 5 },
-    promo: { label: 'Promo', defaultPercent: 15 },
+    regular: { label: 'Regular (5%)', defaultPercent: 5 },
+    senior: { label: 'Senior Citizen (20%)', defaultPercent: 20 },
+    pwd: { label: 'PWD (20%)', defaultPercent: 20 },
+    employee: { label: 'Employee (10%)', defaultPercent: 10 },
+    loyalty: { label: 'Loyalty (5%)', defaultPercent: 5 },
+    promo: { label: 'Promo (Custom)', defaultPercent: 15 },
+    custom: { label: 'Custom %', defaultPercent: 10 },
     complimentary: { label: 'Complimentary (100%)', defaultPercent: 100 },
-    athletes_coaches: { label: 'National Athletes & Coaches', defaultPercent: 20 },
-    solo_parent: { label: 'Solo Parent', defaultPercent: 20 }
+    athletes_coaches: { label: 'National Athletes & Coaches (20%)', defaultPercent: 20 },
+    solo_parent: { label: 'Solo Parent (20%)', defaultPercent: 20 }
   };
 
   // Allow all authenticated users to apply complimentary discounts with proper authorization
   const canApplyComplimentary = !!user;
 
-  const handleTypeChange = (type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent') => {
+  const handleTypeChange = (type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent' | 'regular' | 'custom') => {
     setDiscountType(type);
     setDiscountPercentage(discountTypes[type].defaultPercent);
     if (type !== 'complimentary') {
@@ -108,19 +110,20 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="discount-percentage">Discount Percentage</Label>
-            <Input
-              id="discount-percentage"
-              type="number"
-              value={discountPercentage}
-              onChange={(e) => setDiscountPercentage(Number(e.target.value))}
-              min="0"
-              max="100"
-              step="1"
-              disabled={discountType === 'complimentary'}
-            />
-          </div>
+          {(discountType === 'custom' || discountType === 'promo') && (
+            <div>
+              <Label htmlFor="discount-percentage">Discount Percentage</Label>
+              <Input
+                id="discount-percentage"
+                type="number"
+                value={discountPercentage}
+                onChange={(e) => setDiscountPercentage(Number(e.target.value))}
+                min="0"
+                max="100"
+                step="1"
+              />
+            </div>
+          )}
 
           {(discountType === 'senior' || discountType === 'pwd' || discountType === 'employee' || discountType === 'athletes_coaches' || discountType === 'solo_parent') && (
             <div>

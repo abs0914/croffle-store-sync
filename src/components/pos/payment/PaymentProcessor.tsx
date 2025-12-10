@@ -7,7 +7,7 @@ interface PaymentProcessorProps {
   total: number;
   itemCount: number;
   onPaymentComplete: (
-    paymentMethod: 'cash' | 'card' | 'e-wallet',
+    paymentMethod: 'cash' | 'card' | 'e-wallet' | 'gift-certificate',
     amountTendered: number,
     paymentDetails?: any
   ) => Promise<boolean>;
@@ -19,12 +19,14 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
   onPaymentComplete
 }) => {
   const { isConnected: isPrinterConnected } = useThermalPrinter();
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet' | 'gift-certificate'>('cash');
   const [cashAmountTendered, setCashAmountTendered] = useState<number>(0);
   const [cardType, setCardType] = useState<string>('');
   const [cardNumber, setCardNumber] = useState<string>('');
   const [eWalletProvider, setEWalletProvider] = useState<string>('');
   const [eWalletReference, setEWalletReference] = useState<string>('');
+  const [giftCertificateNumber, setGiftCertificateNumber] = useState<string>('');
+  const [giftCertificateValue, setGiftCertificateValue] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPrinterWarning, setShowPrinterWarning] = useState(false);
 
@@ -48,6 +50,9 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       } else if (paymentMethod === 'e-wallet') {
         paymentDetails.provider = eWalletProvider;
         paymentDetails.reference = eWalletReference;
+      } else if (paymentMethod === 'gift-certificate') {
+        paymentDetails.giftCertificateNumber = giftCertificateNumber;
+        paymentDetails.giftCertificateValue = giftCertificateValue;
       }
 
       const success = await onPaymentComplete(
@@ -63,6 +68,8 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
         setCardNumber('');
         setEWalletProvider('');
         setEWalletReference('');
+        setGiftCertificateNumber('');
+        setGiftCertificateValue(0);
         setShowPrinterWarning(false);
       }
     } catch (error) {
@@ -83,6 +90,8 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       return cardType && cardNumber;
     } else if (paymentMethod === 'e-wallet') {
       return eWalletProvider && eWalletReference;
+    } else if (paymentMethod === 'gift-certificate') {
+      return giftCertificateNumber.trim().length > 0;
     }
     return false;
   };
@@ -153,6 +162,10 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
         setEWalletProvider={setEWalletProvider}
         eWalletReferenceNumber={eWalletReference}
         setEWalletReferenceNumber={setEWalletReference}
+        giftCertificateNumber={giftCertificateNumber}
+        setGiftCertificateNumber={setGiftCertificateNumber}
+        giftCertificateValue={giftCertificateValue}
+        setGiftCertificateValue={setGiftCertificateValue}
       />
 
       <div className="mt-6 flex gap-3">

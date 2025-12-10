@@ -6,14 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Banknote, CreditCard, Wallet, QrCode } from "lucide-react";
+import { Banknote, CreditCard, Wallet, QrCode, Gift } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { GCashQRModal } from "./GCashQRModal";
 
 interface PaymentMethodsProps {
   total: number;
-  paymentMethod: 'cash' | 'card' | 'e-wallet';
-  setPaymentMethod: (method: 'cash' | 'card' | 'e-wallet') => void;
+  paymentMethod: 'cash' | 'card' | 'e-wallet' | 'gift-certificate';
+  setPaymentMethod: (method: 'cash' | 'card' | 'e-wallet' | 'gift-certificate') => void;
   amountTendered: number;
   setAmountTendered: (amount: number) => void;
   cardType: string;
@@ -24,6 +24,10 @@ interface PaymentMethodsProps {
   setEWalletProvider: (provider: string) => void;
   eWalletReferenceNumber: string;
   setEWalletReferenceNumber: (reference: string) => void;
+  giftCertificateNumber?: string;
+  setGiftCertificateNumber?: (number: string) => void;
+  giftCertificateValue?: number;
+  setGiftCertificateValue?: (value: number) => void;
   disabled?: boolean;
 }
 
@@ -201,6 +205,76 @@ export function EWalletPaymentTab({
   );
 }
 
+export function GiftCertificatePaymentTab({
+  total,
+  giftCertificateNumber,
+  setGiftCertificateNumber,
+  giftCertificateValue,
+  setGiftCertificateValue,
+  disabled = false
+}: {
+  total: number;
+  giftCertificateNumber: string;
+  setGiftCertificateNumber: (number: string) => void;
+  giftCertificateValue: number;
+  setGiftCertificateValue: (value: number) => void;
+  disabled?: boolean;
+}) {
+  const remainingBalance = Math.max(0, total - giftCertificateValue);
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="gcNumber">Gift Certificate Number *</Label>
+        <Input
+          id="gcNumber"
+          placeholder="Enter GC number (e.g., GC-0001)"
+          value={giftCertificateNumber}
+          onChange={(e) => setGiftCertificateNumber(e.target.value.toUpperCase())}
+          disabled={disabled}
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="gcValue">Certificate Value</Label>
+        <Input
+          id="gcValue"
+          type="number"
+          placeholder="Enter certificate value"
+          value={giftCertificateValue || ''}
+          onChange={(e) => setGiftCertificateValue(Number(e.target.value))}
+          disabled={disabled}
+        />
+      </div>
+
+      <Card className="p-4 bg-muted">
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span>Order Total:</span>
+            <span>{formatCurrency(total)}</span>
+          </div>
+          <div className="flex justify-between text-green-600">
+            <span>GC Value:</span>
+            <span>-{formatCurrency(giftCertificateValue)}</span>
+          </div>
+          {remainingBalance > 0 && (
+            <div className="flex justify-between text-amber-600 font-medium border-t pt-2">
+              <span>Remaining Balance:</span>
+              <span>{formatCurrency(remainingBalance)}</span>
+            </div>
+          )}
+          {remainingBalance === 0 && giftCertificateValue >= total && (
+            <div className="flex justify-between text-green-600 font-medium border-t pt-2">
+              <span>Fully Covered</span>
+              <span>✓</span>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function PaymentMethods({
   total,
   paymentMethod,
@@ -215,28 +289,36 @@ export default function PaymentMethods({
   setEWalletProvider,
   eWalletReferenceNumber,
   setEWalletReferenceNumber,
+  giftCertificateNumber = '',
+  setGiftCertificateNumber = () => {},
+  giftCertificateValue = 0,
+  setGiftCertificateValue = () => {},
   disabled = false
 }: PaymentMethodsProps) {
   return (
     <Tabs defaultValue="cash" value={paymentMethod} onValueChange={(value: string) => {
-      setPaymentMethod(value as 'cash' | 'card' | 'e-wallet');
+      setPaymentMethod(value as 'cash' | 'card' | 'e-wallet' | 'gift-certificate');
       // Preserve amount tendered across payment method switches for better UX
       if (value !== 'cash' && amountTendered === 0) {
         setAmountTendered(total);
       }
     }}>
-      <TabsList className="grid grid-cols-3 mb-4">
-        <TabsTrigger value="cash" className="flex items-center" disabled={disabled}>
-          <Banknote className="mr-2 h-4 w-4" />
+      <TabsList className="grid grid-cols-4 mb-4">
+        <TabsTrigger value="cash" className="flex items-center text-xs px-2" disabled={disabled}>
+          <Banknote className="mr-1 h-3 w-3" />
           Cash
         </TabsTrigger>
-        <TabsTrigger value="card" className="flex items-center" disabled={disabled}>
-          <CreditCard className="mr-2 h-4 w-4" />
+        <TabsTrigger value="card" className="flex items-center text-xs px-2" disabled={disabled}>
+          <CreditCard className="mr-1 h-3 w-3" />
           Card
         </TabsTrigger>
-        <TabsTrigger value="e-wallet" className="flex items-center" disabled={disabled}>
-          <Wallet className="mr-2 h-4 w-4" />
+        <TabsTrigger value="e-wallet" className="flex items-center text-xs px-2" disabled={disabled}>
+          <Wallet className="mr-1 h-3 w-3" />
           E-wallet
+        </TabsTrigger>
+        <TabsTrigger value="gift-certificate" className="flex items-center text-xs px-2" disabled={disabled}>
+          <Gift className="mr-1 h-3 w-3" />
+          GC
         </TabsTrigger>
       </TabsList>
       
@@ -266,6 +348,17 @@ export default function PaymentMethods({
           setEWalletProvider={setEWalletProvider}
           eWalletReferenceNumber={eWalletReferenceNumber}
           setEWalletReferenceNumber={setEWalletReferenceNumber}
+          disabled={disabled}
+        />
+      </TabsContent>
+
+      <TabsContent value="gift-certificate">
+        <GiftCertificatePaymentTab
+          total={total}
+          giftCertificateNumber={giftCertificateNumber}
+          setGiftCertificateNumber={setGiftCertificateNumber}
+          giftCertificateValue={giftCertificateValue}
+          setGiftCertificateValue={setGiftCertificateValue}
           disabled={disabled}
         />
       </TabsContent>

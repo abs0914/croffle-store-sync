@@ -10,10 +10,11 @@ export interface SeniorDiscount {
 }
 
 export interface OtherDiscount {
-  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo' | 'croffle_combo';
+  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo' | 'croffle_combo' | 'regular' | 'custom';
   amount: number;
   idNumber?: string;
   justification?: string;
+  customPercentage?: number; // For custom discount type
 }
 
 export interface CartCalculations {
@@ -50,6 +51,7 @@ export class CartCalculationService {
   private static readonly PWD_DISCOUNT_RATE = 0.20;
   private static readonly EMPLOYEE_DISCOUNT_RATE = 0.15;
   private static readonly LOYALTY_DISCOUNT_RATE = 0.10;
+  private static readonly REGULAR_DISCOUNT_RATE = 0.05;
 
   static calculateCartTotals(
     items: CartItem[],
@@ -171,6 +173,13 @@ export class CartCalculationService {
           break;
         case 'croffle_combo':
           otherDiscountAmount = otherDiscount.amount;
+          break;
+        case 'regular':
+          otherDiscountAmount = discountSubtotal * this.REGULAR_DISCOUNT_RATE;
+          break;
+        case 'custom':
+          const customRate = (otherDiscount.customPercentage || 0) / 100;
+          otherDiscountAmount = discountSubtotal * customRate;
           break;
       }
     }
