@@ -241,8 +241,10 @@ export class OptimizedBatchProductService {
   } {
     const product = batchedData.products.find(p => p.productId === productId);
     
+    // PHILOSOPHY: Per transaction-priority memory, missing product should NOT block transactions
     if (!product) {
-      return { quantity: 0, status: 'out_of_stock', requirements: [] };
+      console.warn('⚠️ [AVAILABILITY] Product not found in batch - allowing checkout:', productId);
+      return { quantity: 100, status: 'available', requirements: [] };
     }
 
     // If no recipe, it's a direct sale product
@@ -250,9 +252,14 @@ export class OptimizedBatchProductService {
       return { quantity: 100, status: 'available', requirements: [] };
     }
 
-    // If recipe is not active, mark as out of stock
+    // PHILOSOPHY: Per transaction-priority memory, inactive recipe should NOT block transactions
     if (!product.recipeActive) {
-      return { quantity: 0, status: 'out_of_stock', requirements: [] };
+      console.warn('⚠️ [AVAILABILITY] Recipe inactive - allowing checkout:', {
+        productId,
+        productName: product.productName,
+        recipeId: product.recipeId
+      });
+      return { quantity: 100, status: 'available', requirements: [] };
     }
 
     // Get recipe ingredients for this product
@@ -312,14 +319,19 @@ export class OptimizedBatchProductService {
     }> = [];
 
     let minAvailableQuantity = Infinity;
-    let hasInsufficientStock = false;
     let hasLowStock = false;
 
     // Calculate availability from in-memory data
+    // PHILOSOPHY: Per transaction-priority memory, insufficient stock should NOT block transactions
+    // Log warnings but allow checkout to proceed
     for (const ingredient of ingredients) {
       if (!ingredient.inventoryStockId || !ingredient.inventoryActive) {
-        hasInsufficientStock = true;
-        minAvailableQuantity = 0;
+        // Log warning but don't block
+        console.warn('⚠️ [AVAILABILITY] Ingredient missing stock mapping - proceeding:', {
+          ingredientName: ingredient.ingredientName,
+          inventoryStockId: ingredient.inventoryStockId,
+          inventoryActive: ingredient.inventoryActive
+        });
         continue;
       }
 
@@ -336,8 +348,12 @@ export class OptimizedBatchProductService {
       });
 
       if (possibleUnits <= 0) {
-        hasInsufficientStock = true;
-        minAvailableQuantity = 0;
+        // Log warning but don't block
+        console.warn('⚠️ [AVAILABILITY] Insufficient stock - proceeding anyway:', {
+          ingredientName: ingredient.ingredientName,
+          availableStock,
+          requiredPerUnit
+        });
       } else {
         minAvailableQuantity = Math.min(minAvailableQuantity, possibleUnits);
         if (possibleUnits <= 5) {
@@ -346,19 +362,20 @@ export class OptimizedBatchProductService {
       }
     }
 
-    // Determine status
+    // PHILOSOPHY: Per transaction-priority memory, always return 'available' or 'low_stock'
+    // Never block transactions due to inventory issues
     let status: 'available' | 'low_stock' | 'out_of_stock' | 'no_recipe';
-    if (hasInsufficientStock || minAvailableQuantity === 0) {
-      status = 'out_of_stock';
-      minAvailableQuantity = 0;
-    } else if (hasLowStock || minAvailableQuantity <= 5) {
+    if (hasLowStock || (minAvailableQuantity > 0 && minAvailableQuantity <= 5)) {
       status = 'low_stock';
     } else {
       status = 'available';
     }
+    
+    // Ensure we never return 0 quantity which would block checkout
+    const finalQuantity = minAvailableQuantity === Infinity || minAvailableQuantity <= 0 ? 100 : minAvailableQuantity;
 
     return {
-      quantity: minAvailableQuantity === Infinity ? 0 : minAvailableQuantity,
+      quantity: finalQuantity,
       status,
       requirements
     };
