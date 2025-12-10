@@ -264,35 +264,29 @@
 
 /* Print styles for Invoice page */
 @media print {
-  /* Hide non-receipt elements */
-  body > *:not(.print-receipt-content) {
+  /* Hide everything by default */
+  body * {
     visibility: hidden;
   }
   
-  /* Hide header, sidebar, navigation, buttons */
-  header,
-  nav,
-  aside,
-  [data-sidebar],
-  .no-print,
-  button,
-  [role="button"] {
-    display: none !important;
+  /* Show only the receipt content and its children */
+  .receipt-content,
+  .receipt-content * {
+    visibility: visible !important;
   }
-
-  /* Style the receipt content for printing */
-  .print-receipt-content {
-    visibility: visible;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    margin: 0 auto;
-    padding: 5mm;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 12px;
-    color: #000;
-    background: #fff;
+  
+  /* Position the receipt */
+  .receipt-content {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 5mm !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 12px !important;
+    color: #000 !important;
+    background: #fff !important;
   }
 
   /* Page setup for thermal receipt */

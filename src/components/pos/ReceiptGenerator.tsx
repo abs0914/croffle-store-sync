@@ -270,8 +270,8 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
 
   return (
     <div>
-      {/* Receipt content */}
-      <div ref={receiptRef} className="text-sm">
+      {/* Receipt content - receipt-content class is used for @media print */}
+      <div ref={receiptRef} className="text-sm receipt-content">
         {/* Receipt header */}
         <div className="receipt-header text-center mb-4">
           <h2 className="text-xl font-bold">{currentStore?.business_name || currentStore?.name || 'Store Name'}</h2>
@@ -518,12 +518,8 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
             <p className="text-xs">Seq: {transaction.sequence_number}</p>
           )}
           <div className="mt-2 border-t pt-2">
-            {/* BIR: Accreditation Status */}
-            {!currentStore?.is_bir_accredited ? (
-              <p className="text-xs font-bold text-red-600">THIS IS NOT AN OFFICIAL RECEIPT</p>
-            ) : (
-              <p className="text-xs font-bold">THIS SERVES AS AN OFFICIAL RECEIPT</p>
-            )}
+            {/* Always show NOT an official receipt */}
+            <p className="text-xs font-bold">THIS IS NOT AN OFFICIAL RECEIPT</p>
             
             {/* BIR: NON-VAT Disclaimer */}
             {!currentStore?.is_vat_registered && currentStore?.non_vat_disclaimer && (
