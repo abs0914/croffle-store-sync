@@ -11,6 +11,7 @@ interface RobinsonsTransmissionRequest {
   salesDate: string;
   isManualResend?: boolean;
   transmissionType?: 'auto' | 'manual';
+  downloadOnly?: boolean; // When true, generates file without requiring full Robinsons setup
 }
 
 serve(async (req) => {
@@ -24,9 +25,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { storeId, salesDate, isManualResend = false, transmissionType = 'auto' }: RobinsonsTransmissionRequest = await req.json();
+    const { storeId, salesDate, isManualResend = false, transmissionType = 'auto', downloadOnly = false }: RobinsonsTransmissionRequest = await req.json();
 
-    console.log(`🏢 Robinsons Transmission Request:`, { storeId, salesDate, transmissionType });
+    console.log(`🏢 Robinsons Transmission Request:`, { storeId, salesDate, transmissionType, downloadOnly });
 
     // Fetch store's Robinsons configuration
     const { data: store, error: storeError } = await supabase
@@ -39,26 +40,32 @@ serve(async (req) => {
       throw new Error('Store not found');
     }
 
-    // Validate Robinsons store
-    if (!store.robinsons_enabled) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Robinsons transmission not enabled for this store. Please enable it in store settings.",
-          success: false
-        }), 
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // For SFTP transmission, require full configuration
+    // For download-only, allow generation with defaults
+    if (!downloadOnly) {
+      if (!store.robinsons_enabled) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Robinsons transmission not enabled for this store. Please enable it in store settings.",
+            success: false
+          }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!store.robinsons_tenant_id) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Robinsons Tenant ID not configured. Please add it in store settings.",
+            success: false
+          }), 
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    if (!store.robinsons_tenant_id) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Robinsons Tenant ID not configured. Please add it in store settings.",
-          success: false
-        }), 
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Use configured tenant ID or generate a placeholder for download-only mode
+    const tenantId = store.robinsons_tenant_id || 'PENDING_ID';
 
     // Fetch all transactions for the date
     const { data: transactions, error: txError } = await supabase
@@ -166,7 +173,7 @@ serve(async (req) => {
     const endingReceipt = transactions[transactions.length - 1]?.receipt_number || '0000001';
 
     const lines = [
-      formatField(1, store.robinsons_tenant_id, 10),
+      formatField(1, tenantId, 10),
       formatField(2, '01', 2), // Terminal number
       formatField(3, grossSales, 16, 2),
       formatField(4, vatAmount, 12, 2),
@@ -199,7 +206,7 @@ serve(async (req) => {
     ];
 
     const fileContent = lines.join('\n');
-    const filename = `${store.robinsons_tenant_id}_${salesDateStr}_01.txt`;
+    const filename = `${tenantId}_${salesDateStr}_01.txt`;
 
     console.log(`📄 Generated file: ${filename}`);
 

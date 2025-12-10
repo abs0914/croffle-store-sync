@@ -50,6 +50,7 @@ export function RobinsonsResendDataPanel({ storeId }: RobinsonsResendDataPanelPr
           salesDate,
           isManualResend: true,
           transmissionType: 'manual',
+          downloadOnly, // Pass this flag to allow file generation without full Robinsons setup
         },
       });
 
