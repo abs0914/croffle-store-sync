@@ -102,7 +102,14 @@ serve(async (req) => {
     let pwdDiscounts = 0;
 
     transactions.forEach((t: any) => {
-      // Gross Sales = total including VAT (RLC requirement)
+      // Void transactions (status === 'voided' or 'void') - count but exclude from gross sales
+      if (t.status === 'voided' || t.status === 'void') {
+        voidAmount += t.total || 0;
+        voidCount++;
+        return; // Skip voided transactions from gross sales calculation
+      }
+
+      // Gross Sales = total including VAT (RLC requirement) - excludes voided transactions
       grossSales += t.total || t.subtotal || 0;
       vatAmount += t.vat_amount || 0;
       
@@ -116,12 +123,6 @@ serve(async (req) => {
       // PWD discounts
       if (t.discount_type === 'pwd' || t.pwd_discount) {
         pwdDiscounts += t.pwd_discount || t.discount_amount || 0;
-      }
-
-      // Void transactions (status === 'voided' or 'void')
-      if (t.status === 'voided' || t.status === 'void') {
-        voidAmount += t.total || 0;
-        voidCount++;
       }
 
       // Refund transactions
