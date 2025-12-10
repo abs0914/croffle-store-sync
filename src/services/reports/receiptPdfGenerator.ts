@@ -148,7 +148,10 @@ export class ReceiptPdfGenerator {
     
     // Discounts
     if (receipt.discountAmount > 0) {
-      this.addTotalLine('DISCOUNT:', -receipt.discountAmount);
+      const discountLabel = receipt.discountType 
+        ? `DISCOUNT (${receipt.discountType}):` 
+        : 'DISCOUNT:';
+      this.addTotalLine(discountLabel, -receipt.discountAmount);
     }
     
     if (receipt.seniorDiscount && receipt.seniorDiscount > 0) {
