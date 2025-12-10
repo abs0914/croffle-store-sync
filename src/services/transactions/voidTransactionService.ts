@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { nowInPhilippines, formatDateTime } from '@/utils';
 import { executeWithValidSession } from "@/contexts/auth/session-utils";
+import { AtomicInventoryService } from '@/services/inventory/atomicInventoryService';
 
 export type VoidReasonCategory = 
   | 'customer_request' 
@@ -185,6 +186,19 @@ export const voidTransaction = async (voidData: VoidRequestData) => {
       .eq('id', voidData.transactionId);
 
     if (updateError) throw updateError;
+
+    // Restore inventory deductions
+    try {
+      const compensationResult = await AtomicInventoryService.compensateDeduction(voidData.transactionId);
+      if (compensationResult.success) {
+        console.log(`✅ Restored inventory for ${compensationResult.itemsRestored} items`);
+      } else {
+        console.warn(`⚠️ Inventory restoration had errors:`, compensationResult.errors);
+      }
+    } catch (inventoryError) {
+      // Log but don't fail the void - inventory restoration is best-effort
+      console.error('❌ Failed to restore inventory:', inventoryError);
+    }
 
     return {
       success: true,
