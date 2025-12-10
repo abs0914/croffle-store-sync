@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
+import QRCode from 'qrcode';
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -26,6 +27,8 @@ export interface ReceiptData {
   seniorDiscount?: number;
   pwdDiscount?: number;
   promoDetails?: string;
+  amountTendered?: number;
+  change?: number;
 }
 
 export class ReceiptPdfGenerator {
@@ -45,17 +48,18 @@ export class ReceiptPdfGenerator {
     this.currentY = 10;
   }
 
-  generateReceipt(receipt: ReceiptData): string {
+  async generateReceipt(receipt: ReceiptData): Promise<string> {
     this.addHeader(receipt);
     this.addItems(receipt.items);
     this.addTotals(receipt);
-    this.addFooter(receipt);
+    await this.addFooter(receipt);
     
     return this.doc.output('datauristring');
   }
 
-  generateBatchReceipts(receipts: ReceiptData[]): string {
-    receipts.forEach((receipt, index) => {
+  async generateBatchReceipts(receipts: ReceiptData[]): Promise<string> {
+    for (let index = 0; index < receipts.length; index++) {
+      const receipt = receipts[index];
       if (index > 0) {
         this.doc.addPage();
         this.currentY = 10;
@@ -64,8 +68,8 @@ export class ReceiptPdfGenerator {
       this.addHeader(receipt);
       this.addItems(receipt.items);
       this.addTotals(receipt);
-      this.addFooter(receipt);
-    });
+      await this.addFooter(receipt);
+    }
     
     return this.doc.output('datauristring');
   }
@@ -182,7 +186,7 @@ export class ReceiptPdfGenerator {
     }
   }
 
-  private addFooter(receipt: ReceiptData): void {
+  private async addFooter(receipt: ReceiptData): Promise<void> {
     this.doc.setFontSize(6);
     this.doc.setFont('helvetica', 'normal');
     
@@ -193,9 +197,58 @@ export class ReceiptPdfGenerator {
     this.currentY += 3;
     this.addCenteredText(`Generated: ${format(new Date(), 'MM/dd/yyyy HH:mm:ss')}`, this.currentY);
     
-    // QR Code placeholder (could be enhanced with actual QR code generation)
+    // Generate QR code with readable transaction text
     this.currentY += 5;
-    this.addCenteredText('[QR CODE PLACEHOLDER]', this.currentY);
+    try {
+      const qrText = this.generateQRText(receipt);
+      const qrDataUrl = await QRCode.toDataURL(qrText, { 
+        width: 100, 
+        margin: 1,
+        errorCorrectionLevel: 'M' 
+      });
+      
+      // Center the QR code
+      const qrSize = 25; // mm
+      const qrX = (this.pageWidth - qrSize) / 2;
+      this.doc.addImage(qrDataUrl, 'PNG', qrX, this.currentY, qrSize, qrSize);
+      this.currentY += qrSize + 2;
+      
+      this.doc.setFontSize(5);
+      this.addCenteredText('Scan for transaction details', this.currentY);
+    } catch (error) {
+      console.error('Error generating QR code for PDF:', error);
+      this.addCenteredText('[QR Code Error]', this.currentY);
+    }
+  }
+
+  private generateQRText(receipt: ReceiptData): string {
+    const itemsText = receipt.items
+      .map(item => `${item.description} x${item.quantity} = P${item.lineTotal.toFixed(2)}`)
+      .join('\n');
+    
+    return `========================
+    SALES INVOICE
+========================
+${receipt.storeName}
+${receipt.storeAddress}
+TIN: ${receipt.storeTin}
+
+SI #: ${receipt.receiptNumber}
+Date: ${receipt.businessDate}
+Time: ${receipt.transactionTime}
+Cashier: ${receipt.cashierName}
+------------------------
+ITEMS:
+${itemsText}
+------------------------
+Subtotal:    P${receipt.grossAmount.toFixed(2)}
+VAT (12%):   P${receipt.vatAmount.toFixed(2)}${receipt.discountAmount > 0 ? `\nDiscount:   -P${receipt.discountAmount.toFixed(2)}` : ''}
+------------------------
+TOTAL:       P${receipt.netAmount.toFixed(2)}
+
+Payment: ${receipt.paymentMethod}${receipt.amountTendered ? `\nTendered:    P${receipt.amountTendered.toFixed(2)}\nChange:      P${(receipt.change || 0).toFixed(2)}` : ''}
+========================
+Thank you!`;
   }
 
   private addTotalLine(label: string, amount: number): void {
@@ -227,7 +280,7 @@ export class ReceiptPdfGenerator {
   }
 }
 
-export const generateVirtualReceipts = (transactions: any[]): string => {
+export const generateVirtualReceipts = async (transactions: any[]): Promise<string> => {
   const generator = new ReceiptPdfGenerator();
   
   const receipts: ReceiptData[] = transactions.map(transaction => ({
