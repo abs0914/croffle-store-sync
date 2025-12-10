@@ -17,11 +17,6 @@ export const CATEGORY_ORDER = [
   'Espresso',
   // Then Beverages
   'Beverages',
-  // Then Additional Items (including all addon category variations)
-  'Add-ons',
-  'Add-on',
-  'addon',
-  'Addons',
   // Finally Combos
   'Combo'
 ];
@@ -72,7 +67,8 @@ export const getCategoryOrderIndex = (categoryName: string): number => {
  * @returns True if category should be displayed
  */
 export const shouldDisplayCategoryInPOS = (categoryName: string): boolean => {
-  const hiddenCategories = ['desserts', 'other', 'others', 'mini croffle']; // Hide desserts, other/duplicate categories, and mini croffle
+  // Hide Add-on category from main POS (used for Mix & Match add-ons only)
+  const hiddenCategories = ['add-on'];
   return !hiddenCategories.includes(categoryName.toLowerCase());
 };
 
