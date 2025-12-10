@@ -50,7 +50,7 @@ export function BIRZReadingView({ data }: BIRZReadingViewProps) {
       </div>
 
       {/* Report Content */}
-      <div className="font-mono text-xs bg-white p-4 max-w-sm mx-auto">
+      <div className="font-mono text-xs bg-white p-4 max-w-sm mx-auto z-reading-print">
         {/* Header */}
         <div className="text-center mb-4">
           <div className="font-bold">{data.businessName}</div>
