@@ -102,8 +102,8 @@ serve(async (req) => {
     let pwdDiscounts = 0;
 
     transactions.forEach((t: any) => {
-      // Gross Sales = subtotal before discounts
-      grossSales += t.subtotal || t.total || 0;
+      // Gross Sales = total including VAT (RLC requirement)
+      grossSales += t.total || t.subtotal || 0;
       vatAmount += t.vat_amount || 0;
       
       // Total discounts
