@@ -13,13 +13,15 @@ interface EnhancedPaymentProcessorProps {
   total: number;
   itemCount?: number;
   onPaymentComplete: (
-    paymentMethod: 'cash' | 'card' | 'e-wallet',
+    paymentMethod: 'cash' | 'card' | 'e-wallet' | 'gift-certificate',
     amountTendered: number,
     paymentDetails?: {
       cardType?: string;
       cardNumber?: string;
       eWalletProvider?: string;
       eWalletReferenceNumber?: string;
+      giftCertificateNumber?: string;
+      giftCertificateValue?: number;
     }
   ) => Promise<boolean>;
 }
@@ -32,7 +34,7 @@ export default function EnhancedPaymentProcessor({
   const { currentShift } = useShift();
   const [isOpen, setIsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet' | 'gift-certificate'>('cash');
   const [amountTendered, setAmountTendered] = useState<number>(total === 0 ? 0 : total);
   
   // Card payment details
@@ -42,6 +44,10 @@ export default function EnhancedPaymentProcessor({
   // E-wallet payment details
   const [eWalletProvider, setEWalletProvider] = useState<string>('GCash');
   const [eWalletReferenceNumber, setEWalletReferenceNumber] = useState<string>('');
+
+  // Gift certificate payment details
+  const [giftCertificateNumber, setGiftCertificateNumber] = useState<string>('');
+  const [giftCertificateValue, setGiftCertificateValue] = useState<number>(0);
 
   // Keyboard shortcuts setup
   const handleShowHelp = () => {
@@ -260,6 +266,10 @@ export default function EnhancedPaymentProcessor({
             setEWalletProvider={setEWalletProvider}
             eWalletReferenceNumber={eWalletReferenceNumber}
             setEWalletReferenceNumber={setEWalletReferenceNumber}
+            giftCertificateNumber={giftCertificateNumber}
+            setGiftCertificateNumber={setGiftCertificateNumber}
+            giftCertificateValue={giftCertificateValue}
+            setGiftCertificateValue={setGiftCertificateValue}
             disabled={isProcessing}
           />
           
