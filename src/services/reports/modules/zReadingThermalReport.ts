@@ -71,8 +71,8 @@ export async function fetchZReadingForThermal(
           // Business Info
           businessName: birConfig?.business_name || storeData?.name || 'Store',
           businessAddress: birConfig?.business_address || storeData?.address || '',
-          tin: birConfig?.tin || storeData?.tax_id || '',
-          taxpayerName: birConfig?.taxpayer_name || 'Store Owner',
+          tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
+          taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
           
           // Machine Info
           machineId: birConfig?.machine_identification_number || 'MACHINE-001',
@@ -212,8 +212,8 @@ export async function fetchZReadingForThermal(
         // Business Info
         businessName: birConfig?.business_name || storeData?.name || 'Store',
         businessAddress: birConfig?.business_address || storeData?.address || '',
-        tin: birConfig?.tin || storeData?.tax_id || '',
-        taxpayerName: birConfig?.taxpayer_name || 'Store Owner',
+        tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
+        taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
         
         // Machine Info
         machineId: birConfig?.machine_identification_number || 'MACHINE-001',
