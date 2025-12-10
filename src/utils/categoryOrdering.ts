@@ -17,6 +17,8 @@ export const CATEGORY_ORDER = [
   'Espresso',
   // Then Beverages
   'Beverages',
+  // Add-ons
+  'Add-on',
   // Finally Combos
   'Combo'
 ];
@@ -67,9 +69,8 @@ export const getCategoryOrderIndex = (categoryName: string): number => {
  * @returns True if category should be displayed
  */
 export const shouldDisplayCategoryInPOS = (categoryName: string): boolean => {
-  // Hide Add-on category from main POS (used for Mix & Match add-ons only)
-  const hiddenCategories = ['add-on'];
-  return !hiddenCategories.includes(categoryName.toLowerCase());
+  // All categories are now displayed - no hidden categories
+  return true;
 };
 
 /**
