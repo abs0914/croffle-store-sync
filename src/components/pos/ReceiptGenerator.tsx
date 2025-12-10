@@ -178,7 +178,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     }, 250);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     try {
       // Map transaction data to ReceiptData format
       const receiptData: ReceiptData = {
@@ -204,10 +204,12 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         paymentMethod: transaction.paymentMethod || 'Cash',
         seniorDiscount: (transaction as any).senior_discount || 0,
         pwdDiscount: (transaction as any).pwd_discount || 0,
+        amountTendered: transaction.amountTendered,
+        change: transaction.change,
       };
 
       const generator = new ReceiptPdfGenerator();
-      const pdfDataUri = generator.generateReceipt(receiptData);
+      const pdfDataUri = await generator.generateReceipt(receiptData);
       
       // Create download link
       const link = document.createElement('a');
@@ -254,17 +256,55 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     return tin;
   };
 
-  // Generate QR code content with error handling
+  // Generate human-readable QR code content
   const qrContent = React.useMemo(() => {
     try {
-      const receiptNum = transaction?.receiptNumber || 'UNKNOWN';
-      const storeName = currentStore?.name || 'Unknown Store';
-      const date = transaction?.createdAt ? format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm') : 'Unknown Date';
+      const storeName = currentStore?.business_name || currentStore?.name || 'Store';
+      const storeAddress = currentStore?.address || '';
+      const tin = currentStore?.tin || 'N/A';
+      const siNumber = transaction?.receiptNumber || 'N/A';
+      const dateStr = transaction?.createdAt 
+        ? format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a') 
+        : 'N/A';
+      
+      // Build items list (compact format)
+      const itemsText = (transaction?.items || [])
+        .map(item => `${item.name} x${item.quantity} = P${(item.totalPrice || 0).toFixed(2)}`)
+        .join('\n');
+      
+      const subtotal = transaction?.subtotal || 0;
+      const vat = transaction?.tax || 0;
+      const discount = transaction?.discount || 0;
       const total = transaction?.total || 0;
-      return `RECEIPT:${receiptNum}|STORE:${storeName}|DATE:${date}|TOTAL:${total}`;
+      const paymentMethod = transaction?.paymentMethod || 'Cash';
+      const amountTendered = transaction?.amountTendered || total;
+      const change = transaction?.change || 0;
+
+      // Build readable receipt text
+      return `========================
+    SALES INVOICE
+========================
+${storeName}
+${storeAddress}
+TIN: ${tin}
+
+SI #: ${siNumber}
+Date: ${dateStr}
+------------------------
+ITEMS:
+${itemsText}
+------------------------
+Subtotal:    P${subtotal.toFixed(2)}
+VAT (12%):   P${vat.toFixed(2)}${discount > 0 ? `\nDiscount:   -P${discount.toFixed(2)}` : ''}
+------------------------
+TOTAL:       P${total.toFixed(2)}
+
+Payment: ${paymentMethod}${paymentMethod.toLowerCase() === 'cash' ? `\nTendered:    P${amountTendered.toFixed(2)}\nChange:      P${change.toFixed(2)}` : ''}
+========================
+Thank you!`;
     } catch (error) {
       console.error("ReceiptGenerator: Error generating QR content:", error);
-      return `RECEIPT:${transaction?.receiptNumber || 'ERROR'}`;
+      return `SI #: ${transaction?.receiptNumber || 'ERROR'}`;
     }
   }, [transaction, currentStore]);
 
