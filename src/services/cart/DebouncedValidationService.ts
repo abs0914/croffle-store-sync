@@ -219,9 +219,10 @@ class DebouncedValidationService {
       console.log('🎯 [CART-OPTIMIZED] Fetched data for', productIds.length, 'cart products only');
 
       const itemValidations = new Map<string, ItemValidation>();
-      const globalErrors: string[] = [];
+      const globalErrors: string[] = []; // Always empty - never block checkout
       const globalWarnings: string[] = [];
-      let allValid = true;
+      // PHILOSOPHY: Per transaction-priority memory, always valid - never block transactions
+      const allValid = true;
 
       // Validate each item using batched data (no queries!)
       for (const item of request.items) {
@@ -257,16 +258,22 @@ class DebouncedValidationService {
 
         const itemErrors: string[] = [];
         const itemWarnings: string[] = [];
+        // PHILOSOPHY: Per transaction-priority memory, NEVER block transactions due to stock issues
+        // Log warnings but always allow checkout to proceed
         let itemValid = true;
 
         if (availability.status === 'out_of_stock') {
-          itemErrors.push('Out of stock');
-          itemValid = false;
-          allValid = false;
+          // Log as warning, NOT error - don't block checkout
+          itemWarnings.push(`Low stock warning: ${item.product?.name || 'Product'}`);
+          console.warn('⚠️ [VALIDATION] Stock warning (not blocking):', item.product?.name);
         } else if (availability.quantity < item.quantity) {
-          itemErrors.push(`Need ${item.quantity}, only ${availability.quantity} available`);
-          itemValid = false;
-          allValid = false;
+          // Log as warning, NOT error - don't block checkout
+          itemWarnings.push(`Stock warning: ${item.product?.name || 'Product'}`);
+          console.warn('⚠️ [VALIDATION] Quantity warning (not blocking):', {
+            product: item.product?.name,
+            requested: item.quantity,
+            available: availability.quantity
+          });
         } else if (availability.status === 'low_stock') {
           itemWarnings.push(`Low stock: ${availability.quantity} remaining`);
         }
@@ -274,14 +281,14 @@ class DebouncedValidationService {
         itemValidations.set(itemKey, {
           itemKey,
           productId: item.productId,
-          isValid: itemValid,
+          isValid: itemValid, // Always true now
           availableQuantity: availability.quantity,
           requestedQuantity: item.quantity,
-          errors: itemErrors,
+          errors: itemErrors, // Always empty now
           warnings: itemWarnings
         });
 
-        globalErrors.push(...itemErrors);
+        // Only push warnings, never errors that would block checkout
         globalWarnings.push(...itemWarnings);
       }
 
