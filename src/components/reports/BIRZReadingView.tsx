@@ -23,17 +23,29 @@ export function BIRZReadingView({ data }: BIRZReadingViewProps) {
     await printZReading(data);
   };
 
+  const handleBrowserPrint = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-4">
-      {/* Print Button */}
-      <div className="flex justify-end p-4 bg-gray-50 border-b">
+      {/* Print Buttons */}
+      <div className="flex justify-end gap-2 p-4 bg-gray-50 border-b print:hidden">
+        <Button
+          onClick={handleBrowserPrint}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <Printer className="h-4 w-4" />
+          Print (Browser)
+        </Button>
         <Button
           onClick={handlePrint}
           disabled={!isConnected || isPrinting}
           className="flex items-center gap-2"
         >
           <Printer className="h-4 w-4" />
-          {isPrinting ? 'Printing...' : 'Print Z-Reading'}
+          {isPrinting ? 'Printing...' : 'Print Z-Reading (Thermal)'}
         </Button>
       </div>
 
