@@ -123,12 +123,12 @@ export async function fetchXReadingForThermal(
 
       // If no transactions found, return zero data
       if (!transactions || transactions.length === 0) {
-        return {
-          // Business Info
-          businessName: birConfig?.business_name || storeData?.name || 'Store',
-          businessAddress: birConfig?.business_address || storeData?.address || '',
-          taxpayerName: birConfig?.taxpayer_name || 'Store Owner',
-          tin: birConfig?.tin || storeData?.tax_id || '',
+      return {
+        // Business Info
+        businessName: birConfig?.business_name || storeData?.name || 'Store',
+        businessAddress: birConfig?.business_address || storeData?.address || '',
+        taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
+        tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
           
           // Machine Info
           machineId: birConfig?.machine_identification_number || 'MACHINE-001',
@@ -222,8 +222,8 @@ export async function fetchXReadingForThermal(
         // Business Info
         businessName: birConfig?.business_name || storeData?.name || 'Store',
         businessAddress: birConfig?.business_address || storeData?.address || '',
-        taxpayerName: birConfig?.taxpayer_name || 'Store Owner',
-        tin: birConfig?.tin || storeData?.tax_id || '',
+        taxpayerName: birConfig?.taxpayer_name || storeData?.owner_name || storeData?.business_name || 'Not Configured',
+        tin: birConfig?.tin || storeData?.tin || storeData?.tax_id || 'Not Configured',
         
         // Machine Info
         machineId: birConfig?.machine_identification_number || storeData?.machine_serial_number || 'MACHINE-001',
