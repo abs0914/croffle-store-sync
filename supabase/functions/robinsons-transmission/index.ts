@@ -11,11 +11,10 @@ interface RobinsonsTransmissionRequest {
   salesDate: string;
   isManualResend?: boolean;
   transmissionType?: 'auto' | 'manual';
-  downloadOnly?: boolean; // When true, generates file without requiring full Robinsons setup
+  downloadOnly?: boolean;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -41,7 +40,6 @@ serve(async (req) => {
     }
 
     // For SFTP transmission, require full configuration
-    // For download-only, allow generation with defaults
     if (!downloadOnly) {
       if (!store.robinsons_enabled) {
         return new Response(
@@ -64,7 +62,6 @@ serve(async (req) => {
       }
     }
 
-    // Use configured tenant ID or generate a placeholder for download-only mode
     const tenantId = store.robinsons_tenant_id || 'PENDING_ID';
 
     // Fetch all transactions for the date
@@ -92,37 +89,63 @@ serve(async (req) => {
 
     console.log(`📊 Found ${transactions.length} transactions for ${salesDate}`);
 
-    // Calculate values from transactions
+    // Calculate values from transactions according to RLC checklist
     let grossSales = 0;
     let vatAmount = 0;
-    let vatSales = 0;
-    let vatExemptSales = 0;
-    let zeroRatedSales = 0;
     let totalDiscounts = 0;
-    let seniorDiscounts = 0;
+    let discountedTransactionCount = 0;
+    let voidAmount = 0;
+    let voidCount = 0;
+    let refundAmount = 0;
+    let refundCount = 0;
+    let creditSales = 0; // Non-cash sales (card, e-wallet, etc.)
     let pwdDiscounts = 0;
-    let cashSales = 0;
-    let nonCashTotal = 0;
 
     transactions.forEach((t: any) => {
-      grossSales += t.subtotal || t.total;
+      // Gross Sales = subtotal before discounts
+      grossSales += t.subtotal || t.total || 0;
       vatAmount += t.vat_amount || 0;
-      vatSales += t.vat_sales || 0;
-      vatExemptSales += t.vat_exempt_sales || 0;
-      zeroRatedSales += t.zero_rated_sales || 0;
-      totalDiscounts += t.discount_amount || 0;
-      seniorDiscounts += t.discount_type === 'senior' ? (t.senior_discount || 0) : 0;
-      pwdDiscounts += t.discount_type === 'pwd' ? (t.pwd_discount || 0) : 0;
+      
+      // Total discounts
+      const discountAmt = t.discount_amount || 0;
+      totalDiscounts += discountAmt;
+      if (discountAmt > 0) {
+        discountedTransactionCount++;
+      }
 
-      const paymentMethod = t.payment_method?.toLowerCase() || 'cash';
-      if (paymentMethod === 'cash') {
-        cashSales += t.total;
-      } else {
-        nonCashTotal += t.total;
+      // PWD discounts
+      if (t.discount_type === 'pwd' || t.pwd_discount) {
+        pwdDiscounts += t.pwd_discount || t.discount_amount || 0;
+      }
+
+      // Void transactions (status === 'voided' or 'void')
+      if (t.status === 'voided' || t.status === 'void') {
+        voidAmount += t.total || 0;
+        voidCount++;
+      }
+
+      // Refund transactions
+      if (t.status === 'refunded' || t.order_status === 'refunded') {
+        refundAmount += t.total || 0;
+        refundCount++;
+      }
+
+      // Credit sales (non-cash payments)
+      const paymentMethod = (t.payment_method || 'cash').toLowerCase();
+      if (paymentMethod !== 'cash') {
+        creditSales += t.total || 0;
       }
     });
 
-    const netSales = grossSales - vatAmount - totalDiscounts;
+    // Calculate credit VAT (VAT portion of credit sales)
+    // Assuming 12% VAT: creditVat = creditSales * 0.12 / 1.12
+    const creditVat = creditSales * 0.12 / 1.12;
+
+    // Non-VAT sales (vat_exempt + zero_rated)
+    let nonVatSales = 0;
+    transactions.forEach((t: any) => {
+      nonVatSales += (t.vat_exempt_sales || 0) + (t.zero_rated_sales || 0);
+    });
 
     // Get previous EOD counter and grand total
     const { data: lastTransmission } = await supabase
@@ -137,87 +160,147 @@ serve(async (req) => {
     const previousEODCounter = lastTransmission?.eod_counter || 0;
     const currentEODCounter = previousEODCounter + 1;
 
-    // Extract previous grand total from line 28 of last transmission
+    // Extract previous grand total from line 17 of last transmission (Current Accumulated Grand Total)
     let previousGrandTotal = 0;
     if (lastTransmission?.file_content) {
       const lines = lastTransmission.file_content.split('\n');
-      if (lines.length >= 28) {
-        const line28 = lines[27];
-        const valueStr = line28.substring(2);
-        previousGrandTotal = parseFloat(valueStr) / 100;
+      if (lines.length >= 17) {
+        const line17 = lines[16]; // 0-indexed
+        const valueStr = line17.substring(2); // Remove line number prefix
+        previousGrandTotal = parseFloat(valueStr) / 100; // Convert from cents
       }
     }
 
-    const currentGrandTotal = previousGrandTotal + netSales;
+    const currentGrandTotal = previousGrandTotal + grossSales;
 
-    // Format helper function
+    // Format helper function - RLC requires right-justified, zero-padded values
     const formatField = (lineNo: number, value: number | string, width: number, decimals?: number): string => {
       const linePrefix = lineNo.toString().padStart(2, '0');
       let formattedValue: string;
       
       if (typeof value === 'number' && decimals !== undefined) {
-        const wholePart = Math.floor(value);
-        const decimalPart = Math.round((value - wholePart) * Math.pow(10, decimals));
-        const combinedValue = wholePart * Math.pow(10, decimals) + decimalPart;
-        formattedValue = combinedValue.toString().padStart(width, '0');
+        // For decimal values: multiply by 10^decimals to get integer representation
+        const intValue = Math.round(value * Math.pow(10, decimals));
+        formattedValue = intValue.toString().padStart(width, '0');
+      } else if (typeof value === 'number') {
+        formattedValue = Math.round(value).toString().padStart(width, '0');
       } else {
-        formattedValue = value.toString().padStart(width, '0');
+        // For string values, pad with spaces on left for right-justification
+        formattedValue = value.toString().padStart(width, ' ');
       }
       
       return `${linePrefix}${formattedValue}`;
     };
 
-    // Generate 30-line TXT format
-    const salesDateStr = salesDate.replace(/-/g, '');
-    const beginningReceipt = transactions[0]?.receipt_number || '0000001';
-    const endingReceipt = transactions[transactions.length - 1]?.receipt_number || '0000001';
+    // Format date as MM/DD/YYYY (RLC requirement for Line 18)
+    const dateParts = salesDate.split('-'); // YYYY-MM-DD
+    const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // MM/DD/YYYY
 
+    // Generate 30-line TXT format according to RLC checklist
     const lines = [
+      // Line 01: Tenant ID (width 10)
       formatField(1, tenantId, 10),
-      formatField(2, '01', 2), // Terminal number
+      
+      // Line 02: POS Terminal No. (width 2)
+      formatField(2, '01', 2),
+      
+      // Line 03: Gross Sales (width 16, 2 decimals)
       formatField(3, grossSales, 16, 2),
+      
+      // Line 04: Total Tax/VAT (width 12, 2 decimals)
       formatField(4, vatAmount, 12, 2),
-      formatField(5, 0, 12, 2), // Void amount
-      formatField(6, 0, 6), // Void count
-      formatField(7, seniorDiscounts, 12, 2),
-      formatField(8, pwdDiscounts, 12, 2),
-      formatField(9, 0, 12, 2), // Other discounts
-      formatField(10, totalDiscounts, 12, 2),
-      formatField(11, vatSales, 16, 2),
-      formatField(12, vatExemptSales, 16, 2),
-      formatField(13, zeroRatedSales, 16, 2),
-      formatField(14, netSales, 16, 2),
-      formatField(15, cashSales, 12, 2),
-      formatField(16, 0, 12, 2), // Charge
-      formatField(17, 0, 12, 2), // Credit card
-      formatField(18, 0, 12, 2), // Gift certificate
-      formatField(19, 0, 12, 2), // Debit card
-      formatField(20, nonCashTotal, 12, 2),
-      formatField(21, transactions.length, 10),
-      formatField(22, beginningReceipt, 10),
-      formatField(23, endingReceipt, 10),
-      formatField(24, salesDateStr, 8),
-      formatField(25, previousEODCounter, 6),
-      formatField(26, previousGrandTotal, 16, 2),
-      formatField(27, currentEODCounter, 6),
-      formatField(28, currentGrandTotal, 16, 2),
-      formatField(29, 0, 8),
-      formatField(30, 0, 8),
+      
+      // Line 05: Total Amount Void/Error Correct (width 12, 2 decimals)
+      formatField(5, voidAmount, 12, 2),
+      
+      // Line 06: No. of Void Transactions (width 6)
+      formatField(6, voidCount, 6),
+      
+      // Line 07: Total Amount Discount (width 12, 2 decimals) - ALL discounts
+      formatField(7, totalDiscounts, 12, 2),
+      
+      // Line 08: No. of Discounted Transactions (width 6)
+      formatField(8, discountedTransactionCount, 6),
+      
+      // Line 09: Total Amount Refund/Return (width 12, 2 decimals)
+      formatField(9, refundAmount, 12, 2),
+      
+      // Line 10: No. of Refunded Transactions (width 6)
+      formatField(10, refundCount, 6),
+      
+      // Line 11: Other Negative Adjustments (width 12, 2 decimals)
+      formatField(11, 0, 12, 2),
+      
+      // Line 12: No. of Recorded Negative Adjustments (width 6)
+      formatField(12, 0, 6),
+      
+      // Line 13: Total Service Charge (width 12, 2 decimals)
+      formatField(13, 0, 12, 2),
+      
+      // Line 14: Previous EOD Counter (width 5)
+      formatField(14, previousEODCounter, 5),
+      
+      // Line 15: Previous Accumulated Grand Total (width 16, 2 decimals)
+      formatField(15, previousGrandTotal, 16, 2),
+      
+      // Line 16: Current EOD Counter (width 5)
+      formatField(16, currentEODCounter, 5),
+      
+      // Line 17: Current Accumulated Grand Total (width 16, 2 decimals)
+      formatField(17, currentGrandTotal, 16, 2),
+      
+      // Line 18: Sales Transaction Date (width 10) - FORMAT: MM/DD/YYYY
+      formatField(18, formattedDate, 10),
+      
+      // Line 19: Novelty/Promotional items (width 16, 2 decimals)
+      formatField(19, 0, 16, 2),
+      
+      // Line 20: Misc. Sales Scrap (width 16, 2 decimals)
+      formatField(20, 0, 16, 2),
+      
+      // Line 21: Local Tax/Government Tax (width 16, 2 decimals)
+      formatField(21, 0, 16, 2),
+      
+      // Line 22: Total Credit Sales (width 16, 2 decimals) - non-cash sales
+      formatField(22, creditSales, 16, 2),
+      
+      // Line 23: Total Credit Tax/Vat (width 16, 2 decimals)
+      formatField(23, creditVat, 16, 2),
+      
+      // Line 24: Total Non-Vat Sales (width 16, 2 decimals)
+      formatField(24, nonVatSales, 16, 2),
+      
+      // Line 25: Pharma Sales (width 16, 2 decimals)
+      formatField(25, 0, 16, 2),
+      
+      // Line 26: Non-Pharma Sales (width 16, 2 decimals) - same as gross for non-pharma business
+      formatField(26, grossSales, 16, 2),
+      
+      // Line 27: Person with Disability Discount (width 16, 2 decimals)
+      formatField(27, pwdDiscounts, 16, 2),
+      
+      // Line 28: Gross Sales not subject to % rent (width 16, 2 decimals)
+      formatField(28, 0, 16, 2),
+      
+      // Line 29: Total Amount of re-printed transactions (width 12, 2 decimals)
+      formatField(29, 0, 12, 2),
+      
+      // Line 30: Number of re-printed transactions (width 16)
+      formatField(30, 0, 16),
     ];
 
     const fileContent = lines.join('\n');
+    const salesDateStr = salesDate.replace(/-/g, '');
     const filename = `${tenantId}_${salesDateStr}_01.txt`;
 
     console.log(`📄 Generated file: ${filename}`);
+    console.log(`📋 File content preview:\n${fileContent}`);
 
-    // TODO: Implement actual SFTP upload when credentials are configured
-    // For now, simulate upload
+    // SFTP upload logic
     let sftpSuccess = false;
     let sftpMessage = '';
 
     if (store.robinsons_sftp_host && store.robinsons_sftp_username) {
-      // SFTP upload would happen here
-      // Since we don't have credentials yet, we'll mark as pending
       sftpSuccess = false;
       sftpMessage = 'SFTP credentials configured but password not available. Please configure SFTP password secret.';
     } else {
@@ -245,7 +328,6 @@ serve(async (req) => {
       console.error('Error logging transmission:', logError);
     }
 
-    // Update store's EOD counter if successful
     if (sftpSuccess) {
       await supabase
         .from('stores')
@@ -268,7 +350,10 @@ serve(async (req) => {
         status: sftpSuccess ? 'success' : 'pending',
         details: {
           grossSales,
-          netSales,
+          vatAmount,
+          totalDiscounts,
+          discountedTransactionCount,
+          creditSales,
           transactionCount: transactions.length,
         }
       }),
