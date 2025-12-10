@@ -29,9 +29,8 @@ export default function ProductCategoryTabs({
   );
 
   // Define the main POS categories based on your recipe categories
-  // Note: Add-on is hidden from main POS display (used for Mix & Match add-ons only)
   const mainCategoryNames = [
-    'Classic', 'Cold', 'Blended', 'Beverages', 
+    'Classic', 'Cold', 'Blended', 'Beverages', 'Add-on',
     'Espresso', 'Fruity', 'Plain', 'Mix & Match', 'Premium', 'Combo', 'Glaze'
   ];
 
