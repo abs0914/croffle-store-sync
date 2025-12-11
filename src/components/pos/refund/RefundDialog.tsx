@@ -100,6 +100,7 @@ export const RefundDialog: React.FC<RefundDialogProps> = ({
   const toggleItemSelection = (item: any, index: number) => {
     const key = `${item.productId || item.product_id}-${index}`;
     const newSelected = new Map(selectedItems);
+    const itemPrice = item.price || item.unit_price || item.unitPrice || 0;
 
     if (newSelected.has(key)) {
       newSelected.delete(key);
@@ -109,8 +110,8 @@ export const RefundDialog: React.FC<RefundDialogProps> = ({
         productName: item.name || item.product_name,
         quantity: item.quantity,
         originalQuantity: item.quantity,
-        unitPrice: item.price || item.unit_price,
-        totalRefund: (item.price || item.unit_price) * item.quantity,
+        unitPrice: itemPrice,
+        totalRefund: itemPrice * item.quantity,
         returnToStock: true,
         isDamaged: false,
       });
@@ -156,13 +157,14 @@ export const RefundDialog: React.FC<RefundDialogProps> = ({
     const newSelected = new Map<string, RefundedItem>();
     items.forEach((item: any, index: number) => {
       const key = `${item.productId || item.product_id}-${index}`;
+      const itemPrice = item.price || item.unit_price || item.unitPrice || 0;
       newSelected.set(key, {
         productId: item.productId || item.product_id,
         productName: item.name || item.product_name,
         quantity: item.quantity,
         originalQuantity: item.quantity,
-        unitPrice: item.price || item.unit_price,
-        totalRefund: (item.price || item.unit_price) * item.quantity,
+        unitPrice: itemPrice,
+        totalRefund: itemPrice * item.quantity,
         returnToStock: true,
         isDamaged: false,
       });
@@ -332,6 +334,7 @@ export const RefundDialog: React.FC<RefundDialogProps> = ({
                         const key = `${item.productId || item.product_id}-${index}`;
                         const isSelected = selectedItems.has(key);
                         const selectedItem = selectedItems.get(key);
+                        const itemPrice = item.price || item.unit_price || item.unitPrice || 0;
 
                         return (
                           <div
@@ -349,12 +352,12 @@ export const RefundDialog: React.FC<RefundDialogProps> = ({
                                 <div>
                                   <p className="font-medium">{item.name || item.product_name}</p>
                                   <p className="text-sm text-muted-foreground">
-                                    {item.quantity} × ₱{(item.price || item.unit_price).toFixed(2)}
+                                    {item.quantity} × ₱{itemPrice.toFixed(2)}
                                   </p>
                                 </div>
                               </div>
                               <span className="font-medium">
-                                ₱{((item.price || item.unit_price) * item.quantity).toFixed(2)}
+                                ₱{(itemPrice * item.quantity).toFixed(2)}
                               </span>
                             </div>
 
