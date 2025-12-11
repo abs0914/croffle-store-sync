@@ -7,6 +7,7 @@ import { UserListView, ErrorView, LoadingView } from "./components";
 import { useUserDebug, useUsersData, useUserDialogs } from "./hooks";
 import UserAccessView from "./components/UserAccessView";
 import UserDialogs from "./components/UserDialogs";
+import ResetPasswordDialog from "./components/ResetPasswordDialog";
 import { SecurityAuditPanel } from "@/components/security/SecurityAuditPanel";
 import { syncAuthWithAppUsers, updateAppUsersFromAuthMetadata } from "@/services/appUser/sync";
 import { toast } from "sonner";
@@ -35,6 +36,7 @@ export default function UsersPage() {
     isEditDialogOpen, setIsEditDialogOpen,
     isDeleteDialogOpen, setIsDeleteDialogOpen,
     isActivateDialogOpen, setIsActivateDialogOpen,
+    isResetPasswordDialogOpen, setIsResetPasswordDialogOpen,
     selectedUser, isDeactivating,
     handlers
   } = useUserDialogs();
@@ -127,6 +129,7 @@ export default function UsersPage() {
         onDeleteUser={handlers.handleDeleteUser}
         onActivateUser={handlers.handleActivateUser}
         onDeactivateUser={handlers.handleDeactivateUser}
+        onResetPassword={handlers.handleResetPassword}
         onRefresh={refetch}
         onSyncUsers={handleSyncUsers}
       />
@@ -138,19 +141,26 @@ export default function UsersPage() {
 
       {/* Dialogs - Only render for users with management permissions */}
       {canManageUsers && (
-        <UserDialogs
-          isAddDialogOpen={isAddDialogOpen}
-          isEditDialogOpen={isEditDialogOpen}
-          isDeleteDialogOpen={isDeleteDialogOpen}
-          isActivateDialogOpen={isActivateDialogOpen}
-          selectedUser={selectedUser}
-          isDeactivating={isDeactivating}
-          stores={stores}
-          setIsAddDialogOpen={setIsAddDialogOpen}
-          setIsEditDialogOpen={setIsEditDialogOpen}
-          setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-          setIsActivateDialogOpen={setIsActivateDialogOpen}
-        />
+        <>
+          <UserDialogs
+            isAddDialogOpen={isAddDialogOpen}
+            isEditDialogOpen={isEditDialogOpen}
+            isDeleteDialogOpen={isDeleteDialogOpen}
+            isActivateDialogOpen={isActivateDialogOpen}
+            selectedUser={selectedUser}
+            isDeactivating={isDeactivating}
+            stores={stores}
+            setIsAddDialogOpen={setIsAddDialogOpen}
+            setIsEditDialogOpen={setIsEditDialogOpen}
+            setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+            setIsActivateDialogOpen={setIsActivateDialogOpen}
+          />
+          <ResetPasswordDialog
+            isOpen={isResetPasswordDialogOpen}
+            onOpenChange={setIsResetPasswordDialogOpen}
+            user={selectedUser}
+          />
+        </>
       )}
     </div>
   );

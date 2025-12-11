@@ -1,7 +1,7 @@
 
 import { AppUser } from "@/types/appUser";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, TrashIcon, XCircleIcon, CheckCircleIcon } from "lucide-react";
+import { PencilIcon, TrashIcon, XCircleIcon, CheckCircleIcon, KeyRound } from "lucide-react";
 
 interface UserTableActionsProps {
   user: AppUser;
@@ -9,6 +9,7 @@ interface UserTableActionsProps {
   onDelete: (user: AppUser) => void;
   onActivate?: (user: AppUser) => void;
   onDeactivate?: (user: AppUser) => void;
+  onResetPassword?: (user: AppUser) => void;
 }
 
 export default function UserTableActions({ 
@@ -16,7 +17,8 @@ export default function UserTableActions({
   onEdit, 
   onDelete, 
   onActivate, 
-  onDeactivate 
+  onDeactivate,
+  onResetPassword
 }: UserTableActionsProps) {
   return (
     <div className="flex justify-end space-x-1">
@@ -29,6 +31,18 @@ export default function UserTableActions({
       >
         <PencilIcon className="h-4 w-4" />
       </Button>
+      
+      {onResetPassword && user.userId && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onResetPassword(user)}
+          title="Reset password"
+          className="h-8 w-8 p-0 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
+        >
+          <KeyRound className="h-4 w-4" />
+        </Button>
+      )}
       
       {user.isActive && onDeactivate ? (
         <Button

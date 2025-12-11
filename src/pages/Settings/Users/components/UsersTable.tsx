@@ -12,6 +12,7 @@ interface UsersTableProps {
   onDelete: (user: AppUser) => void;
   onActivate?: (user: AppUser) => void;
   onDeactivate?: (user: AppUser) => void;
+  onResetPassword?: (user: AppUser) => void;
   allStores: Store[];
 }
 
