@@ -63,6 +63,32 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
       return null;
     }
 
+    // If role is cashier and has store assignments, create cashier entries
+    if (data.role === 'cashier' && storeIds && storeIds.length > 0 && newUser.user_id) {
+      for (const storeId of storeIds) {
+        try {
+          const { error: cashierError } = await supabase
+            .from('cashiers')
+            .insert({
+              user_id: newUser.user_id,
+              store_id: storeId,
+              first_name: data.firstName,
+              last_name: data.lastName,
+              is_active: data.isActive,
+              contact_number: data.contactNumber
+            });
+          
+          if (cashierError && !cashierError.message.includes('duplicate')) {
+            console.warn(`Failed to create cashier entry for store ${storeId}:`, cashierError);
+          } else {
+            console.log(`✅ Created cashier entry for store ${storeId}`);
+          }
+        } catch (err) {
+          console.warn('Error creating cashier entry:', err);
+        }
+      }
+    }
+
     toast.success('User created successfully');
       return {
         id: newUser.id,
