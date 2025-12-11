@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Receipt, Clock, DollarSign, User, AlertTriangle } from "lucide-react";
+import { Receipt, Clock, DollarSign, User, AlertTriangle, RotateCcw } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { format } from "date-fns";
 import { getVoidableTransactions, voidTransaction, VoidTransactionData, VoidRequestData } from "@/services/transactions/voidTransactionService";
 import { VoidTransactionDialog } from "./VoidTransactionDialog";
+import { RefundDialog } from "@/components/pos/refund/RefundDialog";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 
@@ -22,6 +23,7 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
   const { user } = useAuth();
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [isVoidDialogOpen, setIsVoidDialogOpen] = useState(false);
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isVoiding, setIsVoiding] = useState(false);
 
   const { data: transactions = [], isLoading, refetch } = useQuery({
@@ -37,6 +39,16 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
   const handleVoidClick = (transaction: any) => {
     setSelectedTransaction(transaction);
     setIsVoidDialogOpen(true);
+  };
+
+  const handleRefundClick = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setIsRefundDialogOpen(true);
+  };
+
+  const handleRefundComplete = (refundReceiptNumber: string) => {
+    toast.success(`Refund processed: ${refundReceiptNumber}`);
+    refetch();
   };
 
   const handleConfirmVoid = async (data: VoidRequestData) => {
@@ -111,15 +123,26 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
                       </div>
 
                       {transaction.status === 'completed' ? (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleVoidClick(transaction)}
-                          className="flex items-center gap-1"
-                        >
-                          <AlertTriangle className="h-3 w-3" />
-                          Void
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRefundClick(transaction)}
+                            className="flex items-center gap-1"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Refund
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleVoidClick(transaction)}
+                            className="flex items-center gap-1"
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            Void
+                          </Button>
+                        </div>
                       ) : (
                         <Badge variant="destructive" className="text-xs">
                           VOIDED
@@ -188,6 +211,19 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
         transaction={selectedTransaction}
         onConfirmVoid={handleConfirmVoid}
         isVoiding={isVoiding}
+      />
+
+      <RefundDialog
+        isOpen={isRefundDialogOpen}
+        onClose={() => {
+          setIsRefundDialogOpen(false);
+          setSelectedTransaction(null);
+        }}
+        storeId={storeId}
+        userId={user?.id || ''}
+        userName={user?.email || 'Unknown'}
+        preloadedTransaction={selectedTransaction}
+        onRefundComplete={handleRefundComplete}
       />
     </>
   );
