@@ -9,14 +9,16 @@ interface Transaction {
   vat_sales?: number;
   vat_exempt_sales?: number;
   zero_rated_sales?: number;
-  discount_amount?: number;
+  discount?: number;  // Database column name
   discount_type?: string;
   senior_discount?: number;
+  senior_citizen_discount?: number;
   pwd_discount?: number;
   payment_method: string;
   amount_tendered: number;
   created_at: string;
   receipt_number?: string;
+  status?: string;
 }
 
 interface RobinsonsData {
@@ -125,16 +127,29 @@ export class RobinsonsDataFormatter {
     let creditCardSales = 0;
     let giftCertificateSales = 0;
     let nonCashTotal = 0;
-    let transactionCount = transactions.length;
+    let transactionCount = 0;
 
     transactions.forEach((t) => {
+      // Skip voided transactions for gross sales but track void amounts
+      if (t.status === 'voided') {
+        voidAmount += t.total || 0;
+        voidCount++;
+        return;
+      }
+
+      transactionCount++;
       grossSales += t.subtotal || t.total;
       vatAmount += t.vat_amount || 0;
       vatSales += t.vat_sales || 0;
       vatExemptSales += t.vat_exempt_sales || 0;
       zeroRatedSales += t.zero_rated_sales || 0;
-      totalDiscounts += t.discount_amount || 0;
-      seniorDiscounts += t.discount_type === 'senior' ? (t.senior_discount || 0) : 0;
+      totalDiscounts += t.discount || 0;
+      
+      // Senior discount - check both field names and discount_type
+      const seniorAmt = t.senior_discount || t.senior_citizen_discount || 0;
+      seniorDiscounts += t.discount_type === 'senior' ? seniorAmt : 0;
+      
+      // PWD discount - use pwd_discount field when discount_type is 'pwd'
       pwdDiscounts += t.discount_type === 'pwd' ? (t.pwd_discount || 0) : 0;
 
       // Payment method breakdown
@@ -144,7 +159,7 @@ export class RobinsonsDataFormatter {
       } else if (paymentMethod === 'credit_card' || paymentMethod === 'card') {
         creditCardSales += t.total;
         nonCashTotal += t.total;
-      } else if (paymentMethod === 'gift_certificate') {
+      } else if (paymentMethod === 'gift_certificate' || paymentMethod === 'gift-certificate') {
         giftCertificateSales += t.total;
         nonCashTotal += t.total;
       } else {
