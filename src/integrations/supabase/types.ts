@@ -6233,6 +6233,125 @@ export type Database = {
           },
         ]
       }
+      refunds: {
+        Row: {
+          authorized_by_name: string | null
+          authorized_by_user_id: string | null
+          created_at: string | null
+          id: string
+          items_damaged: Json | null
+          items_returned_to_stock: Json | null
+          original_receipt_number: string
+          original_transaction_id: string
+          original_transaction_total: number
+          processed_by_name: string
+          processed_by_user_id: string
+          refund_amount: number
+          refund_date: string | null
+          refund_method: string
+          refund_method_details: Json | null
+          refund_notes: string | null
+          refund_reason: string
+          refund_reason_category: string
+          refund_receipt_number: string
+          refund_type: string
+          refund_vat_amount: number | null
+          refunded_items: Json
+          sequence_number: number | null
+          shift_id: string | null
+          store_id: string
+          terminal_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          authorized_by_name?: string | null
+          authorized_by_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          items_damaged?: Json | null
+          items_returned_to_stock?: Json | null
+          original_receipt_number: string
+          original_transaction_id: string
+          original_transaction_total?: number
+          processed_by_name: string
+          processed_by_user_id: string
+          refund_amount?: number
+          refund_date?: string | null
+          refund_method: string
+          refund_method_details?: Json | null
+          refund_notes?: string | null
+          refund_reason: string
+          refund_reason_category: string
+          refund_receipt_number: string
+          refund_type: string
+          refund_vat_amount?: number | null
+          refunded_items?: Json
+          sequence_number?: number | null
+          shift_id?: string | null
+          store_id: string
+          terminal_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          authorized_by_name?: string | null
+          authorized_by_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          items_damaged?: Json | null
+          items_returned_to_stock?: Json | null
+          original_receipt_number?: string
+          original_transaction_id?: string
+          original_transaction_total?: number
+          processed_by_name?: string
+          processed_by_user_id?: string
+          refund_amount?: number
+          refund_date?: string | null
+          refund_method?: string
+          refund_method_details?: Json | null
+          refund_notes?: string | null
+          refund_reason?: string
+          refund_reason_category?: string
+          refund_receipt_number?: string
+          refund_type?: string
+          refund_vat_amount?: number | null
+          refunded_items?: Json
+          sequence_number?: number | null
+          shift_id?: string | null
+          store_id?: string
+          terminal_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_original_transaction_id_fkey"
+            columns: ["original_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "refunds_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       robinsons_transmission_log: {
         Row: {
           created_at: string | null
