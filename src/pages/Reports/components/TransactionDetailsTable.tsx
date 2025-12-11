@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Printer } from "lucide-react";
+import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Printer, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/utils/format";
@@ -21,6 +21,7 @@ import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { BluetoothPrinterService } from "@/services/printer/BluetoothPrinterService";
 import { Transaction as PosTransaction } from "@/types";
 import { Store } from "@/types/store";
+import { ReceiptPdfGenerator, ReceiptData } from "@/services/reports/receiptPdfGenerator";
 
 interface Transaction {
   id: string;
@@ -51,6 +52,7 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isVoiding, setIsVoiding] = useState(false);
   const [isReprinting, setIsReprinting] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
   // Check if user can void transactions (managers, admins, owners)
   const canVoidTransactions = user?.role ? 
@@ -282,6 +284,93 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
     }
   };
 
+  const handleDownloadReceipt = async (transaction: Transaction) => {
+    setIsDownloading(transaction.id);
+    try {
+      console.log('📥 Downloading receipt for transaction:', transaction.receipt_number);
+      
+      // Fetch complete transaction details
+      const { data: txData, error: txError } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          stores:store_id (
+            id,
+            name,
+            address,
+            phone,
+            bir_store_config (
+              tin,
+              business_name,
+              business_address
+            )
+          )
+        `)
+        .eq('id', transaction.id)
+        .single();
+
+      if (txError || !txData) {
+        throw new Error('Failed to fetch transaction details');
+      }
+
+      const storeData = txData.stores as any;
+      const birConfig = storeData?.bir_store_config?.[0] || storeData?.bir_store_config;
+      
+      // Parse items
+      const items = typeof txData.items === 'string' 
+        ? JSON.parse(txData.items) 
+        : txData.items;
+
+      // Build receipt data
+      const receiptData: ReceiptData = {
+        receiptNumber: txData.receipt_number,
+        businessDate: txData.created_at,
+        transactionTime: formatInTimeZone(new Date(txData.created_at), 'Asia/Manila', 'HH:mm:ss'),
+        storeName: birConfig?.business_name || storeData?.name || 'Store',
+        storeAddress: birConfig?.business_address || storeData?.address || '',
+        storeTin: birConfig?.tin || '',
+        cashierName: txData.cashier_name || 'Cashier',
+        items: items.map((item: any) => ({
+          description: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice || item.unit_price || 0,
+          lineTotal: item.totalPrice || item.total_price || (item.quantity * (item.unitPrice || item.unit_price || 0)),
+          itemDiscount: 0,
+          vatExemptFlag: txData.discount_type === 'senior' || txData.discount_type === 'pwd'
+        })),
+        grossAmount: txData.subtotal || txData.total,
+        discountAmount: txData.discount || txData.discount_amount || 0,
+        netAmount: txData.total,
+        vatAmount: txData.vat_sales ? (txData.total - (txData.total / 1.12)) : (txData.total / 1.12 * 0.12),
+        paymentMethod: txData.payment_method || 'Cash',
+        discountType: txData.discount_type,
+        seniorDiscount: txData.senior_citizen_discount || txData.senior_discount || 0,
+        pwdDiscount: txData.pwd_discount || 0,
+        amountTendered: txData.amount_tendered,
+        change: txData.change
+      };
+
+      // Generate PDF
+      const generator = new ReceiptPdfGenerator();
+      const pdfDataUri = await generator.generateReceipt(receiptData);
+      
+      // Trigger download
+      const link = document.createElement('a');
+      link.href = pdfDataUri;
+      link.download = `receipt-${txData.receipt_number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Receipt downloaded');
+    } catch (error: any) {
+      console.error('❌ Error downloading receipt:', error);
+      toast.error(error.message || 'Failed to download receipt');
+    } finally {
+      setIsDownloading(null);
+    }
+  };
+
   const exportToCSV = () => {
     const csvHeaders = [
       "Date/Time",
@@ -452,6 +541,16 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
                             title="Reprint Receipt"
                           >
                             <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadReceipt(tx)}
+                            disabled={isDownloading === tx.id}
+                            className="h-8 w-8 p-0"
+                            title="Download Receipt PDF"
+                          >
+                            <FileDown className="h-4 w-4" />
                           </Button>
                           {canVoidTransactions && (
                             <Button

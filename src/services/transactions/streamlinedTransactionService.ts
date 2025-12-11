@@ -392,8 +392,10 @@ class StreamlinedTransactionService {
       vat_sales: vatableSales,
       vat_exempt_sales: data.discountType === 'senior' || data.discountType === 'pwd' ? discountAmount : 0,
       zero_rated_sales: 0,
-      senior_citizen_discount: data.discountType === 'senior' ? discountAmount : 0,
-      pwd_discount: data.discountType === 'pwd' ? discountAmount : 0,
+      senior_citizen_discount: data.discountType === 'senior' ? discountAmount : 
+        (data.seniorDiscounts?.reduce((sum, s) => sum + s.discountAmount, 0) || 0),
+      pwd_discount: data.discountType === 'pwd' ? discountAmount : 
+        (data.otherDiscount?.type === 'pwd' ? data.otherDiscount.amount : 0),
       sequence_number: parseInt(timestamp),
       terminal_id: 'TERMINAL-01',
       // Store detailed discount information
