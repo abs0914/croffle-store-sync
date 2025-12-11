@@ -146,8 +146,10 @@ export class ReceiptPdfGenerator {
     // Gross amount
     this.addTotalLine('GROSS AMOUNT:', receipt.grossAmount);
     
-    // Discounts
-    if (receipt.discountAmount > 0) {
+    // Discounts - avoid duplicating PWD/Senior which have dedicated lines
+    const isPwdOrSeniorDiscount = receipt.discountType === 'pwd' || receipt.discountType === 'senior';
+    
+    if (receipt.discountAmount > 0 && !isPwdOrSeniorDiscount) {
       const discountLabel = receipt.discountType 
         ? `DISCOUNT (${receipt.discountType}):` 
         : 'DISCOUNT:';
