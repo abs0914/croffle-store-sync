@@ -17,6 +17,7 @@ interface UserListViewProps {
   onDeleteUser: (user: AppUser) => void;
   onActivateUser?: (user: AppUser) => void;
   onDeactivateUser?: (user: AppUser) => void;
+  onResetPassword?: (user: AppUser) => void;
   onRefresh: () => void;
   onSyncUsers?: () => void;
   error?: any;
@@ -32,6 +33,7 @@ export default function UserListView({
   onDeleteUser,
   onActivateUser,
   onDeactivateUser,
+  onResetPassword,
   onRefresh,
   onSyncUsers,
   error
@@ -83,6 +85,7 @@ export default function UserListView({
         onDelete={onDeleteUser}
         onActivate={onActivateUser}
         onDeactivate={onDeactivateUser}
+        onResetPassword={onResetPassword}
         allStores={stores}
       />
     );

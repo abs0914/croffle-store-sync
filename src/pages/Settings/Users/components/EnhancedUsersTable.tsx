@@ -14,6 +14,7 @@ interface EnhancedUsersTableProps {
   onDelete: (user: AppUser) => void;
   onActivate?: (user: AppUser) => void;
   onDeactivate?: (user: AppUser) => void;
+  onResetPassword?: (user: AppUser) => void;
   onBulkActivate?: (userIds: string[]) => void;
   onBulkDeactivate?: (userIds: string[]) => void;
   onBulkRoleChange?: (userIds: string[], newRole: string) => void;
@@ -29,6 +30,7 @@ export default function EnhancedUsersTable({
   onDelete,
   onActivate,
   onDeactivate,
+  onResetPassword,
   onBulkActivate,
   onBulkDeactivate,
   onBulkRoleChange,
@@ -159,6 +161,7 @@ export default function EnhancedUsersTable({
           onDelete={onDelete}
           onActivate={onActivate}
           onDeactivate={onDeactivate}
+          onResetPassword={onResetPassword}
         />
       </div>
     </div>
@@ -175,6 +178,7 @@ interface EnhancedUserTableWithSelectionProps {
   onDelete: (user: AppUser) => void;
   onActivate?: (user: AppUser) => void;
   onDeactivate?: (user: AppUser) => void;
+  onResetPassword?: (user: AppUser) => void;
 }
 
 function EnhancedUserTableWithSelection({
@@ -185,7 +189,8 @@ function EnhancedUserTableWithSelection({
   onEdit,
   onDelete,
   onActivate,
-  onDeactivate
+  onDeactivate,
+  onResetPassword
 }: EnhancedUserTableWithSelectionProps) {
   return (
     <EnhancedUserTable
@@ -195,6 +200,7 @@ function EnhancedUserTableWithSelection({
       onDelete={onDelete}
       onActivate={onActivate}
       onDeactivate={onDeactivate}
+      onResetPassword={onResetPassword}
     />
   );
 }

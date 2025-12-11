@@ -7,6 +7,7 @@ export default function useUserDialogs() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
   
@@ -36,6 +37,11 @@ export default function useUserDialogs() {
     setIsActivateDialogOpen(true);
   };
 
+  const handleResetPassword = (user: AppUser) => {
+    setSelectedUser(user);
+    setIsResetPasswordDialogOpen(true);
+  };
+
   return {
     isAddDialogOpen,
     setIsAddDialogOpen,
@@ -45,6 +51,8 @@ export default function useUserDialogs() {
     setIsDeleteDialogOpen,
     isActivateDialogOpen,
     setIsActivateDialogOpen,
+    isResetPasswordDialogOpen,
+    setIsResetPasswordDialogOpen,
     selectedUser,
     isDeactivating,
     handlers: {
@@ -52,7 +60,8 @@ export default function useUserDialogs() {
       handleEditUser,
       handleDeleteUser,
       handleActivateUser,
-      handleDeactivateUser
+      handleDeactivateUser,
+      handleResetPassword
     }
   };
 }

@@ -17,6 +17,7 @@ interface EnhancedUserTableRowProps {
   onDelete: (user: AppUser) => void;
   onActivate?: (user: AppUser) => void;
   onDeactivate?: (user: AppUser) => void;
+  onResetPassword?: (user: AppUser) => void;
 }
 
 const ROLE_ICONS = {
@@ -34,7 +35,8 @@ export default function EnhancedUserTableRow({
   onEdit,
   onDelete,
   onActivate,
-  onDeactivate
+  onDeactivate,
+  onResetPassword
 }: EnhancedUserTableRowProps) {
   const roleDefinition = getUserRoleDefinition(user.role);
   const IconComponent = ROLE_ICONS[user.role as keyof typeof ROLE_ICONS] || Shield;
@@ -190,6 +192,7 @@ export default function EnhancedUserTableRow({
           onDelete={onDelete}
           onActivate={onActivate}
           onDeactivate={onDeactivate}
+          onResetPassword={onResetPassword}
         />
       </TableCell>
     </TableRow>

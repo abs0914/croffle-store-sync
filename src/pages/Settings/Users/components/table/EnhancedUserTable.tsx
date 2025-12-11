@@ -11,6 +11,7 @@ interface EnhancedUserTableProps {
   onDelete: (user: AppUser) => void;
   onActivate?: (user: AppUser) => void;
   onDeactivate?: (user: AppUser) => void;
+  onResetPassword?: (user: AppUser) => void;
 }
 
 export default function EnhancedUserTable({
@@ -19,7 +20,8 @@ export default function EnhancedUserTable({
   onEdit,
   onDelete,
   onActivate,
-  onDeactivate
+  onDeactivate,
+  onResetPassword
 }: EnhancedUserTableProps) {
   if (users.length === 0) {
     return <UserTableEmpty colSpan={7} />;
@@ -49,6 +51,7 @@ export default function EnhancedUserTable({
               onDelete={onDelete}
               onActivate={onActivate}
               onDeactivate={onDeactivate}
+              onResetPassword={onResetPassword}
             />
           ))}
         </TableBody>
