@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Printer, FileDown } from "lucide-react";
+import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Printer, FileDown, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/utils/format";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth";
 import { VoidTransactionDialog } from "@/components/pos/void/VoidTransactionDialog";
+import { RefundDialog } from "@/components/pos/refund/RefundDialog";
 import { voidTransaction, VoidRequestData } from "@/services/transactions/voidTransactionService";
 import { toast } from "sonner";
 import { hasPermission } from "@/types/rolePermissions";
@@ -22,7 +23,7 @@ import { BluetoothPrinterService } from "@/services/printer/BluetoothPrinterServ
 import { Transaction as PosTransaction } from "@/types";
 import { Store } from "@/types/store";
 import { ReceiptPdfGenerator, ReceiptData } from "@/services/reports/receiptPdfGenerator";
-
+import { useStore } from "@/contexts/StoreContext";
 interface Transaction {
   id: string;
   created_at: string;
@@ -43,12 +44,14 @@ const ITEMS_PER_PAGE = 20;
 
 export function TransactionDetailsTable({ transactions, onTransactionVoided }: TransactionDetailsTableProps) {
   const { user } = useAuth();
+  const { currentStore } = useStore();
   const { isConnected, connectedPrinter } = useThermalPrinter();
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set());
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isVoiding, setIsVoiding] = useState(false);
   const [isReprinting, setIsReprinting] = useState<string | null>(null);
@@ -97,6 +100,19 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
   const handleVoidClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setVoidDialogOpen(true);
+  };
+
+  const handleRefundClick = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setRefundDialogOpen(true);
+  };
+
+  const handleRefundComplete = () => {
+    setRefundDialogOpen(false);
+    setSelectedTransaction(null);
+    if (onTransactionVoided) {
+      onTransactionVoided(); // Refresh transactions list
+    }
   };
 
   const handleVoidConfirm = async (voidData: VoidRequestData) => {
@@ -553,15 +569,26 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
                             <FileDown className="h-4 w-4" />
                           </Button>
                           {canVoidTransactions && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleVoidClick(tx)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              title="Void Transaction"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRefundClick(tx)}
+                                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                                title="Process Refund"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleVoidClick(tx)}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                title="Void Transaction"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -660,6 +687,22 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
           onConfirmVoid={handleVoidConfirm}
           isVoiding={isVoiding}
         />
+
+        {/* Refund Dialog */}
+        {currentStore && user && (
+          <RefundDialog
+            isOpen={refundDialogOpen}
+            onClose={() => {
+              setRefundDialogOpen(false);
+              setSelectedTransaction(null);
+            }}
+            storeId={currentStore.id}
+            userId={user.id}
+            userName={user.name || user.email || 'User'}
+            preloadedTransaction={selectedTransaction}
+            onRefundComplete={handleRefundComplete}
+          />
+        )}
       </CardContent>
     </Card>
   );
