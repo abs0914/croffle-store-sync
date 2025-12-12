@@ -10,7 +10,7 @@ export interface SeniorDiscount {
 }
 
 export interface OtherDiscount {
-  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo' | 'croffle_combo' | 'regular' | 'custom';
+  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo' | 'croffle_combo' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent';
   amount: number;
   idNumber?: string;
   justification?: string;

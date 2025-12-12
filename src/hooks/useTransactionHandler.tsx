@@ -23,16 +23,16 @@ export function useTransactionHandler(storeId: string) {
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
-  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | undefined>(undefined);
+  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent' | undefined>(undefined);
   const [discountIdNumber, setDiscountIdNumber] = useState<string | undefined>(undefined);
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
-  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string } | undefined>(undefined);
+  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string } | undefined>(undefined);
   
   const { clearCart, applyDiscounts: applyCartDiscounts } = useCart();
 
   const handleApplyDiscount = (
     discountAmount: number, 
-    type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary',
+    type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent',
     idNumber?: string,
     justification?: string
   ) => {

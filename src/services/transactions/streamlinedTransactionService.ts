@@ -53,7 +53,7 @@ export interface StreamlinedTransactionData {
     discountAmount: number;
   }>;
   otherDiscount?: {
-    type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo';
+    type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent';
     amount: number;
     idNumber?: string;
     justification?: string;
@@ -396,6 +396,8 @@ class StreamlinedTransactionService {
         (data.seniorDiscounts?.reduce((sum, s) => sum + s.discountAmount, 0) || 0),
       pwd_discount: data.discountType === 'pwd' ? discountAmount : 
         (data.otherDiscount?.type === 'pwd' ? data.otherDiscount.amount : 0),
+      // Store the VAT amount correctly for BIR/RLC compliance
+      vat_amount: vatAmount,
       sequence_number: parseInt(timestamp),
       terminal_id: 'TERMINAL-01',
       // Store detailed discount information
