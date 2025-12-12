@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
 import { PerformanceMonitor } from "@/services/performance/performanceMonitor";
+// Static imports for offline support - eliminates dynamic import overhead
+import { OfflinePOSManager } from "@/services/offline/OfflinePOSManager";
+import { backgroundSyncHealth } from "@/services/inventory/backgroundSyncHealthService";
 
 export interface SeniorDiscount {
   id: string;
@@ -116,12 +119,11 @@ export function useTransactionHandler(storeId: string) {
       setIsProcessing(true);
       console.log('🚀 Using streamlined transaction processing...', transactionData);
 
-      // Import sync validator
-      const { InventorySyncValidator } = await import('@/services/inventory/inventorySyncValidator');
-      const syncValidator = InventorySyncValidator.getInstance();
-
-      // Check if we can process sales based on sync health
-      const syncCheck = await syncValidator.canProcessSale();
+      // Initialize background sync health if first call (idempotent)
+      backgroundSyncHealth.initialize().catch(console.error);
+      
+      // Check cached sync health - NO DATABASE QUERY
+      const syncCheck = backgroundSyncHealth.canProcessSale();
       if (!syncCheck.allowed) {
         throw new Error(`Sales temporarily disabled: ${syncCheck.reason}`);
       }
@@ -323,8 +325,7 @@ export function useTransactionHandler(storeId: string) {
       if (!navigator.onLine) {
         console.log('📴 [OFFLINE MODE] Routing transaction through offline system with print queue support');
         
-        // Import offline POS manager
-        const { OfflinePOSManager } = await import('@/services/offline/OfflinePOSManager');
+        // Use static import - no dynamic import overhead
         const offlineManager = OfflinePOSManager.getInstance();
         
         // Prepare offline transaction data
@@ -383,8 +384,7 @@ export function useTransactionHandler(storeId: string) {
         console.log('📴 [NETWORK ERROR DETECTED] Routing to offline mode despite navigator.onLine=true');
         
         try {
-          // Import offline POS manager
-          const { OfflinePOSManager } = await import('@/services/offline/OfflinePOSManager');
+          // Use static import - no dynamic import overhead
           const offlineManager = OfflinePOSManager.getInstance();
           
           // Ensure manager is initialized
