@@ -6,10 +6,12 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
-import { AtomicInventoryService, DeductionItem } from "@/services/inventory/atomicInventoryService";
+import { BatchedAtomicInventoryService, DeductionItem } from "@/services/inventory/batchedAtomicInventoryService";
+import { AtomicInventoryService } from "@/services/inventory/atomicInventoryService";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
-import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
+import { batchEnrichCartItems, DetailedTransactionItem } from "./batchedTransactionItemsService";
+import { insertTransactionItems } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
 import { extractBaseProductName } from "@/utils/productNameUtils";
 import { toast } from "sonner";
@@ -219,7 +221,8 @@ class StreamlinedTransactionService {
                   quantity: item.quantity
                 }));
 
-                const result = await AtomicInventoryService.deductInventoryAtomic({
+                // Use BATCHED inventory service for optimized performance
+                const result = await BatchedAtomicInventoryService.deductInventoryAtomic({
                   transactionId: transaction.id,
                   storeId: transactionData.storeId,
                   items: deductionItems,
@@ -456,7 +459,8 @@ class StreamlinedTransactionService {
   ): Promise<void> {
     try {
       if (cartItems && cartItems.length > 0) {
-        const enrichedItems = await enrichCartItemsWithCategories(cartItems);
+        // Use BATCHED enrichment for optimized performance
+        const enrichedItems = await batchEnrichCartItems(cartItems);
         await insertTransactionItems(transactionId, enrichedItems);
       } else {
         // Create basic items from transaction data - handle combo products
