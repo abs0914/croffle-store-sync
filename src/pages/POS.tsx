@@ -382,7 +382,7 @@ export default function POS() {
         deliveryPlatform,
         deliveryOrderNumber,
         seniorDiscounts,        // ✅ Pass senior discounts detail
-        otherDiscount,          // ✅ Pass other discount detail
+        otherDiscount as any,          // ✅ Pass other discount detail
         effectiveCalculations?.vatExemption  // ✅ Pass VAT exemption amount
       );
 
@@ -475,7 +475,7 @@ export default function POS() {
           selectedCustomer={selectedCustomer}
           setSelectedCustomer={setSelectedCustomer}
           discount={discount}
-          discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | undefined}
+          discountType={discountType as any}
           discountIdNumber={discountIdNumber}
           seniorDiscounts={seniorDiscounts}
           otherDiscount={otherDiscount}

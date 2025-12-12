@@ -87,7 +87,19 @@ serve(async (req) => {
       );
     }
 
-    console.log(`📊 Found ${transactions.length} transactions for ${salesDate}`);
+    // Fetch refunds for the date
+    const { data: refunds, error: refundError } = await supabase
+      .from('refunds')
+      .select('*')
+      .eq('store_id', storeId)
+      .gte('refund_date', `${salesDate}T00:00:00`)
+      .lt('refund_date', `${salesDate}T23:59:59`);
+
+    if (refundError) {
+      console.warn('Error fetching refunds (non-blocking):', refundError.message);
+    }
+
+    console.log(`📊 Found ${transactions.length} transactions and ${refunds?.length || 0} refunds for ${salesDate}`);
 
     // Calculate values from transactions according to RLC checklist
     let grossSales = 0;
@@ -96,10 +108,10 @@ serve(async (req) => {
     let discountedTransactionCount = 0;
     let voidAmount = 0;
     let voidCount = 0;
-    let refundAmount = 0;
-    let refundCount = 0;
     let creditSales = 0; // Non-cash sales (card, e-wallet, etc.)
     let pwdDiscounts = 0;
+    let seniorDiscounts = 0;
+    let transactionCount = 0;
 
     transactions.forEach((t: any) => {
       // Void transactions (status === 'voided' or 'void') - count but exclude from gross sales
@@ -109,26 +121,33 @@ serve(async (req) => {
         return; // Skip voided transactions from gross sales calculation
       }
 
-      // Gross Sales = total including VAT (RLC requirement) - excludes voided transactions
-      grossSales += t.total || t.subtotal || 0;
+      transactionCount++;
+
+      // ✅ RLC COMPLIANCE: Gross Sales = total (VAT-inclusive) - excludes voided transactions
+      grossSales += t.total || 0;
       vatAmount += t.vat_amount || 0;
       
-      // Total discounts
-      const discountAmt = t.discount_amount || 0;
+      // ✅ FIX: Use 'discount' field (correct column name), not 'discount_amount'
+      const discountAmt = t.discount || 0;
       totalDiscounts += discountAmt;
       if (discountAmt > 0) {
         discountedTransactionCount++;
       }
 
-      // PWD discounts
-      if (t.discount_type === 'pwd' || t.pwd_discount) {
-        pwdDiscounts += t.pwd_discount || t.discount_amount || 0;
+      // PWD discounts - check discount_type first, then pwd_discount field
+      if (t.discount_type === 'pwd') {
+        pwdDiscounts += t.pwd_discount || discountAmt || 0;
+      } else if (t.pwd_discount && t.pwd_discount > 0) {
+        pwdDiscounts += t.pwd_discount;
       }
 
-      // Refund transactions
-      if (t.status === 'refunded' || t.order_status === 'refunded') {
-        refundAmount += t.total || 0;
-        refundCount++;
+      // Senior discounts - check discount_type and senior_citizen_discount field
+      if (t.discount_type === 'senior') {
+        seniorDiscounts += t.senior_citizen_discount || t.senior_discount || discountAmt || 0;
+      } else if (t.senior_citizen_discount && t.senior_citizen_discount > 0) {
+        seniorDiscounts += t.senior_citizen_discount;
+      } else if (t.senior_discount && t.senior_discount > 0) {
+        seniorDiscounts += t.senior_discount;
       }
 
       // Credit sales (non-cash payments)
@@ -138,6 +157,16 @@ serve(async (req) => {
       }
     });
 
+    // ✅ Calculate refund amount and count from refunds table
+    let refundAmount = 0;
+    let refundCount = 0;
+    if (refunds && refunds.length > 0) {
+      refunds.forEach((r: any) => {
+        refundAmount += r.refund_amount || 0;
+        refundCount++;
+      });
+    }
+
     // Calculate credit VAT (VAT portion of credit sales)
     // Assuming 12% VAT: creditVat = creditSales * 0.12 / 1.12
     const creditVat = creditSales * 0.12 / 1.12;
@@ -145,7 +174,9 @@ serve(async (req) => {
     // Non-VAT sales (vat_exempt + zero_rated)
     let nonVatSales = 0;
     transactions.forEach((t: any) => {
-      nonVatSales += (t.vat_exempt_sales || 0) + (t.zero_rated_sales || 0);
+      if (t.status !== 'voided' && t.status !== 'void') {
+        nonVatSales += (t.vat_exempt_sales || 0) + (t.zero_rated_sales || 0);
+      }
     });
 
     // Get previous EOD counter and grand total
@@ -205,7 +236,7 @@ serve(async (req) => {
       // Line 02: POS Terminal No. (width 2)
       formatField(2, '01', 2),
       
-      // Line 03: Gross Sales (width 16, 2 decimals)
+      // Line 03: Gross Sales (width 16, 2 decimals) - VAT-inclusive total
       formatField(3, grossSales, 16, 2),
       
       // Line 04: Total Tax/VAT (width 12, 2 decimals)
@@ -296,6 +327,19 @@ serve(async (req) => {
 
     console.log(`📄 Generated file: ${filename}`);
     console.log(`📋 File content preview:\n${fileContent}`);
+    console.log(`📊 RLC Values Summary:`, {
+      grossSales,
+      vatAmount,
+      totalDiscounts,
+      seniorDiscounts,
+      pwdDiscounts,
+      refundAmount,
+      refundCount,
+      voidAmount,
+      voidCount,
+      creditSales,
+      transactionCount,
+    });
 
     // SFTP upload logic
     let sftpSuccess = false;
@@ -353,9 +397,13 @@ serve(async (req) => {
           grossSales,
           vatAmount,
           totalDiscounts,
+          seniorDiscounts,
+          pwdDiscounts,
+          refundAmount,
+          refundCount,
           discountedTransactionCount,
           creditSales,
-          transactionCount: transactions.length,
+          transactionCount,
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

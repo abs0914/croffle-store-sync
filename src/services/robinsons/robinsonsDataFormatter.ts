@@ -21,11 +21,20 @@ interface Transaction {
   status?: string;
 }
 
+interface Refund {
+  id: string;
+  refund_amount: number;
+  refund_vat_amount?: number;
+  refund_date: string;
+  refund_receipt_number?: string;
+}
+
 interface RobinsonsData {
   tenantId: string;
   posTerminalNo: string;
   salesDate: Date;
   transactions: Transaction[];
+  refunds: Refund[];
   previousEODCounter: number;
   previousGrandTotal: number;
   currentEODCounter: number;
@@ -110,8 +119,9 @@ export class RobinsonsDataFormatter {
 
   /**
    * Calculate all required values from transactions
+   * RLC COMPLIANCE: Gross sales uses `total` (VAT-inclusive) per RLC requirement
    */
-  private calculateValues(transactions: Transaction[]) {
+  private calculateValues(transactions: Transaction[], refunds: Refund[]) {
     let grossSales = 0;
     let vatAmount = 0;
     let vatSales = 0;
@@ -120,8 +130,11 @@ export class RobinsonsDataFormatter {
     let totalDiscounts = 0;
     let seniorDiscounts = 0;
     let pwdDiscounts = 0;
+    let otherDiscounts = 0;
     let voidAmount = 0;
     let voidCount = 0;
+    let refundAmount = 0;
+    let refundCount = 0;
     let cashSales = 0;
     let chargeSales = 0;
     let creditCardSales = 0;
@@ -138,19 +151,41 @@ export class RobinsonsDataFormatter {
       }
 
       transactionCount++;
-      grossSales += t.subtotal || t.total;
+      
+      // ✅ RLC COMPLIANCE FIX: Use `total` (VAT-inclusive) for gross sales, not subtotal
+      // Per Robinsons Land Corporation requirements, gross sales should be the transaction total
+      grossSales += t.total || 0;
+      
+      // VAT calculations
       vatAmount += t.vat_amount || 0;
       vatSales += t.vat_sales || 0;
       vatExemptSales += t.vat_exempt_sales || 0;
       zeroRatedSales += t.zero_rated_sales || 0;
-      totalDiscounts += t.discount || 0;
       
-      // Senior discount - check both field names and discount_type
-      const seniorAmt = t.senior_discount || t.senior_citizen_discount || 0;
-      seniorDiscounts += t.discount_type === 'senior' ? seniorAmt : 0;
+      // Total discount from the discount field
+      const txnDiscount = t.discount || 0;
+      totalDiscounts += txnDiscount;
       
-      // PWD discount - use pwd_discount field when discount_type is 'pwd'
-      pwdDiscounts += t.discount_type === 'pwd' ? (t.pwd_discount || 0) : 0;
+      // Senior discount - check discount_type first, then fallback to fields
+      if (t.discount_type === 'senior') {
+        seniorDiscounts += t.senior_citizen_discount || t.senior_discount || txnDiscount || 0;
+      } else {
+        // May have senior discount amount stored even if type is different
+        seniorDiscounts += t.senior_citizen_discount || t.senior_discount || 0;
+      }
+      
+      // PWD discount - check discount_type and pwd_discount field
+      if (t.discount_type === 'pwd') {
+        pwdDiscounts += t.pwd_discount || txnDiscount || 0;
+      } else {
+        pwdDiscounts += t.pwd_discount || 0;
+      }
+      
+      // Other discounts (employee, loyalty, regular, custom, promo, etc.)
+      const discountTypesOther = ['employee', 'loyalty', 'promo', 'complimentary', 'regular', 'custom', 'athletes_coaches', 'solo_parent'];
+      if (t.discount_type && discountTypesOther.includes(t.discount_type)) {
+        otherDiscounts += txnDiscount;
+      }
 
       // Payment method breakdown
       const paymentMethod = t.payment_method?.toLowerCase() || 'cash';
@@ -163,12 +198,20 @@ export class RobinsonsDataFormatter {
         giftCertificateSales += t.total;
         nonCashTotal += t.total;
       } else {
+        // e-wallet, debit, etc.
         chargeSales += t.total;
         nonCashTotal += t.total;
       }
     });
 
-    const netSales = grossSales - vatAmount - totalDiscounts;
+    // ✅ Process refunds separately
+    refunds.forEach((r) => {
+      refundAmount += r.refund_amount || 0;
+      refundCount++;
+    });
+
+    // Net sales = Gross sales - VAT - Discounts - Refunds
+    const netSales = grossSales - vatAmount - totalDiscounts - refundAmount;
     const beginningReceiptNumber = transactions[0]?.receipt_number || '0000001';
     const endingReceiptNumber = transactions[transactions.length - 1]?.receipt_number || '0000001';
 
@@ -181,8 +224,11 @@ export class RobinsonsDataFormatter {
       totalDiscounts,
       seniorDiscounts,
       pwdDiscounts,
+      otherDiscounts,
       voidAmount,
       voidCount,
+      refundAmount,
+      refundCount,
       cashSales,
       chargeSales,
       creditCardSales,
@@ -199,7 +245,7 @@ export class RobinsonsDataFormatter {
    * Generate the 30-line TXT format as per Robinsons requirements
    */
   async generate30LineFormat(data: RobinsonsData): Promise<string> {
-    const calculations = this.calculateValues(data.transactions);
+    const calculations = this.calculateValues(data.transactions, data.refunds);
     
     // Format date as YYYYMMDD
     const salesDateStr = data.salesDate.toISOString().split('T')[0].replace(/-/g, '');
@@ -211,13 +257,13 @@ export class RobinsonsDataFormatter {
     const lines = [
       this.formatField(1, data.tenantId, 10), // Tenant ID
       this.formatField(2, data.posTerminalNo, 2), // POS Terminal Number
-      this.formatField(3, calculations.grossSales, 16, 2), // Gross Sales
+      this.formatField(3, calculations.grossSales, 16, 2), // Gross Sales (VAT-inclusive)
       this.formatField(4, calculations.vatAmount, 12, 2), // VAT Amount
       this.formatField(5, calculations.voidAmount, 12, 2), // Void Amount
       this.formatField(6, calculations.voidCount, 6), // Number of Void Transactions
       this.formatField(7, calculations.seniorDiscounts, 12, 2), // Senior Citizen Discount
       this.formatField(8, calculations.pwdDiscounts, 12, 2), // PWD Discount
-      this.formatField(9, 0, 12, 2), // Other Discount (placeholder)
+      this.formatField(9, calculations.otherDiscounts, 12, 2), // Other Discount
       this.formatField(10, calculations.totalDiscounts, 12, 2), // Total Discount
       this.formatField(11, calculations.vatSales, 16, 2), // VAT Sales
       this.formatField(12, calculations.vatExemptSales, 16, 2), // VAT Exempt Sales
@@ -237,8 +283,8 @@ export class RobinsonsDataFormatter {
       this.formatField(26, data.previousGrandTotal, 16, 2), // Previous Grand Total
       this.formatField(27, data.currentEODCounter, 6), // Current EOD Counter
       this.formatField(28, currentGrandTotal, 16, 2), // Current Grand Total
-      this.formatField(29, 0, 8), // Reserved Field 1
-      this.formatField(30, 0, 8), // Reserved Field 2
+      this.formatField(29, calculations.refundAmount, 12, 2), // Refund Amount
+      this.formatField(30, calculations.refundCount, 6), // Number of Refund Transactions
     ];
     
     return lines.join('\n');
@@ -262,6 +308,27 @@ export class RobinsonsDataFormatter {
     }
 
     return data as Transaction[];
+  }
+
+  /**
+   * Fetch refunds for a specific store and date
+   */
+  async fetchRefunds(storeId: string, salesDate: string): Promise<Refund[]> {
+    const { data, error } = await supabase
+      .from('refunds')
+      .select('*')
+      .eq('store_id', storeId)
+      .gte('refund_date', `${salesDate}T00:00:00`)
+      .lt('refund_date', `${salesDate}T23:59:59`)
+      .order('refund_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching refunds:', error);
+      // Don't throw - refunds might not exist for this date
+      return [];
+    }
+
+    return data as Refund[];
   }
 
   /**
