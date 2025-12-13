@@ -27,9 +27,9 @@ interface POSContentProps {
   discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent';
   discountIdNumber?: string;
   seniorDiscounts: SeniorDiscount[];
-  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string } | null;
+  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number } | null;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', idNumber?: string, justification?: string) => void;
-  handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string }) => void;
+  handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number }) => void;
   handlePaymentComplete: (
     paymentMethod: 'cash' | 'card' | 'e-wallet', 
     amountTendered: number, 

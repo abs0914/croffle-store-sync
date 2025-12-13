@@ -13,9 +13,9 @@ interface OptimizedCartViewProps {
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
+  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'bogo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent';
   discountIdNumber?: string;
-  handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
+  handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'bogo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', idNumber?: string, justification?: string) => void;
   handlePaymentComplete: (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,

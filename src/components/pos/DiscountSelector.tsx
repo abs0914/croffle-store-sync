@@ -11,7 +11,7 @@ import { BOGOService } from "@/services/cart/BOGOService";
 
 interface DiscountSelectorProps {
   subtotal: number;
-  onApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'bogo', idNumber?: string) => void;
+  onApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'bogo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', idNumber?: string, justification?: string) => void;
   currentDiscount: number;
   currentDiscountType?: string;
   currentDiscountIdNumber?: string;

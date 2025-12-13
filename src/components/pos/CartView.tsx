@@ -18,11 +18,13 @@ import { CartHeader, CartValidationMessage, OptimizedCartItemsList, CartSummary,
 interface CartViewProps {
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
-  handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
+  handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', idNumber?: string, justification?: string) => void;
   handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: {
-    type: 'pwd' | 'employee' | 'loyalty' | 'promo';
+    type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent';
     amount: number;
     idNumber?: string;
+    justification?: string;
+    customPercentage?: number;
   }) => void;
   handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string, cartItems?: CartItem[], cartCalculations?: any) => Promise<boolean>;
   isShiftActive: boolean;

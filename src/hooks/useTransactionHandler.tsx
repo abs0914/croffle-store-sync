@@ -29,7 +29,7 @@ export function useTransactionHandler(storeId: string) {
   const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent' | undefined>(undefined);
   const [discountIdNumber, setDiscountIdNumber] = useState<string | undefined>(undefined);
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
-  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string } | undefined>(undefined);
+  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number } | undefined>(undefined);
   
   const { clearCart, applyDiscounts: applyCartDiscounts } = useCart();
 
@@ -68,7 +68,7 @@ export function useTransactionHandler(storeId: string) {
 
   const handleApplyMultipleDiscounts = (
     seniorDiscountsArray: SeniorDiscount[],
-    otherDiscountValue?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string }
+    otherDiscountValue?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number }
   ) => {
     setSeniorDiscounts(seniorDiscountsArray);
     setOtherDiscount(otherDiscountValue);
@@ -174,7 +174,7 @@ export function useTransactionHandler(storeId: string) {
     deliveryPlatform?: string,
     deliveryOrderNumber?: string,
     seniorDiscountsParam?: SeniorDiscount[],
-    otherDiscountParam?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string },
+    otherDiscountParam?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number },
     vatExemption?: number
   ) => {
     try {
