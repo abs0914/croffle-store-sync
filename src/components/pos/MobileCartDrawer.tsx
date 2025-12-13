@@ -21,7 +21,11 @@ interface MobileCartDrawerProps {
     paymentDetails?: any,
     orderType?: string,
     deliveryPlatform?: string,
-    deliveryOrderNumber?: string
+    deliveryOrderNumber?: string,
+    cartItems?: any[],
+    cartCalculations?: any,
+    seniorDiscountsParam?: any[],
+    otherDiscountParam?: { type: string; amount: number; idNumber?: string; justification?: string; customPercentage?: number } | null
   ) => Promise<boolean>;
   isShiftActive: boolean;
   open: boolean;

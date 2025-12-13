@@ -26,7 +26,7 @@ interface CartViewProps {
     justification?: string;
     customPercentage?: number;
   }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string, cartItems?: CartItem[], cartCalculations?: any) => Promise<boolean>;
+  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string, cartItems?: CartItem[], cartCalculations?: any, seniorDiscountsParam?: SeniorDiscount[], otherDiscountParam?: OtherDiscount | null) => Promise<boolean>;
   isShiftActive: boolean;
 }
 const CartView = memo(function CartView({
@@ -166,7 +166,7 @@ const CartView = memo(function CartView({
         return false;
       }
 
-      // Proceed with payment - PASS cartItems AND calculations as parameters
+      // Proceed with payment - PASS cartItems, calculations AND discounts as parameters
       const success = await handlePaymentComplete(
         paymentMethod, 
         amountTendered, 
@@ -175,7 +175,9 @@ const CartView = memo(function CartView({
         deliveryPlatform, 
         deliveryOrderNumber,
         currentCartItems, // Pass cart items explicitly
-        currentCalculations // Pass calculations explicitly
+        currentCalculations, // Pass calculations explicitly
+        seniorDiscounts, // Pass senior discounts explicitly
+        otherDiscount // Pass other discount explicitly (for complimentary check)
       );
       if (success) {
         setIsPaymentDialogOpen(false);
