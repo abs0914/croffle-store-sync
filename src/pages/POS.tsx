@@ -323,7 +323,10 @@ export default function POS() {
       const capturedTotal = effectiveCalculations?.finalTotal || 0;
       
       // 🚨 VALIDATION: Check if captured values are valid
-      if (capturedTotal === 0 && currentItems.length > 0) {
+      // ✅ Allow zero total for complimentary transactions
+      const isComplimentary = otherDiscount?.type === 'complimentary';
+      
+      if (capturedTotal === 0 && currentItems.length > 0 && !isComplimentary) {
         const hasItemsWithPrices = currentItems.every(i => i.price != null && i.price >= 0);
         
         console.error("❌ CRITICAL: Total is 0 despite having items in cart!", {
@@ -357,6 +360,10 @@ export default function POS() {
             : "Some items are missing prices. Please remove them and try again."
         );
         return false; // Block transaction
+      }
+      
+      if (isComplimentary) {
+        console.log('📋 Processing complimentary transaction (₱0 total allowed)');
       }
       
       // Convert cart items to the format expected by the transaction handler
