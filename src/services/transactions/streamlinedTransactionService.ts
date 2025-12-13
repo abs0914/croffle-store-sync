@@ -345,8 +345,18 @@ class StreamlinedTransactionService {
    */
   private async createTransactionRecord(data: StreamlinedTransactionData): Promise<Transaction | null> {
     // ✅ Guard against invalid transaction data
-    if (data.total <= 0) {
-      throw new Error('Invalid transaction: total amount must be greater than zero');
+    if (data.total < 0) {
+      throw new Error('Invalid transaction: total amount cannot be negative');
+    }
+    
+    // For zero-total transactions (complimentary), validate that it's intentional
+    if (data.total === 0) {
+      const isComplimentary = data.discountType === 'complimentary' || 
+        data.otherDiscount?.type === 'complimentary';
+      if (!isComplimentary) {
+        throw new Error('Invalid transaction: zero total requires complimentary discount');
+      }
+      console.log('📋 Processing complimentary transaction (₱0 total)');
     }
     
     if (data.subtotal < 0) {
