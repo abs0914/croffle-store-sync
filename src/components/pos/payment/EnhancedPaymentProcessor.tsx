@@ -212,7 +212,7 @@ export default function EnhancedPaymentProcessor({
         <Button 
           size="lg" 
           className="w-full font-semibold"
-          disabled={total <= 0}
+          disabled={total < 0}
           onClick={() => {
             setIsOpen(true);
             setAmountTendered(paymentMethod === 'cash' ? Math.ceil(total / 50) * 50 : total);
