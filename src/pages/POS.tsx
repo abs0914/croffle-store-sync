@@ -220,7 +220,9 @@ export default function POS() {
     deliveryPlatform?: string,
     deliveryOrderNumber?: string,
     cartItems?: any[], // Accept cart items as parameter
-    cartCalculations?: any // Accept calculations as parameter
+    cartCalculations?: any, // Accept calculations as parameter
+    seniorDiscountsParam?: any[], // Accept senior discounts as parameter
+    otherDiscountParam?: { type: string; amount: number; idNumber?: string; justification?: string; customPercentage?: number } | null // Accept other discount as parameter
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
@@ -324,7 +326,9 @@ export default function POS() {
       
       // 🚨 VALIDATION: Check if captured values are valid
       // ✅ Allow zero total for complimentary transactions
-      const isComplimentary = otherDiscount?.type === 'complimentary';
+      // Use passed parameter (from CartView), fallback to hook state
+      const effectiveOtherDiscount = otherDiscountParam ?? otherDiscount;
+      const isComplimentary = effectiveOtherDiscount?.type === 'complimentary';
       
       if (capturedTotal === 0 && currentItems.length > 0 && !isComplimentary) {
         const hasItemsWithPrices = currentItems.every(i => i.price != null && i.price >= 0);
@@ -388,9 +392,9 @@ export default function POS() {
         orderType,
         deliveryPlatform,
         deliveryOrderNumber,
-        seniorDiscounts,        // ✅ Pass senior discounts detail
-        otherDiscount as any,          // ✅ Pass other discount detail
-        effectiveCalculations?.vatExemption  // ✅ Pass VAT exemption amount
+        seniorDiscountsParam ?? seniorDiscounts,        // ✅ Use passed or fallback
+        effectiveOtherDiscount as any,                  // ✅ Use passed or fallback
+        effectiveCalculations?.vatExemption             // ✅ Pass VAT exemption amount
       );
 
       return success;
