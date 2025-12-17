@@ -178,6 +178,120 @@ export class BIREJournalService {
   }
 
   /**
+   * Export e-Journal as TXT (BIR-compliant plain text format)
+   */
+  static exportAsTXT(ejournalData: EJournalData, storeName: string = '', storeAddress: string = '', tin: string = ''): string {
+    const lines: string[] = [];
+    const separator = '='.repeat(60);
+    const thinSeparator = '-'.repeat(60);
+    
+    // Header
+    lines.push(separator);
+    lines.push('                    BIR ELECTRONIC JOURNAL');
+    lines.push(separator);
+    lines.push('');
+    lines.push(`STORE NAME      : ${storeName}`);
+    lines.push(`ADDRESS         : ${storeAddress}`);
+    lines.push(`TIN             : ${tin}`);
+    lines.push(`TERMINAL ID     : ${ejournalData.terminalId}`);
+    lines.push(`JOURNAL DATE    : ${ejournalData.journalDate}`);
+    lines.push(`GENERATED AT    : ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`);
+    lines.push('');
+    lines.push(thinSeparator);
+    lines.push('                    TRANSACTION SUMMARY');
+    lines.push(thinSeparator);
+    lines.push(`BEGINNING SI NO : ${ejournalData.beginningReceiptNumber}`);
+    lines.push(`ENDING SI NO    : ${ejournalData.endingReceiptNumber}`);
+    lines.push(`TOTAL TRANS     : ${ejournalData.transactionCount}`);
+    lines.push('');
+    lines.push(thinSeparator);
+    lines.push('                      SALES SUMMARY');
+    lines.push(thinSeparator);
+    lines.push(`GROSS SALES     : ${ejournalData.grossSales.toFixed(2).padStart(15)}`);
+    lines.push(`LESS: DISCOUNTS : ${ejournalData.totalDiscounts.toFixed(2).padStart(15)}`);
+    lines.push(`NET SALES       : ${ejournalData.netSales.toFixed(2).padStart(15)}`);
+    lines.push('');
+    lines.push(thinSeparator);
+    lines.push('                      VAT ANALYSIS');
+    lines.push(thinSeparator);
+    lines.push(`VATABLE SALES   : ${ejournalData.vatSales.toFixed(2).padStart(15)}`);
+    lines.push(`VAT AMOUNT      : ${ejournalData.vatAmount.toFixed(2).padStart(15)}`);
+    lines.push(`VAT EXEMPT      : ${ejournalData.vatExemptSales.toFixed(2).padStart(15)}`);
+    lines.push(`ZERO-RATED      : ${ejournalData.zeroRatedSales.toFixed(2).padStart(15)}`);
+    lines.push('');
+    lines.push(thinSeparator);
+    lines.push('                    DISCOUNT BREAKDOWN');
+    lines.push(thinSeparator);
+    lines.push(`SENIOR CITIZEN  : ${ejournalData.seniorDiscounts.toFixed(2).padStart(15)}`);
+    lines.push(`PWD             : ${ejournalData.pwdDiscounts.toFixed(2).padStart(15)}`);
+    lines.push(`OTHER DISCOUNTS : ${(ejournalData.totalDiscounts - ejournalData.seniorDiscounts - ejournalData.pwdDiscounts).toFixed(2).padStart(15)}`);
+    lines.push('');
+    lines.push(separator);
+    lines.push('                   TRANSACTION DETAILS');
+    lines.push(separator);
+    lines.push('');
+    
+    // Transaction details header
+    lines.push('SI NO.          SEQ   GROSS      DISC       NET        VAT      PAYMENT');
+    lines.push(thinSeparator);
+    
+    // Transaction rows
+    ejournalData.transactions.forEach(tx => {
+      const siNo = tx.receiptNumber.padEnd(16);
+      const seq = tx.sequenceNumber.toString().padStart(4);
+      const gross = tx.grossAmount.toFixed(2).padStart(10);
+      const disc = tx.discountAmount.toFixed(2).padStart(10);
+      const net = tx.netAmount.toFixed(2).padStart(10);
+      const vat = tx.vatAmount.toFixed(2).padStart(10);
+      const payment = tx.paymentMethod.substring(0, 8).padEnd(8);
+      
+      lines.push(`${siNo}${seq}${gross}${disc}${net}${vat}  ${payment}`);
+      
+      // Add discount info if applicable
+      if (tx.discountAmount > 0 && tx.discountType) {
+        lines.push(`                      ** ${tx.customerType} DISCOUNT **`);
+      }
+    });
+    
+    lines.push(thinSeparator);
+    
+    // Totals row
+    const totalGross = ejournalData.grossSales.toFixed(2).padStart(10);
+    const totalDisc = ejournalData.totalDiscounts.toFixed(2).padStart(10);
+    const totalNet = ejournalData.netSales.toFixed(2).padStart(10);
+    const totalVat = ejournalData.vatAmount.toFixed(2).padStart(10);
+    lines.push(`TOTALS:              ${totalGross}${totalDisc}${totalNet}${totalVat}`);
+    
+    lines.push('');
+    lines.push(separator);
+    lines.push('                    END OF E-JOURNAL');
+    lines.push(separator);
+    lines.push('');
+    lines.push('This is a BIR-compliant electronic journal.');
+    lines.push('Keep this record for at least 10 years.');
+    lines.push('');
+    
+    return lines.join('\n');
+  }
+
+  /**
+   * Download e-Journal as TXT file
+   */
+  static downloadTXT(ejournalData: EJournalData, storeName: string = '', storeAddress: string = '', tin: string = ''): void {
+    const txtData = this.exportAsTXT(ejournalData, storeName, storeAddress, tin);
+    const blob = new Blob([txtData], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ejournal_${ejournalData.storeId}_${ejournalData.journalDate}_${ejournalData.terminalId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
    * Download e-Journal as JSON file
    */
   static downloadJSON(ejournalData: EJournalData): void {
