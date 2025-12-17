@@ -17,15 +17,24 @@ const CORE_ASSETS = [
   // Additional assets will be cached as they're requested
 ];
 
-// Install event - cache core assets
+// Install event - cache core assets individually (resilient to failures)
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
+      .then(async (cache) => {
         console.log('[SW] Caching core assets');
-        return cache.addAll(CORE_ASSETS);
+        // Cache each asset individually to prevent one failure from blocking all
+        for (const asset of CORE_ASSETS) {
+          try {
+            await cache.add(asset);
+            console.log('[SW] Cached:', asset);
+          } catch (error) {
+            console.warn('[SW] Failed to cache:', asset, error.message);
+            // Continue with other assets even if one fails
+          }
+        }
       })
       .then(() => self.skipWaiting())
   );
