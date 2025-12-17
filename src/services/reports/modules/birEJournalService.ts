@@ -76,6 +76,10 @@ export class BIREJournalService {
     try {
       console.log('📋 E-Journal query params:', { storeId, date, terminalId });
       
+      // Ensure date is in ISO format (YYYY-MM-DD)
+      const isoDate = date.includes('-') ? date : date;
+      console.log('📋 E-Journal using ISO date:', isoDate);
+      
       // Build query - terminal_id filter is optional
       let query = supabase
         .from('transactions')
@@ -86,8 +90,8 @@ export class BIREJournalService {
           )
         `)
         .eq('store_id', storeId)
-        .gte('created_at', `${date}T00:00:00`)
-        .lte('created_at', `${date}T23:59:59`)
+        .gte('created_at', `${isoDate}T00:00:00`)
+        .lte('created_at', `${isoDate}T23:59:59.999`)
         .eq('status', 'completed')
         .order('sequence_number');
       
@@ -100,11 +104,19 @@ export class BIREJournalService {
 
       console.log('📋 E-Journal query result:', { 
         count: transactions?.length || 0, 
-        error: error?.message 
+        error: error?.message,
+        firstTransaction: transactions?.[0]?.receipt_number
       });
 
-      if (error) throw error;
-      if (!transactions || transactions.length === 0) return null;
+      if (error) {
+        console.error('📋 E-Journal query error:', error);
+        throw error;
+      }
+      
+      if (!transactions || transactions.length === 0) {
+        console.log('📋 E-Journal: No transactions found for', { storeId, date: isoDate });
+        return null;
+      }
 
       // Calculate totals
       let grossSales = 0;
@@ -121,8 +133,12 @@ export class BIREJournalService {
         // Calculate grossAmount with fallbacks for missing subtotal
         let grossAmount = tx.subtotal;
         if (!grossAmount || grossAmount <= 0) {
-          const itemsTotal = (tx.items as any[])?.reduce((sum: number, item: any) => 
-            sum + ((item.quantity || 1) * (item.unitPrice || item.unit_price || 0)), 0) || 0;
+          // Parse items if it's a string
+          const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
+          const itemsTotal = Array.isArray(items) 
+            ? items.reduce((sum: number, item: any) => 
+                sum + ((item.quantity || 1) * (item.unitPrice || item.unit_price || 0)), 0)
+            : 0;
           grossAmount = itemsTotal || ((tx.total || 0) + (tx.discount || 0));
         }
         const discountAmount = tx.discount || 0;
