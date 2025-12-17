@@ -274,7 +274,8 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
           customerData,
           storeFormatted,
           txData.cashier_name || 'Cashier',
-          false // Don't auto-open drawer for reprints
+          false, // Don't auto-open drawer for reprints
+          true   // isReprint = true - adds REPRINT watermark with date/time
         );
 
         if (success) {

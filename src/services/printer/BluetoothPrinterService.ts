@@ -58,7 +58,8 @@ export class BluetoothPrinterService {
     customer?: Customer | null,
     store?: Store,
     cashierName?: string,
-    autoOpenDrawer?: boolean
+    autoOpenDrawer?: boolean,
+    isReprint?: boolean
   ): Promise<boolean> {
     console.log('🖨️ [BT-PRINTER] printReceipt called', {
       isOnline: navigator.onLine,
@@ -66,7 +67,8 @@ export class BluetoothPrinterService {
       receiptNumber: transaction.receiptNumber,
       hasStore: !!store,
       storeName: store?.name,
-      hasCustomer: !!customer
+      hasCustomer: !!customer,
+      isReprint: !!isReprint
     });
 
     const printer = PrinterDiscovery.getConnectedPrinter();
@@ -92,11 +94,12 @@ export class BluetoothPrinterService {
       console.log('✅ [BT-PRINTER] Connection validated, proceeding with print');
 
       console.log('🖨️ [BT-PRINTER] Formatting receipt...');
-      const receiptData = PrinterTypeManager.formatReceipt(printer, transaction, customer, store, cashierName);
+      const receiptData = PrinterTypeManager.formatReceipt(printer, transaction, customer, store, cashierName, isReprint);
       console.log('📄 [BT-PRINTER] Receipt formatted successfully', {
         dataLength: receiptData.length,
         estimatedChunks: Math.ceil(new TextEncoder().encode(receiptData).length / 256),
-        receiptNumber: transaction.receiptNumber
+        receiptNumber: transaction.receiptNumber,
+        isReprint: !!isReprint
       });
       
       console.log('📡 [BT-PRINTER] Sending data to printer...', {
@@ -157,15 +160,15 @@ export class BluetoothPrinterService {
     }
   }
 
-  static async printZReading(zReadingData: any): Promise<boolean> {
+  static async printZReading(zReadingData: any, isReprint?: boolean): Promise<boolean> {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
       throw new Error('No printer connected');
     }
 
     try {
-      console.log('🖨️ Preparing Z-Reading report...');
-      const reportData = PrinterTypeManager.formatZReading(printer, zReadingData);
+      console.log('🖨️ Preparing Z-Reading report...', { isReprint: !!isReprint });
+      const reportData = PrinterTypeManager.formatZReading(printer, zReadingData, isReprint);
       console.log(`📄 Z-Reading formatted (${reportData.length} characters)`);
 
       const success = await this.sendDataToPrinter(printer, reportData);
@@ -181,15 +184,15 @@ export class BluetoothPrinterService {
     }
   }
 
-  static async printXReading(xReadingData: any): Promise<boolean> {
+  static async printXReading(xReadingData: any, isReprint?: boolean): Promise<boolean> {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
       throw new Error('No printer connected');
     }
 
     try {
-      console.log('🖨️ Preparing X-Reading report...');
-      const reportData = PrinterTypeManager.formatXReading(printer, xReadingData);
+      console.log('🖨️ Preparing X-Reading report...', { isReprint: !!isReprint });
+      const reportData = PrinterTypeManager.formatXReading(printer, xReadingData, isReprint);
       console.log(`📄 X-Reading formatted (${reportData.length} characters)`);
 
       const success = await this.sendDataToPrinter(printer, reportData);
