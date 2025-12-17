@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Upload, FileText, Plus } from 'lucide-react';
-import { InventoryStats } from './components/inventoryManagement/InventoryStats';
+import { InventoryStats, StockFilterType } from './components/inventoryManagement/InventoryStats';
 import { InventoryStockList } from './components/inventoryStock/InventoryStockList';
 import { AddStockItemForm } from './components/inventoryStock/AddStockItemForm';
 import { EditStockItemForm } from './components/inventoryStock/EditStockItemForm';
@@ -11,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const InventoryPage = () => {
+  const [stockFilter, setStockFilter] = useState<StockFilterType>('all');
+  
   const {
     currentStore,
     stockItems,
@@ -88,7 +91,11 @@ const InventoryPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <InventoryStats storeId={currentStore.id} />
+      <InventoryStats 
+        storeId={currentStore.id} 
+        activeFilter={stockFilter}
+        onFilterChange={setStockFilter}
+      />
 
       {/* Inventory Table */}
       <InventoryStockList
@@ -99,6 +106,7 @@ const InventoryPage = () => {
         onStockTransfer={openTransferModal}
         onDelete={openDeleteConfirm}
         hasMultipleStores={hasMultipleStores}
+        stockFilter={stockFilter}
       />
 
       {/* Modals */}
