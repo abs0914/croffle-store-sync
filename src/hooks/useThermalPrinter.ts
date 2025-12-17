@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { BluetoothPrinterService } from '@/services/printer/BluetoothPrinterService';
 import { PrinterDiscovery, BluetoothPrinter, ThermalPrinter } from '@/services/printer/PrinterDiscovery';
 import { BluetoothReconnectionService, ConnectionState } from '@/services/printer/BluetoothReconnectionService';
+import { PrinterStorageService, StoredPrinterInfo } from '@/services/printer/PrinterStorageService';
 import { Transaction, Customer } from '@/types';
 import { Store } from '@/types/store';
 import { toast } from 'sonner';
@@ -14,10 +15,16 @@ export function useThermalPrinter() {
   const [isScanning, setIsScanning] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [connectedPrinter, setConnectedPrinter] = useState<BluetoothPrinter | null>(null);
+  const [storedPrinter, setStoredPrinter] = useState<StoredPrinterInfo | null>(null);
+  const [isQuickReconnecting, setIsQuickReconnecting] = useState(false);
 
   useEffect(() => {
     // Initialize the reconnection service
     BluetoothReconnectionService.initialize();
+    
+    // Check for stored printer on mount
+    const stored = PrinterStorageService.getLastPrinter();
+    setStoredPrinter(stored);
     
     checkAvailability();
 
@@ -28,6 +35,8 @@ export function useThermalPrinter() {
           case ConnectionState.CONNECTED:
             setIsConnected(true);
             setConnectedPrinter(printer);
+            // Update stored printer when connected
+            setStoredPrinter(PrinterStorageService.getLastPrinter());
             break;
           case ConnectionState.DISCONNECTED:
           case ConnectionState.RECONNECT_FAILED:
@@ -176,6 +185,38 @@ export function useThermalPrinter() {
     } catch (error) {
       console.error('Failed to disconnect printer:', error);
       toast.error('Failed to disconnect printer');
+    }
+  };
+
+  const quickReconnect = async (): Promise<boolean> => {
+    if (!storedPrinter) {
+      toast.error('No saved printer found');
+      return false;
+    }
+
+    setIsQuickReconnecting(true);
+    try {
+      toast.info(`Reconnecting to ${storedPrinter.name}...`);
+      const printer = await PrinterDiscovery.quickReconnect();
+      
+      if (printer) {
+        setIsConnected(true);
+        setConnectedPrinter(printer);
+        BluetoothReconnectionService.setupDisconnectionListeners(printer);
+        toast.success(`Reconnected to ${printer.name}`);
+        return true;
+      } else {
+        toast.error('Could not reconnect to printer');
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Quick reconnect failed:', error);
+      if (error.name !== 'NotFoundError') {
+        toast.error(`Reconnect failed: ${error.message || 'Unknown error'}`);
+      }
+      return false;
+    } finally {
+      setIsQuickReconnecting(false);
     }
   };
 
@@ -364,9 +405,12 @@ export function useThermalPrinter() {
     isScanning,
     isPrinting,
     connectedPrinter,
+    storedPrinter,
+    isQuickReconnecting,
     scanForPrinters,
     connectToPrinter,
     disconnectPrinter,
+    quickReconnect,
     printReceipt,
     printTestReceipt,
     printZReading,

@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { BluetoothPrinter, ThermalPrinter, PrinterType } from '@/types/printer';
 import { PrinterTypeManager } from './PrinterTypeManager';
 import { BluetoothPermissionManager } from '@/services/permissions/BluetoothPermissionManager';
+import { PrinterStorageService } from './PrinterStorageService';
 
 // Legacy export for backward compatibility
 export type { ThermalPrinter, BluetoothPrinter };
@@ -382,6 +383,9 @@ export class PrinterDiscovery {
       printer.isConnected = true;
       this.connectedPrinter = printer;
 
+      // Save to localStorage for quick reconnect after page refresh
+      PrinterStorageService.saveLastPrinter(printer);
+
       // Disconnection listener is now handled by BluetoothReconnectionService
       // Import and setup in the calling code after successful connection
 
@@ -406,6 +410,9 @@ export class PrinterDiscovery {
 
       printer.isConnected = true;
       this.connectedPrinter = printer;
+
+      // Save to localStorage for quick reconnect after page refresh
+      PrinterStorageService.saveLastPrinter(printer);
 
       console.log('Connected to printer via Capacitor BLE:', printer.name);
       return true;
@@ -562,6 +569,72 @@ export class PrinterDiscovery {
     this.keepAliveSuspended = false;
   }
 
+
+  /**
+   * Quick reconnect to last used printer using stored info
+   * Opens Web Bluetooth picker with filter matching stored printer name
+   */
+  static async quickReconnect(): Promise<BluetoothPrinter | null> {
+    const storedPrinter = PrinterStorageService.getLastPrinter();
+    if (!storedPrinter) {
+      console.log('No stored printer found for quick reconnect');
+      return null;
+    }
+
+    console.log(`🔄 Quick reconnect to: ${storedPrinter.name}`);
+
+    try {
+      // For web environment, request device with filter matching stored name
+      if (this.hasWebBluetoothSupport()) {
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [
+            { name: storedPrinter.name }
+          ],
+          optionalServices: [
+            'battery_service',
+            'device_information',
+            '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+            '000018f0-0000-1000-8000-00805f9b34fb',
+            '0000fff0-0000-1000-8000-00805f9b34fb',
+            '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+            '12345678-1234-1234-1234-123456789abc'
+          ]
+        });
+
+        const printer: BluetoothPrinter = {
+          id: device.id,
+          name: device.name || storedPrinter.name,
+          isConnected: false,
+          webBluetoothDevice: device,
+          connectionType: 'web',
+          printerType: storedPrinter.printerType
+        };
+
+        printer.capabilities = PrinterTypeManager.getCapabilities(printer.printerType || 'thermal');
+
+        const success = await this.connectToPrinter(printer);
+        if (success) {
+          return printer;
+        }
+      }
+
+      return null;
+    } catch (error: any) {
+      if (error.name === 'NotFoundError') {
+        console.log('User cancelled printer selection');
+      } else {
+        console.error('Quick reconnect failed:', error);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Get stored printer info without connecting
+   */
+  static getStoredPrinter() {
+    return PrinterStorageService.getLastPrinter();
+  }
   
   private static isCapacitorEnvironment(): boolean {
     return !!(window as any).Capacitor?.isNativePlatform?.();
