@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useCart } from "@/contexts/cart/CartContext";
 import { useAuthSession } from "@/contexts/AuthSessionContext";
 import { Customer, Transaction } from "@/types";
-import { streamlinedTransactionService, StreamlinedTransactionData } from "@/services/transactions/streamlinedTransactionService";
+import { streamlinedTransactionService, StreamlinedTransactionData, DiscountBeneficiaryData } from "@/services/transactions/streamlinedTransactionService";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
+import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount, DiscountBeneficiary } from "@/services/cart/CartCalculationService";
 import { PerformanceMonitor } from "@/services/performance/performanceMonitor";
 // Static imports for offline support - eliminates dynamic import overhead
 import { OfflinePOSManager } from "@/services/offline/OfflinePOSManager";
@@ -31,7 +31,8 @@ export function useTransactionHandler(storeId: string) {
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
   const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number } | undefined>(undefined);
   
-  const { clearCart, applyDiscounts: applyCartDiscounts } = useCart();
+  // Get cart context - includes new discount beneficiaries
+  const { clearCart, applyDiscounts: applyCartDiscounts, discountBeneficiaries, regularDiners } = useCart();
 
   const handleApplyDiscount = (
     discountAmount: number, 
@@ -284,6 +285,18 @@ export function useTransactionHandler(storeId: string) {
       return undefined;
     })();
     
+    // Convert cart beneficiaries to transaction format
+    const transactionBeneficiaries: DiscountBeneficiaryData[] = discountBeneficiaries.map(b => ({
+      id: b.id,
+      type: b.type,
+      idNumber: b.idNumber,
+      name: b.name,
+      discountAmount: b.discountAmount,
+      vatExemptionAmount: b.vatExemptionAmount,
+      isVATExempt: b.isVATExempt,
+      discountRate: b.discountRate
+    }));
+
     const streamlinedData: StreamlinedTransactionData = {
       storeId: currentStore.id,
       userId: userId,  // ⭐ Use cached userId
@@ -303,7 +316,10 @@ export function useTransactionHandler(storeId: string) {
       orderType: orderType as any,
       deliveryPlatform: deliveryPlatform as any,
       deliveryOrderNumber: deliveryOrderNumber,
-      // Include detailed discount information
+      // NEW: Multi-discount beneficiaries
+      discountBeneficiaries: transactionBeneficiaries.length > 0 ? transactionBeneficiaries : undefined,
+      regularDiners: regularDiners || 0,
+      // Legacy: Include detailed discount information (for backward compatibility)
       seniorDiscounts: activeSeniorDiscounts,
       otherDiscount: activeOtherDiscount,
       vatExemption: vatExemption

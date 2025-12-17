@@ -28,6 +28,18 @@ export interface StreamlinedTransactionItem {
   variationId?: string;
 }
 
+// Multi-discount beneficiary interface
+export interface DiscountBeneficiaryData {
+  id: string;
+  type: 'senior' | 'pwd' | 'athletes_coaches' | 'solo_parent' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'bogo' | 'croffle_combo';
+  idNumber: string;
+  name: string;
+  discountAmount: number;
+  vatExemptionAmount: number;
+  isVATExempt: boolean;
+  discountRate: number;
+}
+
 export interface StreamlinedTransactionData {
   storeId: string;
   userId: string;
@@ -47,7 +59,10 @@ export interface StreamlinedTransactionData {
   orderType?: 'dine_in' | 'takeout' | 'delivery';
   deliveryPlatform?: string;
   deliveryOrderNumber?: string;
-  // Detailed discount information
+  // NEW: Multi-discount beneficiaries array
+  discountBeneficiaries?: DiscountBeneficiaryData[];
+  regularDiners?: number;
+  // Legacy: Detailed discount information (kept for backward compatibility)
   seniorDiscounts?: Array<{
     id: string;
     idNumber: string;
@@ -380,6 +395,22 @@ class StreamlinedTransactionService {
     const vatableSales = netAmount / 1.12;
     const vatAmount = netAmount - vatableSales;
 
+    // Calculate discount totals from beneficiaries if present
+    const beneficiaries = data.discountBeneficiaries || [];
+    const seniorBeneficiaries = beneficiaries.filter(b => b.type === 'senior');
+    const pwdBeneficiaries = beneficiaries.filter(b => b.type === 'pwd');
+    const naacBeneficiaries = beneficiaries.filter(b => b.type === 'athletes_coaches');
+    const soloParentBeneficiaries = beneficiaries.filter(b => b.type === 'solo_parent');
+    
+    const totalSeniorDiscount = seniorBeneficiaries.reduce((sum, b) => sum + b.discountAmount, 0) ||
+      (data.discountType === 'senior' ? discountAmount : (data.seniorDiscounts?.reduce((sum, s) => sum + s.discountAmount, 0) || 0));
+    
+    const totalPwdDiscount = pwdBeneficiaries.reduce((sum, b) => sum + b.discountAmount, 0) ||
+      (data.discountType === 'pwd' ? discountAmount : (data.otherDiscount?.type === 'pwd' ? data.otherDiscount.amount : 0));
+    
+    const totalVatExemption = beneficiaries.filter(b => b.isVATExempt).reduce((sum, b) => sum + b.vatExemptionAmount, 0) ||
+      (data.vatExemption || 0);
+
     const transactionRecord = {
       shift_id: data.shiftId,
       store_id: data.storeId,
@@ -405,18 +436,19 @@ class StreamlinedTransactionService {
       vat_sales: vatableSales,
       vat_exempt_sales: data.discountType === 'senior' || data.discountType === 'pwd' ? discountAmount : 0,
       zero_rated_sales: 0,
-      senior_citizen_discount: data.discountType === 'senior' ? discountAmount : 
-        (data.seniorDiscounts?.reduce((sum, s) => sum + s.discountAmount, 0) || 0),
-      pwd_discount: data.discountType === 'pwd' ? discountAmount : 
-        (data.otherDiscount?.type === 'pwd' ? data.otherDiscount.amount : 0),
+      senior_citizen_discount: totalSeniorDiscount,
+      pwd_discount: totalPwdDiscount,
       // Store the VAT amount correctly for BIR/RLC compliance
       vat_amount: vatAmount,
       sequence_number: parseInt(timestamp),
       terminal_id: 'TERMINAL-01',
-      // Store detailed discount information
+      // NEW: Store multi-discount beneficiaries array
+      discount_beneficiaries: beneficiaries.length > 0 ? JSON.stringify(beneficiaries) : null,
+      regular_diners: data.regularDiners || 0,
+      // Legacy: Store detailed discount information (for backward compatibility)
       senior_discounts_detail: data.seniorDiscounts ? JSON.stringify(data.seniorDiscounts) : null,
       other_discount_detail: data.otherDiscount ? JSON.stringify(data.otherDiscount) : null,
-      vat_exemption_amount: data.vatExemption || 0
+      vat_exemption_amount: totalVatExemption
     };
 
     const { data: dbTransaction, error } = await supabase

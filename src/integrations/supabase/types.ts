@@ -7598,6 +7598,7 @@ export type Database = {
           delivery_platform: string | null
           discount: number
           discount_amount: number | null
+          discount_beneficiaries: Json | null
           discount_details: Json | null
           discount_id: string | null
           discount_id_number: string | null
@@ -7615,6 +7616,7 @@ export type Database = {
           promo_reference: string | null
           pwd_discount: number | null
           receipt_number: string
+          regular_diners: number | null
           senior_citizen_discount: number | null
           senior_discount: number | null
           senior_discounts: Json | null
@@ -7645,6 +7647,7 @@ export type Database = {
           delivery_platform?: string | null
           discount?: number
           discount_amount?: number | null
+          discount_beneficiaries?: Json | null
           discount_details?: Json | null
           discount_id?: string | null
           discount_id_number?: string | null
@@ -7662,6 +7665,7 @@ export type Database = {
           promo_reference?: string | null
           pwd_discount?: number | null
           receipt_number: string
+          regular_diners?: number | null
           senior_citizen_discount?: number | null
           senior_discount?: number | null
           senior_discounts?: Json | null
@@ -7692,6 +7696,7 @@ export type Database = {
           delivery_platform?: string | null
           discount?: number
           discount_amount?: number | null
+          discount_beneficiaries?: Json | null
           discount_details?: Json | null
           discount_id?: string | null
           discount_id_number?: string | null
@@ -7709,6 +7714,7 @@ export type Database = {
           promo_reference?: string | null
           pwd_discount?: number | null
           receipt_number?: string
+          regular_diners?: number | null
           senior_citizen_discount?: number | null
           senior_discount?: number | null
           senior_discounts?: Json | null

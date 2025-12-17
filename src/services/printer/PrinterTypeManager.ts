@@ -227,7 +227,49 @@ export class PrinterTypeManager {
       receipt += formatter.formatLine('Tax:', formatter.formatCurrencyWithSymbol(transaction.tax), width);
     }
     
-    if (transaction.discount > 0) {
+    // NEW: Multi-discount beneficiaries support
+    if ((transaction as any).discount_beneficiaries && (transaction as any).discount_beneficiaries.length > 0) {
+      const beneficiaries = (transaction as any).discount_beneficiaries;
+      const typeLabels: Record<string, string> = {
+        senior: 'Senior Citizen',
+        pwd: 'PWD',
+        athletes_coaches: 'NAAC',
+        solo_parent: 'Solo Parent',
+        employee: 'Employee',
+        loyalty: 'Loyalty',
+        custom: 'Custom',
+        complimentary: 'Complimentary'
+      };
+      
+      // Group beneficiaries by type
+      const grouped = beneficiaries.reduce((acc: Record<string, any[]>, b: any) => {
+        if (!acc[b.type]) acc[b.type] = [];
+        acc[b.type].push(b);
+        return acc;
+      }, {});
+      
+      // Print each group
+      Object.entries(grouped).forEach(([type, items]: [string, any[]]) => {
+        const label = typeLabels[type] || type;
+        receipt += formatter.bold(`${label} Disc:`) + '\n';
+        
+        items.forEach((b: any) => {
+          const name = b.name || 'Beneficiary';
+          const idText = b.idNumber ? ` (${b.idNumber})` : '';
+          receipt += formatter.formatLine(`  ${name}${idText}`, formatter.formatCurrencyWithSymbol(-b.discountAmount), width);
+        });
+      });
+      
+      // Total VAT Exemption
+      const totalVatExempt = beneficiaries
+        .filter((b: any) => b.isVATExempt)
+        .reduce((sum: number, b: any) => sum + (b.vatExemptionAmount || 0), 0);
+      
+      if (totalVatExempt > 0) {
+        receipt += formatter.formatLine('VAT Exemption:', formatter.formatCurrencyWithSymbol(-totalVatExempt), width);
+      }
+    } else if (transaction.discount > 0) {
+      // Legacy: Single discount handling
       const discountType = transaction.discountType || 'regular';
       let discountLabel = 'Discount:';
       
