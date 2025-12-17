@@ -31,8 +31,8 @@ export function useTransactionHandler(storeId: string) {
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
   const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number } | undefined>(undefined);
   
-  // Get cart context - includes new discount beneficiaries
-  const { clearCart, applyDiscounts: applyCartDiscounts, discountBeneficiaries, regularDiners } = useCart();
+  // Get cart context - includes new discount beneficiaries and calculated values
+  const { clearCart, applyDiscounts: applyCartDiscounts, discountBeneficiaries, regularDiners, calculations } = useCart();
 
   const handleApplyDiscount = (
     discountAmount: number, 
@@ -266,7 +266,8 @@ export function useTransactionHandler(storeId: string) {
     const activeSeniorDiscounts = seniorDiscountsParam || seniorDiscounts;
     const activeOtherDiscount = otherDiscountParam || otherDiscount;
     
-    const calculatedTotalDiscount = (
+    // Use cart calculations for accurate discount total (beneficiaryBreakdown has calculated amounts)
+    const calculatedTotalDiscount = calculations.totalDiscountAmount || (
       activeSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0) +
       (activeOtherDiscount?.amount || 0)
     );
@@ -285,13 +286,14 @@ export function useTransactionHandler(storeId: string) {
       return undefined;
     })();
     
-    // Convert cart beneficiaries to transaction format
-    const transactionBeneficiaries: DiscountBeneficiaryData[] = discountBeneficiaries.map(b => ({
+    // Use calculated beneficiaries from CartCalculationService (has correct discount amounts)
+    const calculatedBeneficiaries = calculations.beneficiaryBreakdown || [];
+    const transactionBeneficiaries: DiscountBeneficiaryData[] = calculatedBeneficiaries.map(b => ({
       id: b.id,
       type: b.type,
       idNumber: b.idNumber,
       name: b.name,
-      discountAmount: b.discountAmount,
+      discountAmount: b.discountAmount,  // Now correctly calculated!
       vatExemptionAmount: b.vatExemptionAmount,
       isVATExempt: b.isVATExempt,
       discountRate: b.discountRate
