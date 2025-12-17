@@ -197,6 +197,27 @@ export class PrinterTypeManager {
     receipt += formatter.formatLine('Date:', new Date(transaction.createdAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }), width);
     receipt += formatter.formatLine('Time:', new Date(transaction.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }), width);
     receipt += formatter.formatLine('Cashier:', cashierName || 'Unknown', width);
+    
+    // Order Type Information
+    const orderType = (transaction as any).orderType || (transaction as any).order_type;
+    if (orderType === 'online_delivery') {
+      receipt += formatter.formatLine('Order Type:', 'Online Delivery', width);
+      const platform = (transaction as any).deliveryPlatform || (transaction as any).delivery_platform;
+      if (platform === 'grab_food') {
+        receipt += formatter.formatLine('Platform:', 'Grab Food', width);
+      } else if (platform === 'food_panda') {
+        receipt += formatter.formatLine('Platform:', 'FoodPanda', width);
+      }
+      const deliveryOrderNo = (transaction as any).deliveryOrderNumber || (transaction as any).delivery_order_number;
+      if (deliveryOrderNo) {
+        receipt += formatter.formatLine('Order No:', deliveryOrderNo, width);
+      }
+    } else if (orderType === 'takeout') {
+      receipt += formatter.formatLine('Order Type:', 'Take Out', width);
+    } else {
+      receipt += formatter.formatLine('Order Type:', 'Dine In', width);
+    }
+    
     receipt += formatter.horizontalLine(width);
     
     // BIR: Item Table Header
@@ -328,6 +349,20 @@ export class PrinterTypeManager {
     receipt += formatter.formatLine('Payment Type:', paymentMethod, width);
     receipt += formatter.formatLine('Amount Paid:', formatter.formatCurrencyWithSymbol(transaction.amountTendered || transaction.total), width);
     
+    // E-wallet Details (for e-wallet payments)
+    if (paymentMethod === 'E-WALLET') {
+      const paymentDetails = (transaction as any).paymentDetails || (transaction as any).payment_details || {};
+      const provider = paymentDetails?.eWalletProvider || paymentDetails?.e_wallet_provider || paymentDetails?.provider || '';
+      const refNumber = paymentDetails?.eWalletReferenceNumber || paymentDetails?.e_wallet_reference_number || paymentDetails?.referenceNumber || '';
+      
+      if (provider) {
+        receipt += formatter.formatLine('Provider:', provider.toUpperCase(), width);
+      }
+      if (refNumber) {
+        receipt += formatter.formatLine('Reference No:', refNumber, width);
+      }
+    }
+
     if (transaction.change && transaction.change > 0) {
       receipt += formatter.formatLine('Change:', formatter.formatCurrencyWithSymbol(transaction.change), width);
     }
