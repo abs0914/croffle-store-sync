@@ -44,11 +44,13 @@ export class BIREJournalService {
   static async generateEJournal(
     storeId: string, 
     date: string, 
-    terminalId: string = 'TERMINAL-01'
+    terminalId?: string
   ): Promise<EJournalData | null> {
     try {
-      // Get all transactions for the date
-      const { data: transactions, error } = await supabase
+      console.log('📋 E-Journal query params:', { storeId, date, terminalId });
+      
+      // Build query - terminal_id filter is optional
+      let query = supabase
         .from('transactions')
         .select(`
           *,
@@ -57,11 +59,22 @@ export class BIREJournalService {
           )
         `)
         .eq('store_id', storeId)
-        .eq('terminal_id', terminalId)
         .gte('created_at', `${date}T00:00:00`)
         .lte('created_at', `${date}T23:59:59`)
         .eq('status', 'completed')
         .order('sequence_number');
+      
+      // Only filter by terminal_id if explicitly provided
+      if (terminalId) {
+        query = query.eq('terminal_id', terminalId);
+      }
+      
+      const { data: transactions, error } = await query;
+
+      console.log('📋 E-Journal query result:', { 
+        count: transactions?.length || 0, 
+        error: error?.message 
+      });
 
       if (error) throw error;
       if (!transactions || transactions.length === 0) return null;
