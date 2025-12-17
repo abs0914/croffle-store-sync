@@ -121,7 +121,6 @@ export class PrinterTypeManager {
     cashierName?: string,
     isReprint?: boolean
   ): string {
-    // Use existing thermal formatting logic
     const formatter = ESCPOSFormatter;
     const width = 32;
     
@@ -149,42 +148,11 @@ export class PrinterTypeManager {
         receipt += store.phone + '\n';
       }
       
-      // BIR: VAT Registration Status
+      // BIR: VAT Registration Status with TIN format
       if (store.is_vat_registered) {
         receipt += `VAT REG. TIN: ${this.formatTIN(store.tin)}\n`;
       } else if (store.tin) {
         receipt += `NON-VAT REG. TIN: ${this.formatTIN(store.tin)}\n`;
-      }
-      
-      // BIR: Taxpayer Name (if different)
-      if (store.owner_name && store.owner_name !== store.business_name) {
-        receipt += `Taxpayer: ${store.owner_name}\n`;
-      }
-      
-      // BIR: Permit Number and Validity
-      if (store.permit_number) {
-        receipt += `Permit No: ${store.permit_number}\n`;
-      }
-      if (store.valid_until) {
-        receipt += `Valid Until: ${new Date(store.valid_until).toLocaleDateString()}\n`;
-      }
-      
-      receipt += formatter.horizontalLine(width);
-      
-      // BIR: Supplier Information
-      if (store.supplier_name) {
-        receipt += `POS Provider:\n`;
-        receipt += `${store.supplier_name}\n`;
-        if (store.supplier_address) {
-          receipt += `${store.supplier_address}\n`;
-        }
-        if (store.supplier_tin) {
-          receipt += `TIN: ${this.formatTIN(store.supplier_tin)}\n`;
-        }
-        if (store.accreditation_date) {
-          receipt += `Accredited: ${new Date(store.accreditation_date).toLocaleDateString()}\n`;
-        }
-      receipt += formatter.horizontalLine(width);
       }
       
       receipt += formatter.left();
@@ -198,21 +166,16 @@ export class PrinterTypeManager {
     
     // Receipt info - SI No instead of Receipt #
     receipt += formatter.formatLine('SI No:', transaction.receiptNumber || 'N/A', width);
+    receipt += formatter.formatLine('Date:', new Date(transaction.createdAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }), width);
+    receipt += formatter.formatLine('Time:', new Date(transaction.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }), width);
     receipt += formatter.formatLine('Cashier:', cashierName || 'Unknown', width);
-    receipt += formatter.formatLine('Date:', new Date(transaction.createdAt).toLocaleDateString(), width);
-    receipt += formatter.formatLine('Time:', new Date(transaction.createdAt).toLocaleTimeString(), width);
     receipt += formatter.horizontalLine(width);
     
-    // Customer info
-    if (customer) {
-      receipt += formatter.formatLine('Customer:', customer.name || 'N/A', width);
-      if (customer.phone) {
-        receipt += formatter.formatLine('Phone:', customer.phone, width);
-      }
-      receipt += formatter.horizontalLine(width);
-    }
+    // BIR: Item Table Header
+    receipt += formatter.formatItemHeader(width);
+    receipt += formatter.horizontalLine(width);
     
-    // Items - no header, directly list items
+    // Items
     transaction.items.forEach(item => {
       const itemTotal = item.quantity * item.unitPrice;
       receipt += formatter.formatItemLine(
@@ -224,109 +187,142 @@ export class PrinterTypeManager {
       );
     });
     
-    // Totals - BIR format
+    // BIR Totals Section
     receipt += formatter.horizontalLine(width);
-    receipt += formatter.formatLine('GROSS AMOUNT:', formatter.formatCurrencyWithSymbol(transaction.subtotal), width);
     
-    // NEW: Multi-discount beneficiaries support
-    if ((transaction as any).discount_beneficiaries && (transaction as any).discount_beneficiaries.length > 0) {
-      const beneficiaries = (transaction as any).discount_beneficiaries;
-      const typeLabels: Record<string, string> = {
-        senior: 'Senior Citizen',
-        pwd: 'PWD',
-        athletes_coaches: 'NAAC',
-        solo_parent: 'Solo Parent',
-        employee: 'Employee',
-        loyalty: 'Loyalty',
-        custom: 'Custom',
-        complimentary: 'Complimentary'
-      };
-      
-      // Group beneficiaries by type
-      const grouped = beneficiaries.reduce((acc: Record<string, any[]>, b: any) => {
-        if (!acc[b.type]) acc[b.type] = [];
-        acc[b.type].push(b);
-        return acc;
-      }, {});
-      
-      // Print each group
-      Object.entries(grouped).forEach(([type, items]: [string, any[]]) => {
-        const label = typeLabels[type] || type;
-        receipt += formatter.bold(`${label} Disc:`) + '\n';
-        
-        items.forEach((b: any) => {
-          const name = b.name || 'Beneficiary';
-          const idText = b.idNumber ? ` (${b.idNumber})` : '';
-          receipt += formatter.formatLine(`  ${name}${idText}`, formatter.formatCurrencyWithSymbol(-b.discountAmount), width);
-        });
-      });
-      
-      // Total VAT Exemption
-      const totalVatExempt = beneficiaries
-        .filter((b: any) => b.isVATExempt)
-        .reduce((sum: number, b: any) => sum + (b.vatExemptionAmount || 0), 0);
-      
-      if (totalVatExempt > 0) {
-        receipt += formatter.formatLine('VAT Exemption:', formatter.formatCurrencyWithSymbol(-totalVatExempt), width);
-      }
-    } else if (transaction.discount > 0) {
-      // Legacy: Single discount handling
-      const discountType = transaction.discountType || 'regular';
-      let discountLabel = 'Discount:';
+    // Calculate VAT values
+    const grossAmount = transaction.subtotal;
+    const vatAmount = transaction.tax || (grossAmount / 1.12 * 0.12);
+    const netOfVat = grossAmount - vatAmount;
+    const totalDiscount = transaction.discount || 0;
+    
+    // Determine VAT-exempt and vatable amounts based on discount type
+    const discountType = transaction.discountType || '';
+    const isVatExempt = ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(discountType);
+    
+    let vatableSales = 0;
+    let vatExemptSales = 0;
+    let zeroRatedSales = 0;
+    let finalVat = vatAmount;
+    
+    if (isVatExempt && totalDiscount > 0) {
+      // For VAT-exempt discounts, the discounted portion becomes VAT-exempt
+      vatExemptSales = netOfVat;
+      vatableSales = 0;
+      finalVat = 0;
+    } else {
+      vatableSales = netOfVat;
+      vatExemptSales = 0;
+    }
+    
+    // BIR Format: Total Sales → Less VAT → Net of VAT → Discount → Add VAT → Total Due
+    receipt += formatter.formatLine('Total Sales:', formatter.formatCurrencyWithSymbol(grossAmount), width);
+    receipt += formatter.formatLine('Less 12% VAT:', formatter.formatCurrencyWithSymbol(vatAmount), width);
+    receipt += formatter.formatLine('Amt. Net of VAT:', formatter.formatCurrencyWithSymbol(netOfVat), width);
+    
+    // Discount section with type and percentage
+    if (totalDiscount > 0) {
+      let discountLabel = 'Discount';
+      let discountPercent = '';
       
       switch (discountType) {
-        case 'senior': discountLabel = 'Senior Citizen Disc:'; break;
-        case 'pwd': discountLabel = 'PWD Discount:'; break;
+        case 'senior': discountLabel = 'SENIOR CITIZEN'; discountPercent = '20%'; break;
+        case 'pwd': discountLabel = 'PWD'; discountPercent = '20%'; break;
         case 'naac': 
-        case 'athletes_coaches': discountLabel = 'NAAC Discount:'; break;
-        case 'solo_parent': discountLabel = 'Solo Parent Disc:'; break;
-        case 'employee': discountLabel = 'Employee Discount:'; break;
-        case 'loyalty': discountLabel = 'Loyalty Discount:'; break;
-        case 'regular': discountLabel = 'Regular Discount:'; break;
-        case 'custom': discountLabel = 'Custom Discount:'; break;
-        case 'complimentary': discountLabel = 'Complimentary:'; break;
-        case 'promo': discountLabel = 'Promo Discount:'; break;
-        case 'bogo': discountLabel = 'BOGO Discount:'; break;
+        case 'athletes_coaches': discountLabel = 'NAAC'; discountPercent = '20%'; break;
+        case 'solo_parent': discountLabel = 'SOLO PARENT'; discountPercent = '20%'; break;
+        case 'employee': discountLabel = 'EMPLOYEE'; discountPercent = '15%'; break;
+        case 'loyalty': discountLabel = 'LOYALTY'; discountPercent = '10%'; break;
+        case 'regular': discountLabel = 'REGULAR'; discountPercent = '5%'; break;
+        case 'custom': discountLabel = 'CUSTOM'; break;
+        case 'complimentary': discountLabel = 'COMPLIMENTARY'; discountPercent = '100%'; break;
+        case 'promo': discountLabel = 'PROMO'; break;
+        case 'bogo': discountLabel = 'BOGO'; break;
       }
       
-      receipt += formatter.formatLine(discountLabel, formatter.formatCurrencyWithSymbol(-transaction.discount), width);
-      
-      // BIR Requirement: Print ID number for eligible discounts
-      if (transaction.discountIdNumber) {
-        receipt += formatter.formatLine('ID Number:', transaction.discountIdNumber, width);
-      }
+      const fullDiscountLabel = discountPercent ? `${discountLabel} ${discountPercent}:` : `${discountLabel}:`;
+      receipt += formatter.formatLine(fullDiscountLabel, formatter.formatCurrencyWithSymbol(-totalDiscount), width);
     }
     
-    // NET AMOUNT and VAT
-    receipt += formatter.horizontalLine(width);
-    receipt += formatter.bold(formatter.formatLine('NET AMOUNT:', formatter.formatCurrencyWithSymbol(transaction.total), width));
-    
-    if (transaction.tax > 0) {
-      receipt += formatter.formatLine('VAT (12%):', formatter.formatCurrencyWithSymbol(transaction.tax), width);
+    // Add VAT (for non-exempt transactions)
+    if (!isVatExempt || totalDiscount === 0) {
+      receipt += formatter.formatLine('Add VAT:', formatter.formatCurrencyWithSymbol(finalVat), width);
     }
     
-    // Payment
     receipt += formatter.horizontalLine(width);
-    receipt += formatter.formatLine('Payment:', transaction.paymentMethod.toUpperCase(), width);
+    receipt += formatter.bold(formatter.formatLine('TOTAL AMOUNT DUE:', formatter.formatCurrencyWithSymbol(transaction.total), width));
+    receipt += formatter.horizontalLine(width);
+    
+    // VAT Breakdown Section
+    receipt += formatter.formatVATBreakdown(vatableSales, isVatExempt ? 0 : vatAmount, vatExemptSales, zeroRatedSales, width);
+    receipt += formatter.horizontalLine(width);
+    
+    // Payment Section
+    const paymentMethod = transaction.paymentMethod?.toUpperCase() || 'CASH';
+    receipt += formatter.formatLine('Payment Type:', paymentMethod, width);
     receipt += formatter.formatLine('Amount Paid:', formatter.formatCurrencyWithSymbol(transaction.amountTendered || transaction.total), width);
     
     if (transaction.change && transaction.change > 0) {
       receipt += formatter.formatLine('Change:', formatter.formatCurrencyWithSymbol(transaction.change), width);
     }
     
+    // Credit Card Details (for card payments)
+    const paymentDetails = (transaction as any).paymentDetails || (transaction as any).payment_details;
+    if (paymentMethod === 'CARD' || paymentMethod === 'CREDIT' || paymentMethod === 'DEBIT') {
+      receipt += formatter.horizontalLine(width);
+      const cardType = paymentDetails?.cardType || paymentDetails?.card_type || 'Credit Card';
+      const cardNumber = paymentDetails?.cardNumber || paymentDetails?.card_number || paymentDetails?.lastFourDigits || '';
+      const expiryDate = paymentDetails?.expiryDate || paymentDetails?.expiry_date;
+      const approvalCode = paymentDetails?.approvalCode || paymentDetails?.approval_code || paymentDetails?.referenceNumber;
+      
+      receipt += formatter.formatCardDetails(cardType, cardNumber, expiryDate, approvalCode, width);
+    }
+    
+    // Discount Beneficiary Info Section (for BIR-mandated discounts)
+    if (totalDiscount > 0 && isVatExempt) {
+      receipt += formatter.horizontalLine(width);
+      
+      // Get beneficiary info from discount details
+      const discountDetails = (transaction as any).discount_details || (transaction as any).discountDetails;
+      const beneficiaryName = discountDetails?.name || discountDetails?.beneficiaryName || customer?.name || 'N/A';
+      const idNumber = transaction.discountIdNumber || discountDetails?.idNumber || 'N/A';
+      const address = discountDetails?.address || customer?.address || '';
+      const tin = discountDetails?.tin || customer?.tin || '';
+      
+      // Determine ID type based on discount type
+      let idType = 'ID No.';
+      switch (discountType) {
+        case 'senior': idType = 'OSCA ID No.'; break;
+        case 'pwd': idType = 'PWD ID No.'; break;
+        case 'naac': 
+        case 'athletes_coaches': idType = 'NAAC ID No.'; break;
+        case 'solo_parent': idType = 'Solo Parent ID No.'; break;
+      }
+      
+      receipt += formatter.formatBeneficiaryInfo(beneficiaryName, idType, idNumber, address, tin, width);
+      
+      // Signature line for discounted transactions
+      receipt += formatter.formatSignatureLine(width);
+    }
+    
     // Footer
     receipt += formatter.horizontalLine(width);
     receipt += formatter.center();
     
-    // BIR: Compliance Footer - always "THIS SERVES AS YOUR INVOICE"
+    // BIR: Compliance Footer
     receipt += formatter.bold('THIS SERVES AS YOUR INVOICE\n');
+    receipt += '\nThank you for dining with us!\n';
     
-    // BIR: NON-VAT Disclaimer
-    if (!store?.is_vat_registered && store?.non_vat_disclaimer) {
-      receipt += '\n' + store.non_vat_disclaimer + '\n';
+    // PTU Info (if available from store)
+    if (store?.permit_number || store?.accreditation_date) {
+      receipt += formatter.left();
+      receipt += formatter.formatPTUInfo(
+        store.permit_number,
+        store.accreditation_date ? new Date(store.accreditation_date).toLocaleDateString() : undefined,
+        width
+      );
     }
     
-    receipt += '\nThank you for dining with us!\n';
     receipt += formatter.left();
     receipt += formatter.lineFeed(3);
     receipt += formatter.cut();
