@@ -2,6 +2,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { format } from "date-fns";
 
+export interface EJournalVoidTransaction {
+  voidReceiptNumber: string;
+  originalReceiptNumber: string;
+  voidDate: string;
+  voidReason: string;
+  originalAmount: number;
+  voidedByName: string;
+  authorizedByName: string;
+}
+
+export interface EJournalRefundTransaction {
+  refundReceiptNumber: string;
+  originalReceiptNumber: string;
+  refundDate: string;
+  refundReason: string;
+  refundAmount: number;
+  refundVatAmount: number;
+  processedByName: string;
+}
+
 export interface EJournalData {
   storeId: string;
   terminalId: string;
@@ -19,6 +39,13 @@ export interface EJournalData {
   seniorDiscounts: number;
   pwdDiscounts: number;
   transactions: EJournalTransaction[];
+  // Void and Refund data
+  voidTransactions: EJournalVoidTransaction[];
+  refundTransactions: EJournalRefundTransaction[];
+  totalVoidAmount: number;
+  totalVoidCount: number;
+  totalRefundAmount: number;
+  totalRefundCount: number;
 }
 
 export interface EJournalTransaction {
@@ -141,6 +168,49 @@ export class BIREJournalService {
 
       const receiptNumbers = transactions.map(tx => tx.receipt_number).sort();
 
+      // Fetch void transactions for the date
+      const { data: voidTransactions } = await supabase
+        .from('void_transactions')
+        .select('*')
+        .eq('store_id', storeId)
+        .gte('voided_at', `${date}T00:00:00`)
+        .lte('voided_at', `${date}T23:59:59`)
+        .order('voided_at');
+
+      // Fetch refund transactions for the date
+      const { data: refundTransactions } = await supabase
+        .from('refunds')
+        .select('*')
+        .eq('store_id', storeId)
+        .gte('created_at', `${date}T00:00:00`)
+        .lte('created_at', `${date}T23:59:59`)
+        .order('created_at');
+
+      // Process void transactions
+      const ejournalVoids: EJournalVoidTransaction[] = (voidTransactions || []).map(v => ({
+        voidReceiptNumber: v.void_receipt_number || `VOID-${v.id.slice(0, 8)}`,
+        originalReceiptNumber: v.original_receipt_number || '',
+        voidDate: v.void_date,
+        voidReason: v.void_reason || 'Not specified',
+        originalAmount: v.original_total || 0,
+        voidedByName: v.voided_by_cashier_name || 'Unknown',
+        authorizedByName: v.authorized_by_name || 'Unknown'
+      }));
+
+      // Process refund transactions
+      const ejournalRefunds: EJournalRefundTransaction[] = (refundTransactions || []).map(r => ({
+        refundReceiptNumber: r.refund_receipt_number || `REF-${r.id.slice(0, 8)}`,
+        originalReceiptNumber: r.original_receipt_number || '',
+        refundDate: r.created_at,
+        refundReason: r.refund_reason || 'Not specified',
+        refundAmount: r.refund_amount || 0,
+        refundVatAmount: r.refund_vat_amount || 0,
+        processedByName: r.processed_by_name || 'Unknown'
+      }));
+
+      const totalVoidAmount = ejournalVoids.reduce((sum, v) => sum + v.originalAmount, 0);
+      const totalRefundAmount = ejournalRefunds.reduce((sum, r) => sum + r.refundAmount, 0);
+
       return {
         storeId,
         terminalId,
@@ -157,7 +227,14 @@ export class BIREJournalService {
         totalDiscounts,
         seniorDiscounts,
         pwdDiscounts,
-        transactions: ejournalTransactions
+        transactions: ejournalTransactions,
+        // Void and Refund data
+        voidTransactions: ejournalVoids,
+        refundTransactions: ejournalRefunds,
+        totalVoidAmount,
+        totalVoidCount: ejournalVoids.length,
+        totalRefundAmount,
+        totalRefundCount: ejournalRefunds.length
       };
     } catch (error) {
       console.error('Error generating e-Journal:', error);
@@ -245,6 +322,62 @@ export class BIREJournalService {
     lines.push(`PWD             : ${ejournalData.pwdDiscounts.toFixed(2).padStart(15)}`);
     lines.push(`OTHER DISCOUNTS : ${(ejournalData.totalDiscounts - ejournalData.seniorDiscounts - ejournalData.pwdDiscounts).toFixed(2).padStart(15)}`);
     lines.push('');
+    
+    // Void Transactions Section
+    lines.push(separator);
+    lines.push('                    VOID TRANSACTIONS');
+    lines.push(separator);
+    if (ejournalData.voidTransactions.length === 0) {
+      lines.push('No void transactions for this date.');
+    } else {
+      lines.push('VOID NO.        ORIG SI NO.     REASON              AMOUNT');
+      lines.push(thinSeparator);
+      ejournalData.voidTransactions.forEach(v => {
+        const voidNo = v.voidReceiptNumber.substring(0, 15).padEnd(16);
+        const origSi = v.originalReceiptNumber.substring(0, 15).padEnd(16);
+        const reason = v.voidReason.substring(0, 18).padEnd(20);
+        const amount = v.originalAmount.toFixed(2).padStart(10);
+        lines.push(`${voidNo}${origSi}${reason}${amount}`);
+        lines.push(`         Voided by: ${v.voidedByName}  |  Authorized by: ${v.authorizedByName}`);
+      });
+      lines.push(thinSeparator);
+      lines.push(`TOTAL VOIDS: ${ejournalData.totalVoidCount}`.padEnd(40) + `AMOUNT: ${ejournalData.totalVoidAmount.toFixed(2).padStart(15)}`);
+    }
+    lines.push('');
+    
+    // Refund Transactions Section
+    lines.push(separator);
+    lines.push('                   REFUND TRANSACTIONS');
+    lines.push(separator);
+    if (ejournalData.refundTransactions.length === 0) {
+      lines.push('No refund transactions for this date.');
+    } else {
+      lines.push('REFUND NO.      ORIG SI NO.     REASON              AMOUNT');
+      lines.push(thinSeparator);
+      ejournalData.refundTransactions.forEach(r => {
+        const refNo = r.refundReceiptNumber.substring(0, 15).padEnd(16);
+        const origSi = r.originalReceiptNumber.substring(0, 15).padEnd(16);
+        const reason = r.refundReason.substring(0, 18).padEnd(20);
+        const amount = r.refundAmount.toFixed(2).padStart(10);
+        lines.push(`${refNo}${origSi}${reason}${amount}`);
+        lines.push(`         Processed by: ${r.processedByName}  |  VAT: ${r.refundVatAmount.toFixed(2)}`);
+      });
+      lines.push(thinSeparator);
+      lines.push(`TOTAL REFUNDS: ${ejournalData.totalRefundCount}`.padEnd(40) + `AMOUNT: ${ejournalData.totalRefundAmount.toFixed(2).padStart(15)}`);
+    }
+    lines.push('');
+    
+    // Adjusted Net Sales Summary
+    lines.push(separator);
+    lines.push('                  ADJUSTED SALES SUMMARY');
+    lines.push(separator);
+    const adjustedNet = ejournalData.netSales - ejournalData.totalVoidAmount - ejournalData.totalRefundAmount;
+    lines.push(`NET SALES       : ${ejournalData.netSales.toFixed(2).padStart(15)}`);
+    lines.push(`LESS: VOIDS     : ${ejournalData.totalVoidAmount.toFixed(2).padStart(15)}`);
+    lines.push(`LESS: REFUNDS   : ${ejournalData.totalRefundAmount.toFixed(2).padStart(15)}`);
+    lines.push(`ADJUSTED NET    : ${adjustedNet.toFixed(2).padStart(15)}`);
+    lines.push('');
+    
     lines.push(separator);
     lines.push('                   TRANSACTION DETAILS');
     lines.push(separator);
