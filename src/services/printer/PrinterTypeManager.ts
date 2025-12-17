@@ -68,14 +68,15 @@ export class PrinterTypeManager {
     transaction: Transaction,
     customer?: Customer | null,
     store?: Store,
-    cashierName?: string
+    cashierName?: string,
+    isReprint?: boolean
   ): string {
     const printerType = printer.printerType || 'thermal';
     
     if (printerType === 'dot-matrix') {
-      return this.formatDotMatrixReceipt(transaction, customer, store, cashierName);
+      return this.formatDotMatrixReceipt(transaction, customer, store, cashierName, isReprint);
     } else {
-      return this.formatThermalReceipt(transaction, customer, store, cashierName);
+      return this.formatThermalReceipt(transaction, customer, store, cashierName, isReprint);
     }
   }
 
@@ -91,24 +92,24 @@ export class PrinterTypeManager {
   }
 
   // Format Z-Reading based on printer type
-  static formatZReading(printer: BluetoothPrinter, zReadingData: any): string {
+  static formatZReading(printer: BluetoothPrinter, zReadingData: any, isReprint?: boolean): string {
     const printerType = printer.printerType || 'thermal';
     
     if (printerType === 'dot-matrix') {
-      return this.formatDotMatrixZReading(zReadingData);
+      return this.formatDotMatrixZReading(zReadingData, isReprint);
     } else {
-      return this.formatThermalZReading(zReadingData);
+      return this.formatThermalZReading(zReadingData, isReprint);
     }
   }
 
   // Format X-Reading based on printer type
-  static formatXReading(printer: BluetoothPrinter, xReadingData: any): string {
+  static formatXReading(printer: BluetoothPrinter, xReadingData: any, isReprint?: boolean): string {
     const printerType = printer.printerType || 'thermal';
     
     if (printerType === 'dot-matrix') {
-      return this.formatDotMatrixXReading(xReadingData);
+      return this.formatDotMatrixXReading(xReadingData, isReprint);
     } else {
-      return this.formatThermalXReading(xReadingData);
+      return this.formatThermalXReading(xReadingData, isReprint);
     }
   }
 
@@ -117,13 +118,25 @@ export class PrinterTypeManager {
     transaction: Transaction,
     customer?: Customer | null,
     store?: Store,
-    cashierName?: string
+    cashierName?: string,
+    isReprint?: boolean
   ): string {
     // Use existing thermal formatting logic
     const formatter = ESCPOSFormatter;
     const width = 32;
     
     let receipt = formatter.init();
+    
+    // BIR Requirement: REPRINT watermark with date/time
+    if (isReprint) {
+      receipt += formatter.center();
+      receipt += formatter.doubleSize();
+      receipt += formatter.bold('*** REPRINT ***') + '\n';
+      receipt += formatter.normalSize();
+      receipt += `Reprinted: ${new Date().toLocaleString()}\n`;
+      receipt += formatter.horizontalLine(width);
+      receipt += formatter.left();
+    }
     
     // Header
     if (store) {
@@ -257,12 +270,24 @@ export class PrinterTypeManager {
     transaction: Transaction,
     customer?: Customer | null,
     store?: Store,
-    cashierName?: string
+    cashierName?: string,
+    isReprint?: boolean
   ): string {
     const formatter = DotMatrixFormatter;
     const width = 80;
     
     let receipt = formatter.init();
+    
+    // BIR Requirement: REPRINT watermark with date/time
+    if (isReprint) {
+      receipt += formatter.center();
+      receipt += formatter.expandedFont();
+      receipt += formatter.bold('*** REPRINT ***') + '\n';
+      receipt += formatter.normalFont();
+      receipt += `Reprinted: ${new Date().toLocaleString()}\n`;
+      receipt += formatter.horizontalLine(width);
+      receipt += formatter.left();
+    }
     
     // Header
     if (store) {
@@ -413,11 +438,22 @@ export class PrinterTypeManager {
   }
 
   // Format thermal Z-Reading report
-  private static formatThermalZReading(zReadingData: any): string {
+  private static formatThermalZReading(zReadingData: any, isReprint?: boolean): string {
     const formatter = ESCPOSFormatter;
     const width = 32;
     
     let report = formatter.init();
+    
+    // BIR Requirement: REPRINT watermark with date/time for reprinted Z-Readings
+    if (isReprint) {
+      report += formatter.center();
+      report += formatter.doubleSize();
+      report += formatter.bold('*** REPRINT ***') + '\n';
+      report += formatter.normalSize();
+      report += `Reprinted: ${new Date().toLocaleString()}\n`;
+      report += formatter.horizontalLine(width);
+      report += formatter.left();
+    }
     
     // Header
     report += formatter.center();
@@ -548,11 +584,22 @@ export class PrinterTypeManager {
   }
 
   // Format thermal X-Reading report
-  private static formatThermalXReading(xReadingData: any): string {
+  private static formatThermalXReading(xReadingData: any, isReprint?: boolean): string {
     const formatter = ESCPOSFormatter;
     const width = 32;
     
     let report = formatter.init();
+    
+    // BIR Requirement: REPRINT watermark with date/time for reprinted X-Readings
+    if (isReprint) {
+      report += formatter.center();
+      report += formatter.doubleSize();
+      report += formatter.bold('*** REPRINT ***') + '\n';
+      report += formatter.normalSize();
+      report += `Reprinted: ${new Date().toLocaleString()}\n`;
+      report += formatter.horizontalLine(width);
+      report += formatter.left();
+    }
     
     // Header
     report += formatter.center();
@@ -645,10 +692,18 @@ export class PrinterTypeManager {
   }
 
   // Format dot matrix X-Reading report
-  private static formatDotMatrixXReading(xReadingData: any): string {
+  private static formatDotMatrixXReading(xReadingData: any, isReprint?: boolean): string {
     // For dot matrix, use similar format but with wider width
     const width = 80;
     let report = '';
+    
+    // BIR Requirement: REPRINT watermark with date/time
+    if (isReprint) {
+      report += '='.repeat(width) + '\n';
+      report += '*** REPRINT ***\n'.padStart(width/2 + 9);
+      report += `Reprinted: ${new Date().toLocaleString()}\n`;
+      report += '='.repeat(width) + '\n';
+    }
     
     // Simple text-based format for dot matrix printers
     report += '='.repeat(width) + '\n';
@@ -675,10 +730,18 @@ export class PrinterTypeManager {
   }
 
   // Format dot matrix Z-Reading report
-  private static formatDotMatrixZReading(zReadingData: any): string {
+  private static formatDotMatrixZReading(zReadingData: any, isReprint?: boolean): string {
     // For dot matrix, use similar format but with wider width
     const width = 80;
     let report = '';
+    
+    // BIR Requirement: REPRINT watermark with date/time
+    if (isReprint) {
+      report += '='.repeat(width) + '\n';
+      report += '*** REPRINT ***\n'.padStart(width/2 + 9);
+      report += `Reprinted: ${new Date().toLocaleString()}\n`;
+      report += '='.repeat(width) + '\n';
+    }
     
     // Simple text-based format for dot matrix printers
     report += '='.repeat(width) + '\n';

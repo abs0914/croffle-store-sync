@@ -19,6 +19,7 @@ interface PrintJobRequest {
   store?: Store;
   cashierName?: string;
   autoOpenDrawer?: boolean;
+  isReprint?: boolean;
 }
 
 interface PrintJobStatus {
@@ -142,7 +143,8 @@ export class PrintCoordinator {
         request.customer,
         request.store,
         request.cashierName,
-        request.autoOpenDrawer
+        request.autoOpenDrawer,
+        request.isReprint
       );
 
       if (success) {

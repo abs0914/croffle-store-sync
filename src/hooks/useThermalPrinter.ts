@@ -287,7 +287,7 @@ export function useThermalPrinter() {
     }
   };
 
-  const printZReading = async (zReadingData: any) => {
+  const printZReading = async (zReadingData: any, isReprint?: boolean) => {
     if (!isConnected) {
       toast.error('No printer connected');
       return false;
@@ -295,10 +295,10 @@ export function useThermalPrinter() {
 
     setIsPrinting(true);
     try {
-      console.log('Starting Z-Reading print...');
-      toast.info('Sending Z-Reading to printer...');
+      console.log('Starting Z-Reading print...', { isReprint: !!isReprint });
+      toast.info(isReprint ? 'Reprinting Z-Reading...' : 'Sending Z-Reading to printer...');
 
-      const success = await BluetoothPrinterService.printZReading(zReadingData);
+      const success = await BluetoothPrinterService.printZReading(zReadingData, isReprint);
 
       if (success) {
         toast.success('Z-Reading sent to printer successfully!');
