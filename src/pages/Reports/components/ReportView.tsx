@@ -17,6 +17,8 @@ import { BIRXReadingView } from "@/components/reports/BIRXReadingView";
 import { BIRZReadingView } from "@/components/reports/BIRZReadingView";
 import { ZReadingThermalWrapper } from "./reports/ZReadingThermalWrapper";
 import { XReadingThermalWrapper } from "./reports/XReadingThermalWrapper";
+import { DiscountSalesBookView } from "./reports/DiscountSalesBookView";
+import { BIRSalesSummaryView } from "./reports/BIRSalesSummaryView";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -51,6 +53,8 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
       return <BIREJournalView storeId={effectiveStoreId} date={dateRange.from} />;
     case 'bir_backup':
       return <BIRDataBackupView storeId={effectiveStoreId} />;
+    case 'bir_sales_summary':
+      return <BIRSalesSummaryView storeId={effectiveStoreId} dateRange={dateRange} />;
     case 'robinsons_compliance':
       return <RobinsonsCompliance />;
     case 'void_report':
@@ -67,6 +71,15 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
       return <CashierShiftReportView dateRange={dateRange} />;
     case 'inventory_status':
       return <CashierInventoryReportView />;
+    // Discount Sales Books
+    case 'senior_citizen_sales':
+      return <DiscountSalesBookView storeId={effectiveStoreId} discountType="senior" dateRange={dateRange} />;
+    case 'pwd_sales':
+      return <DiscountSalesBookView storeId={effectiveStoreId} discountType="pwd" dateRange={dateRange} />;
+    case 'naac_sales':
+      return <DiscountSalesBookView storeId={effectiveStoreId} discountType="naac" dateRange={dateRange} />;
+    case 'solo_parent_sales':
+      return <DiscountSalesBookView storeId={effectiveStoreId} discountType="solo_parent" dateRange={dateRange} />;
     default:
       return null;
   }
