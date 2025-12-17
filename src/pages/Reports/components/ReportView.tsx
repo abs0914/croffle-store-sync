@@ -19,6 +19,7 @@ import { ZReadingThermalWrapper } from "./reports/ZReadingThermalWrapper";
 import { XReadingThermalWrapper } from "./reports/XReadingThermalWrapper";
 import { DiscountSalesBookView } from "./reports/DiscountSalesBookView";
 import { BIRSalesSummaryView } from "./reports/BIRSalesSummaryView";
+import SystemAuditTrailView from "@/components/bir/SystemAuditTrailView";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -80,6 +81,8 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
       return <DiscountSalesBookView storeId={effectiveStoreId} discountType="naac" dateRange={dateRange} />;
     case 'solo_parent_sales':
       return <DiscountSalesBookView storeId={effectiveStoreId} discountType="solo_parent" dateRange={dateRange} />;
+    case 'audit_trail':
+      return <SystemAuditTrailView />;
     default:
       return null;
   }

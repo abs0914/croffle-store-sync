@@ -58,7 +58,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   const isBIRReport = ['x_reading', 'z_reading', 'bir_ejournal', 'void_report'].includes(reportType);
 
   // Check if this is a compliance report that handles its own rendering
-  const isComplianceReport = reportType === 'robinsons_compliance' || reportType === 'bir_backup';
+  const isComplianceReport = reportType === 'robinsons_compliance' || reportType === 'bir_backup' || reportType === 'audit_trail';
 
   // Use selectedStoreId if available, fallback to storeId for data fetching
   const effectiveStoreId = selectedStoreId || storeId;
