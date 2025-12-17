@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useShift } from "@/contexts/shift";
 import { useStore } from "@/contexts/StoreContext";
 import StartShiftDialog from "@/components/pos/dialogs/StartShiftDialog";
 import { toast } from "sonner";
+import { getAppVersionDisplay } from "@/config/appVersion";
 
 export function DashboardHeader() {
   const [showStartDialog, setShowStartDialog] = useState(false);
@@ -27,8 +27,9 @@ export function DashboardHeader() {
   return (
     <>
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold text-croffle-primary">Dashboard</h1>
+          <span className="text-xs text-muted-foreground">{getAppVersionDisplay()}</span>
         </div>
         {currentShift ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

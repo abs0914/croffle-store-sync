@@ -228,7 +228,30 @@ export class PrinterTypeManager {
     }
     
     if (transaction.discount > 0) {
-      receipt += formatter.formatLine('Discount:', formatter.formatCurrencyWithSymbol(-transaction.discount), width);
+      const discountType = transaction.discountType || 'regular';
+      let discountLabel = 'Discount:';
+      
+      switch (discountType) {
+        case 'senior': discountLabel = 'Senior Citizen Disc:'; break;
+        case 'pwd': discountLabel = 'PWD Discount:'; break;
+        case 'naac': 
+        case 'athletes_coaches': discountLabel = 'NAAC Discount:'; break;
+        case 'solo_parent': discountLabel = 'Solo Parent Disc:'; break;
+        case 'employee': discountLabel = 'Employee Discount:'; break;
+        case 'loyalty': discountLabel = 'Loyalty Discount:'; break;
+        case 'regular': discountLabel = 'Regular Discount:'; break;
+        case 'custom': discountLabel = 'Custom Discount:'; break;
+        case 'complimentary': discountLabel = 'Complimentary:'; break;
+        case 'promo': discountLabel = 'Promo Discount:'; break;
+        case 'bogo': discountLabel = 'BOGO Discount:'; break;
+      }
+      
+      receipt += formatter.formatLine(discountLabel, formatter.formatCurrencyWithSymbol(-transaction.discount), width);
+      
+      // BIR Requirement: Print ID number for eligible discounts
+      if (transaction.discountIdNumber) {
+        receipt += formatter.formatLine('ID Number:', transaction.discountIdNumber, width);
+      }
     }
     
     receipt += formatter.formatLine('TOTAL:', formatter.bold(formatter.formatCurrencyWithSymbol(transaction.total)), width);
