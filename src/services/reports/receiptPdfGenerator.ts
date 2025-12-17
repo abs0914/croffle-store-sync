@@ -282,6 +282,59 @@ export class ReceiptPdfGenerator {
       this.addLeftText(receipt.promoDetails, this.currentY);
       this.currentY += 4;
     }
+    
+    // Discount Beneficiary Signature Section (BIR requirement)
+    if (receipt.discountBeneficiaries && receipt.discountBeneficiaries.length > 0) {
+      this.addSeparator();
+      
+      receipt.discountBeneficiaries.forEach((beneficiary, index) => {
+        // Determine ID type and discount label based on type
+        let idType = 'ID No.';
+        let discountLabel = 'DISCOUNT';
+        switch (beneficiary.type) {
+          case 'senior': 
+            idType = 'OSCA ID No.'; 
+            discountLabel = 'SENIOR CITIZEN DISCOUNT';
+            break;
+          case 'pwd': 
+            idType = 'PWD ID No.'; 
+            discountLabel = 'PWD DISCOUNT';
+            break;
+          case 'naac': 
+          case 'athletes_coaches': 
+            idType = 'NAAC ID No.'; 
+            discountLabel = 'NAAC DISCOUNT';
+            break;
+          case 'solo_parent': 
+            idType = 'Solo Parent ID No.'; 
+            discountLabel = 'SOLO PARENT DISCOUNT';
+            break;
+        }
+        
+        // Discount type header
+        this.doc.setFontSize(7);
+        this.doc.setFont('helvetica', 'bold');
+        this.addCenteredText(discountLabel, this.currentY);
+        this.currentY += 4;
+        
+        // Beneficiary info
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setFontSize(6);
+        this.addLeftText(`Name: ${beneficiary.name || '___________________'}`, this.currentY);
+        this.currentY += 3;
+        this.addLeftText(`${idType}: ${beneficiary.idNumber || '___________________'}`, this.currentY);
+        this.currentY += 3;
+        
+        // Signature line
+        this.addLeftText('Signature: ___________________', this.currentY);
+        this.currentY += 5;
+        
+        // Add spacing between multiple beneficiaries
+        if (index < receipt.discountBeneficiaries!.length - 1) {
+          this.currentY += 2;
+        }
+      });
+    }
   }
 
   private async addFooter(receipt: ReceiptData, isReprint: boolean = false): Promise<void> {

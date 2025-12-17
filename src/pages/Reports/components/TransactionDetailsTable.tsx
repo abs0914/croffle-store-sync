@@ -22,7 +22,7 @@ import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { BluetoothPrinterService } from "@/services/printer/BluetoothPrinterService";
 import { Transaction as PosTransaction } from "@/types";
 import { Store } from "@/types/store";
-import { ReceiptPdfGenerator, ReceiptData } from "@/services/reports/receiptPdfGenerator";
+import { ReceiptPdfGenerator, ReceiptData, ReceiptBeneficiary } from "@/services/reports/receiptPdfGenerator";
 import { useStore } from "@/contexts/StoreContext";
 interface Transaction {
   id: string;
@@ -338,6 +338,52 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
         ? JSON.parse(txData.items) 
         : txData.items;
 
+      // Build discount beneficiaries from transaction data
+      const discountBeneficiaries: ReceiptBeneficiary[] = [];
+      
+      // Check new unified format first
+      if (txData.discount_beneficiaries && Array.isArray(txData.discount_beneficiaries)) {
+        txData.discount_beneficiaries.forEach((b: any) => {
+          discountBeneficiaries.push({
+            type: b.type,
+            idNumber: b.idNumber || b.id_number || '',
+            name: b.name || '',
+            discountAmount: b.discountAmount || b.discount_amount || 0,
+            vatExemptionAmount: b.vatExemptionAmount || b.vat_exemption_amount || 0,
+            isVATExempt: ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(b.type)
+          });
+        });
+      }
+      
+      // Fallback to legacy senior_discounts_detail
+      if (discountBeneficiaries.length === 0 && txData.senior_discounts_detail && Array.isArray(txData.senior_discounts_detail)) {
+        txData.senior_discounts_detail.forEach((s: any) => {
+          discountBeneficiaries.push({
+            type: 'senior',
+            idNumber: s.idNumber || s.id_number || '',
+            name: s.name || '',
+            discountAmount: s.discountAmount || s.discount_amount || 0,
+            vatExemptionAmount: 0,
+            isVATExempt: true
+          });
+        });
+      }
+      
+      // Fallback to legacy other_discount_detail (PWD, NAAC, Solo Parent)
+      if (txData.other_discount_detail && typeof txData.other_discount_detail === 'object') {
+        const otherDiscount = txData.other_discount_detail as any;
+        if (['pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(otherDiscount.type)) {
+          discountBeneficiaries.push({
+            type: otherDiscount.type,
+            idNumber: otherDiscount.idNumber || otherDiscount.id_number || '',
+            name: otherDiscount.name || '',
+            discountAmount: otherDiscount.discountAmount || otherDiscount.discount_amount || 0,
+            vatExemptionAmount: 0,
+            isVATExempt: true
+          });
+        }
+      }
+
       // Build receipt data
       const receiptData: ReceiptData = {
         receiptNumber: txData.receipt_number,
@@ -364,7 +410,8 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
         seniorDiscount: txData.senior_citizen_discount || txData.senior_discount || 0,
         pwdDiscount: txData.pwd_discount || 0,
         amountTendered: txData.amount_tendered,
-        change: txData.change
+        change: txData.change,
+        discountBeneficiaries: discountBeneficiaries.length > 0 ? discountBeneficiaries : undefined
       };
 
       // Generate PDF with reprint watermark (downloading from Reports is always a reprint)
