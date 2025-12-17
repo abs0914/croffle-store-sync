@@ -189,18 +189,22 @@ export class BIREJournalService {
         .from('void_transactions')
         .select('*')
         .eq('store_id', storeId)
-        .gte('voided_at', `${date}T00:00:00`)
-        .lte('voided_at', `${date}T23:59:59`)
-        .order('voided_at');
+        .gte('void_date', `${isoDate}T00:00:00`)
+        .lte('void_date', `${isoDate}T23:59:59.999`)
+        .order('void_date');
+      
+      console.log('📋 E-Journal void transactions:', { count: voidTransactions?.length || 0 });
 
       // Fetch refund transactions for the date
       const { data: refundTransactions } = await supabase
         .from('refunds')
         .select('*')
         .eq('store_id', storeId)
-        .gte('created_at', `${date}T00:00:00`)
-        .lte('created_at', `${date}T23:59:59`)
+        .gte('created_at', `${isoDate}T00:00:00`)
+        .lte('created_at', `${isoDate}T23:59:59.999`)
         .order('created_at');
+      
+      console.log('📋 E-Journal refund transactions:', { count: refundTransactions?.length || 0 });
 
       // Process void transactions
       const ejournalVoids: EJournalVoidTransaction[] = (voidTransactions || []).map(v => ({
