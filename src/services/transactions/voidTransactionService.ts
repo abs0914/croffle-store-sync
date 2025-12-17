@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { nowInPhilippines, formatDateTime } from '@/utils';
 import { executeWithValidSession } from "@/contexts/auth/session-utils";
 import { AtomicInventoryService } from '@/services/inventory/atomicInventoryService';
+import { logTransactionVoided } from '@/services/bir/transactionAuditLogger';
 
 export type VoidReasonCategory = 
   | 'customer_request' 
@@ -199,6 +200,22 @@ export const voidTransaction = async (voidData: VoidRequestData) => {
       // Log but don't fail the void - inventory restoration is best-effort
       console.error('❌ Failed to restore inventory:', inventoryError);
     }
+
+    // ✅ Log void transaction to audit trail (non-blocking)
+    logTransactionVoided(
+      voidData.storeId,
+      voidData.transactionId,
+      voidData.receiptNumber,
+      voidReceiptNumber,
+      voidData.voidedBy,
+      voidData.cashierName,
+      {
+        originalTotal: originalTransaction.total,
+        reasonCategory: voidData.reasonCategory,
+        reason: voidData.reason,
+        authorizedBy: voidData.authorizerName,
+      }
+    ).catch(err => console.warn('Audit logging failed (non-critical):', err));
 
     return {
       success: true,

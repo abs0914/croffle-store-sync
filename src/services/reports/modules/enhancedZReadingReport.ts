@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { generateBIRXReading, BIRXReadingData } from './enhancedXReadingReport';
+import { logZReadingGenerated } from "@/services/bir/transactionAuditLogger";
 
 export interface BIRZReadingData extends BIRXReadingData {
   // Cash Management (Z-Reading specific)
@@ -87,6 +88,25 @@ export async function generateBIRZReading(
     
     // Close the shift
     await closeShift(shiftId, actualCash);
+
+    // ✅ Log Z-Reading generation to audit trail (non-blocking)
+    // Get user ID from shift or use a placeholder
+    const userId = shift.user_id || 'system';
+    logZReadingGenerated(
+      storeId,
+      userId,
+      managerName,
+      {
+        readingNumber: zReadingData.readingNumber,
+        grossSales: zReadingData.grossSales,
+        netSales: zReadingData.netSales,
+        totalTransactions: zReadingData.transactionCount,
+        vatAmount: zReadingData.vatAmount,
+        totalDiscounts: zReadingData.totalDiscounts,
+        beginningReceiptNumber: zReadingData.beginningReceiptNumber,
+        endingReceiptNumber: zReadingData.endingReceiptNumber,
+      }
+    ).catch(err => console.warn('Audit logging failed (non-critical):', err));
 
     return zReadingData;
   } catch (error) {
