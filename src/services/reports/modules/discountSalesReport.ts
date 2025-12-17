@@ -240,11 +240,11 @@ export async function fetchBIRSalesSummary(
 
     // Fetch void transactions
     const { data: voidTransactions } = await supabase
-      .from('deleted_transactions_backup')
+      .from('void_transactions')
       .select('*')
       .eq('store_id', storeId)
-      .gte('created_at', `${from}T00:00:00`)
-      .lte('created_at', `${to}T23:59:59`);
+      .gte('void_date', `${from}T00:00:00`)
+      .lte('void_date', `${to}T23:59:59`);
 
     // Fetch refunds
     const { data: refunds } = await supabase
@@ -347,7 +347,7 @@ export async function fetchBIRSalesSummary(
     );
 
     // Calculate void and refund totals
-    const voidAmount = (voidTransactions || []).reduce((sum, t) => sum + (t.total || 0), 0);
+    const voidAmount = (voidTransactions || []).reduce((sum, t) => sum + (t.original_total || 0), 0);
     const refundAmount = (refunds || []).reduce((sum, r) => sum + (r.refund_amount || 0), 0);
 
     return {
