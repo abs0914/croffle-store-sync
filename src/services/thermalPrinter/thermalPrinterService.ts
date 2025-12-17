@@ -90,28 +90,38 @@ export class ThermalPrinterService {
     receipt += ESC_POS.FONT_NORMAL;
     receipt += ESC_POS.BOLD_OFF;
     
-    // Store Address
+    // Store Address and TIN
     receipt += ESC_POS.ALIGN_CENTER;
     receipt += `${data.storeAddress}\n`;
-    receipt += `TIN: ${data.storeTin}\n`;
+    receipt += `VAT REG. TIN: ${data.storeTin}\n`;
     receipt += ESC_POS.LINE_FEED;
     
-    // Receipt Details
+    // SALES INVOICE Header
+    receipt += ESC_POS.BOLD_ON;
+    receipt += 'SALES INVOICE\n';
+    receipt += ESC_POS.BOLD_OFF;
+    
+    // Receipt Details - SI No instead of Receipt No
     receipt += ESC_POS.ALIGN_LEFT;
     receipt += ESC_POS.SEPARATOR;
-    receipt += `Receipt No: ${data.receiptNumber}\n`;
+    receipt += `SI No: ${data.receiptNumber}\n`;
     receipt += `Date: ${data.businessDate}\n`;
     receipt += `Time: ${data.transactionTime}\n`;
     receipt += `Cashier: ${data.cashierName}\n`;
     receipt += ESC_POS.SEPARATOR;
     
-    // Items
+    // Item Header (BIR format)
     receipt += ESC_POS.ALIGN_LEFT;
+    receipt += 'DESC           QTY PRICE   AMOUNT\n';
+    receipt += ESC_POS.SEPARATOR;
+    
+    // Items (BIR format: qty * price amount)
     data.items.forEach(item => {
       receipt += `${item.description}\n`;
-      receipt += `  ${item.quantity} x ${this.formatCurrency(item.unitPrice)}`;
-      receipt += this.padRight(this.formatCurrency(item.lineTotal), 48 - 10 - `  ${item.quantity} x ${this.formatCurrency(item.unitPrice)}`.length);
-      receipt += '\n';
+      receipt += `${item.quantity} * ${this.formatCurrency(item.unitPrice)}`;
+      const spacing = 48 - `${item.quantity} * ${this.formatCurrency(item.unitPrice)}`.length - this.formatCurrency(item.lineTotal).length;
+      receipt += ' '.repeat(Math.max(1, spacing));
+      receipt += `${this.formatCurrency(item.lineTotal)}\n`;
       
       if (item.itemDiscount && item.itemDiscount > 0) {
         receipt += `  Discount: -${this.formatCurrency(item.itemDiscount)}\n`;
@@ -120,63 +130,111 @@ export class ThermalPrinterService {
     
     receipt += ESC_POS.SEPARATOR;
     
-    // Totals
-    receipt += ESC_POS.ALIGN_LEFT;
-    receipt += this.formatTotalLine('GROSS AMOUNT:', data.grossAmount);
+    // BIR Totals Format: Total Sales → Less VAT → Net of VAT → Discount → Add VAT → Total
+    const grossAmount = data.grossAmount;
+    const vatAmount = data.vatAmount || (grossAmount / 1.12 * 0.12);
+    const netOfVat = grossAmount - vatAmount;
     
-    // Detailed discount breakdown
+    receipt += ESC_POS.ALIGN_LEFT;
+    receipt += this.formatTotalLine('Total Sales:', grossAmount);
+    receipt += this.formatTotalLine('Less 12% VAT:', vatAmount);
+    receipt += this.formatTotalLine('Amt. Net of VAT:', netOfVat);
+    
+    // Discount with type
     if (data.discountAmount > 0) {
-      // Check if transaction has detailed discounts (from new format)
       const transaction = (data as any).transaction;
+      const discountType = transaction?.discountType || 'regular';
+      let discountLabel = 'DISCOUNT';
+      let discountPercent = '';
       
-      if (transaction?.senior_discounts_detail && transaction.senior_discounts_detail.length > 0) {
-        receipt += 'SENIOR DISCOUNTS:\n';
-        transaction.senior_discounts_detail.forEach((senior: any) => {
-          receipt += `  ${senior.name} (${senior.idNumber})\n`;
-          receipt += this.formatTotalLine('', -senior.discountAmount);
-        });
+      switch (discountType) {
+        case 'senior': discountLabel = 'SENIOR CITIZEN'; discountPercent = '20%'; break;
+        case 'pwd': discountLabel = 'PWD'; discountPercent = '20%'; break;
+        case 'naac': 
+        case 'athletes_coaches': discountLabel = 'NAAC'; discountPercent = '20%'; break;
+        case 'solo_parent': discountLabel = 'SOLO PARENT'; discountPercent = '20%'; break;
+        case 'employee': discountLabel = 'EMPLOYEE'; discountPercent = '15%'; break;
+        case 'loyalty': discountLabel = 'LOYALTY'; discountPercent = '10%'; break;
+        case 'regular': discountLabel = 'REGULAR'; discountPercent = '5%'; break;
+        case 'custom': discountLabel = 'CUSTOM'; break;
+        case 'complimentary': discountLabel = 'COMPLIMENTARY'; discountPercent = '100%'; break;
       }
       
-      if (transaction?.vat_exemption_amount && transaction.vat_exemption_amount > 0) {
-        receipt += this.formatTotalLine('VAT EXEMPTION:', -transaction.vat_exemption_amount);
-      }
+      const fullLabel = discountPercent ? `${discountLabel} ${discountPercent}:` : `${discountLabel}:`;
+      receipt += this.formatTotalLine(fullLabel, -data.discountAmount);
       
-      if (transaction?.other_discount_detail) {
-        const detail = transaction.other_discount_detail;
-        let label = 'DISCOUNT';
-        if (detail.type === 'pwd') label = 'PWD DISCOUNT';
-        else if (detail.type === 'employee') label = 'EMPLOYEE DISCOUNT';
-        else if (detail.type === 'loyalty') label = 'LOYALTY DISCOUNT';
-        
-        if (detail.idNumber) {
-          receipt += `${label} (${detail.idNumber})\n`;
-          receipt += this.formatTotalLine('', -detail.amount);
-        } else {
-          receipt += this.formatTotalLine(label + ':', -detail.amount);
+      // Beneficiary info for VAT-exempt discounts
+      if (['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(discountType)) {
+        if (transaction?.discountIdNumber) {
+          let idType = 'ID No.';
+          switch (discountType) {
+            case 'senior': idType = 'OSCA ID No.'; break;
+            case 'pwd': idType = 'PWD ID No.'; break;
+            case 'naac': 
+            case 'athletes_coaches': idType = 'NAAC ID No.'; break;
+            case 'solo_parent': idType = 'Solo Parent ID No.'; break;
+          }
+          receipt += `${idType}: ${transaction.discountIdNumber}\n`;
         }
       }
-      
-      // Legacy fallback for old transactions
-      if (!transaction?.senior_discounts_detail && !transaction?.other_discount_detail) {
-        receipt += this.formatTotalLine('DISCOUNT:', -data.discountAmount);
-      }
+    }
+    
+    // Add VAT (for non-exempt)
+    const isVatExempt = ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes((data as any).transaction?.discountType);
+    if (!isVatExempt || data.discountAmount === 0) {
+      receipt += this.formatTotalLine('Add VAT:', vatAmount);
     }
     
     receipt += ESC_POS.SEPARATOR;
     receipt += ESC_POS.BOLD_ON;
-    receipt += this.formatTotalLine('NET AMOUNT:', data.netAmount);
+    receipt += this.formatTotalLine('TOTAL AMOUNT DUE:', data.netAmount);
     receipt += ESC_POS.BOLD_OFF;
-    
-    receipt += this.formatTotalLine('VAT (12%):', data.vatAmount);
-    receipt += ESC_POS.LINE_FEED;
-    
-    // Payment Method
-    receipt += `Payment: ${data.paymentMethod}\n`;
     receipt += ESC_POS.SEPARATOR;
+    
+    // VAT Breakdown Section
+    const vatableSales = isVatExempt && data.discountAmount > 0 ? 0 : netOfVat;
+    const vatExemptSales = isVatExempt && data.discountAmount > 0 ? netOfVat : 0;
+    
+    receipt += this.formatTotalLine('VATABLE Sales:', vatableSales);
+    receipt += this.formatTotalLine('VAT 12%:', isVatExempt ? 0 : vatAmount);
+    receipt += this.formatTotalLine('VAT Exempt Sales:', vatExemptSales);
+    receipt += this.formatTotalLine('Zero-Rated Sales:', 0);
+    receipt += ESC_POS.SEPARATOR;
+    
+    // Payment Section
+    receipt += `Payment Type: ${data.paymentMethod}\n`;
+    
+    // Credit card details if applicable
+    const transaction = (data as any).transaction;
+    const paymentDetails = transaction?.paymentDetails || transaction?.payment_details;
+    if (data.paymentMethod === 'CARD' || data.paymentMethod === 'CREDIT' || data.paymentMethod === 'DEBIT') {
+      const cardType = paymentDetails?.cardType || paymentDetails?.card_type || 'Credit Card';
+      const cardNumber = paymentDetails?.cardNumber || paymentDetails?.card_number || paymentDetails?.lastFourDigits || '';
+      const maskedNumber = cardNumber ? '**** **** **** ' + cardNumber.slice(-4) : 'N/A';
+      receipt += `Credit Card Type: ${cardType}\n`;
+      receipt += `Credit Card No.: ${maskedNumber}\n`;
+      if (paymentDetails?.approvalCode || paymentDetails?.approval_code) {
+        receipt += `Approval Code: ${paymentDetails.approvalCode || paymentDetails.approval_code}\n`;
+      }
+    }
+    
+    receipt += ESC_POS.SEPARATOR;
+    
+    // Signature line for discount transactions
+    if (data.discountAmount > 0 && isVatExempt) {
+      receipt += '\n';
+      receipt += '________________________\n';
+      receipt += ESC_POS.ALIGN_CENTER;
+      receipt += "(Customer's Signature)\n";
+      receipt += ESC_POS.ALIGN_LEFT;
+      receipt += ESC_POS.SEPARATOR;
+    }
     
     // Footer
     receipt += ESC_POS.ALIGN_CENTER;
+    receipt += ESC_POS.BOLD_ON;
     receipt += 'THIS SERVES AS YOUR INVOICE\n';
+    receipt += ESC_POS.BOLD_OFF;
     receipt += '\nThank you for dining with us!\n';
     receipt += ESC_POS.LINE_FEED;
     receipt += ESC_POS.LINE_FEED;
@@ -189,7 +247,7 @@ export class ThermalPrinterService {
   }
 
   private formatCurrency(amount: number): string {
-    return `₱${Math.abs(amount).toFixed(2)}`;
+    return `P${Math.abs(amount).toFixed(2)}`; // Use 'P' instead of peso symbol for thermal printer compatibility
   }
 
   private formatTotalLine(label: string, amount: number): string {

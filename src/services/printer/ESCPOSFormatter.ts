@@ -122,19 +122,89 @@ export class ESCPOSFormatter {
     return truncatedLeft + ' '.repeat(padding) + right + this.lineFeed();
   }
 
-  // Format item line (special formatting for product items)
+  // Format item line (BIR format: name on line 1, qty * price amount on line 2)
   static formatItemLine(name: string, price: string, quantity: number, total: string, width: number = 32): string {
     // Format: "Product Name"
-    //         "  P125.00 x 1        P125.00"
+    //         "qty * price              amount"
     // Note: price and total already have "P" prefix from formatCurrencyWithSymbol
     let result = name + this.lineFeed();
 
-    const qtyLine = `  ${price} x ${quantity}`;
+    // BIR format uses "qty * price" not "price x qty"
+    const qtyLine = `${quantity} * ${price}`;
     const totalFormatted = total;
 
     const padding = Math.max(1, width - qtyLine.length - totalFormatted.length);
     result += qtyLine + ' '.repeat(padding) + totalFormatted + this.lineFeed();
 
+    return result;
+  }
+
+  // Format item table header (BIR format)
+  static formatItemHeader(width: number = 32): string {
+    // DESC QTY U.PRICE (PHP) AMOUNT (PHP)
+    // For 32-char width, simplified version
+    return 'DESC' + ' '.repeat(width - 24) + 'QTY PRICE   AMOUNT' + this.lineFeed();
+  }
+
+  // Format VAT breakdown section (BIR requirement)
+  static formatVATBreakdown(vatableSales: number, vat12: number, vatExemptSales: number, zeroRatedSales: number, width: number = 32): string {
+    let result = '';
+    result += this.formatLine('VATABLE Sales:', this.formatCurrencyWithSymbol(vatableSales), width);
+    result += this.formatLine('VAT 12%:', this.formatCurrencyWithSymbol(vat12), width);
+    result += this.formatLine('VAT Exempt Sales:', this.formatCurrencyWithSymbol(vatExemptSales), width);
+    result += this.formatLine('Zero-Rated Sales:', this.formatCurrencyWithSymbol(zeroRatedSales), width);
+    return result;
+  }
+
+  // Format credit card details (BIR requirement for card payments)
+  static formatCardDetails(cardType: string, cardNumber: string, expiryDate?: string, approvalCode?: string, width: number = 32): string {
+    let result = '';
+    result += this.formatLine('Credit Card Type:', cardType, width);
+    // Mask card number - show last 4 digits only
+    const maskedNumber = cardNumber ? '**** **** **** ' + cardNumber.slice(-4) : 'N/A';
+    result += this.formatLine('Credit Card No.:', maskedNumber, width);
+    if (expiryDate) {
+      result += this.formatLine('Expiry Date:', expiryDate, width);
+    }
+    if (approvalCode) {
+      result += this.formatLine('Approval Code:', approvalCode, width);
+    }
+    return result;
+  }
+
+  // Format beneficiary info section (BIR requirement for discounts)
+  static formatBeneficiaryInfo(name: string, idType: string, idNumber: string, address?: string, tin?: string, width: number = 32): string {
+    let result = '';
+    result += this.formatLine('Name:', name, width);
+    result += this.formatLine(idType + ':', idNumber, width);
+    if (address) {
+      result += this.formatLine('Address:', address, width);
+    }
+    if (tin) {
+      result += this.formatLine('TIN:', tin, width);
+    }
+    return result;
+  }
+
+  // Format signature line (BIR requirement)
+  static formatSignatureLine(width: number = 32): string {
+    let result = this.lineFeed();
+    result += '_'.repeat(Math.floor(width * 0.8)) + this.lineFeed();
+    result += this.center();
+    result += "(Customer's Signature)" + this.lineFeed();
+    result += this.left();
+    return result;
+  }
+
+  // Format PTU info (BIR requirement)
+  static formatPTUInfo(ptuNumber?: string, dateIssued?: string, width: number = 32): string {
+    let result = '';
+    if (ptuNumber) {
+      result += this.formatLine('PTU No.:', ptuNumber, width);
+    }
+    if (dateIssued) {
+      result += this.formatLine('Date Issued:', dateIssued, width);
+    }
     return result;
   }
 
