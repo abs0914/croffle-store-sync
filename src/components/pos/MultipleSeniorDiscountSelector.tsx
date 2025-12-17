@@ -305,7 +305,7 @@ export default function MultipleSeniorDiscountSelector({
             <DialogTitle>Apply Discounts</DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 pr-4 max-h-[calc(85vh-120px)]">
             <div className="py-4 space-y-4">
               {/* Total Diners Input */}
               <Card className="bg-muted/50">
