@@ -37,7 +37,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
       case 'sales':
       case 'expense':
       case 'profit_loss':
-      case 'void_report':
+      case 'sales_adjustment':
       case 'cashier':
         // Default to current month if not already set
         if (!dateRange.from) {

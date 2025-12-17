@@ -55,7 +55,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   const isSpecialCashierReport = reportType === 'daily_shift' || reportType === 'inventory_status';
   
   // Check if this is a BIR report that handles its own data fetching
-  const isBIRReport = ['x_reading', 'z_reading', 'bir_ejournal', 'void_report'].includes(reportType);
+  const isBIRReport = ['x_reading', 'z_reading', 'bir_ejournal', 'sales_adjustment'].includes(reportType);
 
   // Check if this is a discount sales report that handles its own data fetching
   const isDiscountSalesReport = ['bir_sales_summary', 'senior_citizen_sales', 'pwd_sales', 'naac_sales', 'solo_parent_sales'].includes(reportType);
