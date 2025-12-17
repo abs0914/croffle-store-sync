@@ -370,6 +370,47 @@ export function useThermalPrinter() {
     }
   };
 
+  const printXReading = async (xReadingData: any, isReprint?: boolean) => {
+    if (!isConnected) {
+      toast.error('No printer connected');
+      return false;
+    }
+
+    setIsPrinting(true);
+    try {
+      console.log('Starting X-Reading print...', { isReprint: !!isReprint });
+      toast.info(isReprint ? 'Reprinting X-Reading...' : 'Sending X-Reading to printer...');
+
+      const success = await BluetoothPrinterService.printXReading(xReadingData, isReprint);
+
+      if (success) {
+        toast.success('X-Reading sent to printer successfully!');
+        console.log('✅ X-Reading printed successfully');
+      } else {
+        toast.error('Failed to send X-Reading to printer');
+        console.error('❌ X-Reading printing failed');
+      }
+
+      return success;
+    } catch (error: any) {
+      console.error('Failed to print X-Reading:', error);
+
+      if (error.message?.includes('service')) {
+        toast.error('Printer service not found. Check printer compatibility.');
+      } else if (error.message?.includes('characteristic')) {
+        toast.error('Printer communication failed. Try reconnecting.');
+      } else if (error.message?.includes('write')) {
+        toast.error('Failed to send data to printer. Check connection.');
+      } else {
+        toast.error(`X-Reading print failed: ${error.message || 'Unknown error'}`);
+      }
+
+      return false;
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const testServiceDiscovery = async () => {
     if (!isConnected) {
       toast.error('No printer connected');
@@ -414,6 +455,7 @@ export function useThermalPrinter() {
     printReceipt,
     printTestReceipt,
     printZReading,
+    printXReading,
     testServiceDiscovery,
     checkAvailability
   };

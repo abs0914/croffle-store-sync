@@ -2,14 +2,55 @@ import React from 'react';
 import { format } from 'date-fns';
 import { BIRXReadingData } from '@/services/reports/modules/enhancedXReadingReport';
 import { formatCurrency } from '@/utils/format';
+import { Button } from '@/components/ui/button';
+import { Printer } from 'lucide-react';
+import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { toast } from 'sonner';
 
 interface BIRXReadingViewProps {
   data: BIRXReadingData;
 }
 
 export function BIRXReadingView({ data }: BIRXReadingViewProps) {
+  const { isConnected, printXReading, isPrinting } = useThermalPrinter();
+
+  const handlePrint = async () => {
+    if (!isConnected) {
+      toast.error('No thermal printer connected. Please connect a printer first.');
+      return;
+    }
+
+    await printXReading(data);
+  };
+
+  const handleBrowserPrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="font-mono text-xs bg-white p-4 max-w-sm mx-auto x-reading-print">
+    <div className="space-y-4">
+      {/* Print Buttons */}
+      <div className="flex justify-end gap-2 p-4 bg-gray-50 border-b print:hidden">
+        <Button
+          onClick={handleBrowserPrint}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <Printer className="h-4 w-4" />
+          Print (Browser)
+        </Button>
+        <Button
+          onClick={handlePrint}
+          disabled={!isConnected || isPrinting}
+          className="flex items-center gap-2"
+        >
+          <Printer className="h-4 w-4" />
+          {isPrinting ? 'Printing...' : 'Print X-Reading (Thermal)'}
+        </Button>
+      </div>
+
+      {/* Report Content */}
+      <div className="font-mono text-xs bg-white p-4 max-w-sm mx-auto x-reading-print">
       {/* Header */}
       <div className="text-center mb-4">
         <div className="font-bold">{data.businessName}</div>
@@ -143,6 +184,7 @@ export function BIRXReadingView({ data }: BIRXReadingViewProps) {
           <div>Valid Until: {data.permitNumber ? 'N/A' : 'N/A'}</div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
