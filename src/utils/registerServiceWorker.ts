@@ -20,18 +20,36 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   try {
     console.log('📦 Registering service worker...');
     
+    // First, try to unregister any existing service workers in invalid state
+    const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+    for (const reg of existingRegistrations) {
+      try {
+        if (!reg.active && !reg.installing && !reg.waiting) {
+          console.log('🧹 Cleaning up invalid service worker registration');
+          await reg.unregister();
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not clean up service worker:', e);
+      }
+    }
+
     const registration = await navigator.serviceWorker.register('/service-worker.js', {
-      scope: '/'
+      scope: '/',
+      updateViaCache: 'none' // Prevent caching issues
     });
 
     console.log('✅ Service worker registered:', registration.scope);
 
-    // Check for updates periodically
-    setInterval(() => {
-      registration.update();
-    }, 60000); // Check every minute
+    // Check for updates periodically (non-blocking, delayed start)
+    setTimeout(() => {
+      setInterval(() => {
+        registration.update().catch(() => {
+          // Silently ignore update errors
+        });
+      }, 60000);
+    }, 5000);
 
-    // Handle updates
+    // Handle updates (non-blocking)
     registration.addEventListener('updatefound', () => {
       const newWorker = registration.installing;
       
@@ -58,6 +76,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     return registration;
   } catch (error) {
     console.error('❌ Service worker registration failed:', error);
+    // Don't throw - let app continue without service worker
     return null;
   }
 }
