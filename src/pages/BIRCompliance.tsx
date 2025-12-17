@@ -21,6 +21,7 @@ import {
   TestTube
 } from 'lucide-react';
 import BIRTestingDashboard from '@/components/bir/BIRTestingDashboard';
+import SystemAuditTrailView from '@/components/bir/SystemAuditTrailView';
 import { useStore } from '@/contexts/StoreContext';
 import { BIRComplianceService } from '@/services/bir/birComplianceService';
 import { BIRComplianceStatus, BIRAuditLog, BIRCumulativeSales, BIREJournal } from '@/types/bir';
@@ -309,34 +310,7 @@ export default function BIRCompliance() {
         </TabsContent>
 
         <TabsContent value="audit" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Archive className="h-5 w-5" />
-                Audit Trail
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{log.event_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {log.log_type} • {format(new Date(log.created_at), 'MMM dd, yyyy HH:mm')}
-                      </p>
-                    </div>
-                    <Badge variant="outline">#{log.sequence_number}</Badge>
-                  </div>
-                ))}
-                {auditLogs.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No audit logs found
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <SystemAuditTrailView />
         </TabsContent>
 
         <TabsContent value="cumulative" className="space-y-4">
