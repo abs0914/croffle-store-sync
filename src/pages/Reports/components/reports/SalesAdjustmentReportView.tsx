@@ -4,9 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, FileText, AlertTriangle, RotateCcw, XCircle } from 'lucide-react';
+import { Download, FileText, AlertTriangle, RotateCcw, XCircle, FileDown } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '@/utils';
 import { fetchSalesAdjustmentReport, VoidTransaction, RefundTransaction } from '@/services/reports/modules/salesAdjustmentReport';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { APP_VERSION } from '@/config/appVersion';
+import { format } from 'date-fns';
 
 interface SalesAdjustmentReportViewProps {
   storeId: string;
@@ -101,6 +105,163 @@ export function SalesAdjustmentReportView({ storeId, dateRange }: SalesAdjustmen
     window.URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = () => {
+    if (!reportData?.data) return;
+
+    const { voidTransactions, refundTransactions, summary, storeName, dateRange: reportDateRange } = reportData.data;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 15;
+
+    // Header
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BIR SALES ADJUSTMENT REPORT', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(storeName, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 5;
+    doc.text(`Period: ${format(new Date(reportDateRange.from), 'MMM dd, yyyy')} to ${format(new Date(reportDateRange.to), 'MMM dd, yyyy')}`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 5;
+    doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+
+    // Summary Section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SUMMARY', 14, yPos);
+    yPos += 7;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const summaryData = [
+      ['Total Adjustments', summary.totalAdjustments.toString(), `P ${summary.totalAdjustmentAmount.toFixed(2)}`],
+      ['Void Transactions', summary.totalVoids.toString(), `P ${summary.totalVoidAmount.toFixed(2)}`],
+      ['Refund Transactions', summary.totalRefunds.toString(), `P ${summary.totalRefundAmount.toFixed(2)}`],
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Description', 'Count', 'Amount']],
+      body: summaryData,
+      theme: 'grid',
+      headStyles: { fillColor: [66, 66, 66], fontSize: 9 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { cellWidth: 40, halign: 'center' },
+        2: { cellWidth: 50, halign: 'right' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
+
+    // Void Transactions Section
+    if (voidTransactions.length > 0) {
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('VOID TRANSACTIONS', 14, yPos);
+      yPos += 5;
+
+      const voidTableData = voidTransactions.map(vt => [
+        vt.void_receipt_number || '-',
+        vt.original_receipt_number || '-',
+        format(new Date(vt.void_date), 'MM/dd/yyyy HH:mm'),
+        getCategoryLabel(vt.void_reason_category, true),
+        vt.void_reason?.substring(0, 30) || '-',
+        `P ${vt.original_total.toFixed(2)}`,
+        vt.voided_by_cashier_name || '-',
+        vt.authorized_by_name || '-',
+      ]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Void Receipt', 'Original SI #', 'Date', 'Category', 'Reason', 'Amount', 'Voided By', 'Auth By']],
+        body: voidTableData,
+        theme: 'striped',
+        headStyles: { fillColor: [220, 120, 60], fontSize: 8 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 28 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 20, halign: 'right' },
+          6: { cellWidth: 20 },
+          7: { cellWidth: 18 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Check if we need a new page for refunds
+    if (yPos > 250 && refundTransactions.length > 0) {
+      doc.addPage();
+      yPos = 15;
+    }
+
+    // Refund Transactions Section
+    if (refundTransactions.length > 0) {
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('REFUND TRANSACTIONS', 14, yPos);
+      yPos += 5;
+
+      const refundTableData = refundTransactions.map(rt => [
+        rt.refund_receipt_number || '-',
+        rt.original_receipt_number || '-',
+        format(new Date(rt.refund_date), 'MM/dd/yyyy HH:mm'),
+        rt.refund_type === 'full' ? 'Full' : 'Partial',
+        getCategoryLabel(rt.refund_reason_category, false),
+        rt.refund_reason?.substring(0, 25) || '-',
+        `P ${rt.refund_amount.toFixed(2)}`,
+        rt.processed_by_name || '-',
+        rt.authorized_by_name || '-',
+      ]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Refund Receipt', 'Original SI #', 'Date', 'Type', 'Category', 'Reason', 'Amount', 'Processed By', 'Auth By']],
+        body: refundTableData,
+        theme: 'striped',
+        headStyles: { fillColor: [60, 120, 180], fontSize: 8 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 26 },
+          3: { cellWidth: 14 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 24 },
+          6: { cellWidth: 18, halign: 'right' },
+          7: { cellWidth: 20 },
+          8: { cellWidth: 20 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+    }
+
+    // Footer on each page
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${APP_VERSION}`, 14, doc.internal.pageSize.getHeight() - 10);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+      doc.text('THIS DOCUMENT IS FOR BIR COMPLIANCE PURPOSES', pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+    }
+
+    // Download
+    doc.save(`sales-adjustment-report-${storeName.replace(/\s+/g, '-')}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -141,14 +302,18 @@ export function SalesAdjustmentReportView({ storeId, dateRange }: SalesAdjustmen
             {adjustmentData.storeName} • {formatDateTime(adjustmentData.dateRange.from)} to {formatDateTime(adjustmentData.dateRange.to)}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Print
           </Button>
+          <Button variant="outline" onClick={handleExportPDF} className="flex items-center gap-2">
+            <FileDown className="h-4 w-4" />
+            Download PDF
+          </Button>
           <Button onClick={handleExportCSV} className="flex items-center gap-2">
             <Download className="h-4 w-4" />
-            Export for BIR
+            Export CSV
           </Button>
         </div>
       </div>
