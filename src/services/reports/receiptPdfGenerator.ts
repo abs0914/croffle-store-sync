@@ -215,7 +215,7 @@ export class ReceiptPdfGenerator {
     this.addSeparator();
     this.addCenteredText('Thank you for your business!', this.currentY);
     this.currentY += 4;
-    this.addCenteredText('THIS IS NOT AN OFFICIAL RECEIPT', this.currentY);
+    this.addCenteredText('THIS SERVES AS YOUR INVOICE', this.currentY);
     this.currentY += 3;
     this.addCenteredText(`Generated: ${format(new Date(), 'MM/dd/yyyy HH:mm:ss')}`, this.currentY);
     

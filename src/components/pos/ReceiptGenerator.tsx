@@ -561,8 +561,8 @@ Thank you!`;
             <p className="text-xs">Seq: {transaction.sequence_number}</p>
           )}
           <div className="mt-2 border-t pt-2">
-            {/* Always show NOT an official receipt */}
-            <p className="text-xs font-bold">THIS IS NOT AN OFFICIAL RECEIPT</p>
+            {/* BIR compliant invoice statement */}
+            <p className="text-xs font-bold">THIS SERVES AS YOUR INVOICE</p>
             
             {/* BIR: NON-VAT Disclaimer */}
             {!currentStore?.is_vat_registered && currentStore?.non_vat_disclaimer && (
