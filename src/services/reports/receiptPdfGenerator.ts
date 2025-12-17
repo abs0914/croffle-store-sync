@@ -146,22 +146,41 @@ export class ReceiptPdfGenerator {
     // Gross amount
     this.addTotalLine('GROSS AMOUNT:', receipt.grossAmount);
     
-    // Discounts - avoid duplicating PWD/Senior which have dedicated lines
-    const isPwdOrSeniorDiscount = receipt.discountType === 'pwd' || receipt.discountType === 'senior';
+    // Discounts - avoid duplicating PWD/Senior/NAAC/Solo Parent which have dedicated lines
+    const isSpecialDiscount = ['pwd', 'senior', 'naac', 'athletes_coaches', 'solo_parent'].includes(receipt.discountType || '');
     
-    if (receipt.discountAmount > 0 && !isPwdOrSeniorDiscount) {
-      const discountLabel = receipt.discountType 
-        ? `DISCOUNT (${receipt.discountType}):` 
-        : 'DISCOUNT:';
+    if (receipt.discountAmount > 0 && !isSpecialDiscount) {
+      let discountLabel = 'DISCOUNT:';
+      if (receipt.discountType) {
+        const typeLabels: Record<string, string> = {
+          employee: 'EMPLOYEE DISCOUNT:',
+          loyalty: 'LOYALTY DISCOUNT:',
+          promo: 'PROMO DISCOUNT:',
+          complimentary: 'COMPLIMENTARY:',
+          regular: 'REGULAR DISCOUNT:',
+          custom: 'CUSTOM DISCOUNT:',
+          bogo: 'BOGO DISCOUNT:',
+        };
+        discountLabel = typeLabels[receipt.discountType] || `DISCOUNT (${receipt.discountType}):`;
+      }
       this.addTotalLine(discountLabel, -receipt.discountAmount);
     }
     
     if (receipt.seniorDiscount && receipt.seniorDiscount > 0) {
-      this.addTotalLine('SENIOR DISCOUNT:', -receipt.seniorDiscount);
+      this.addTotalLine('SENIOR CITIZEN DISCOUNT:', -receipt.seniorDiscount);
     }
     
     if (receipt.pwdDiscount && receipt.pwdDiscount > 0) {
       this.addTotalLine('PWD DISCOUNT:', -receipt.pwdDiscount);
+    }
+    
+    // NAAC and Solo Parent discounts
+    if ((receipt.discountType === 'naac' || receipt.discountType === 'athletes_coaches') && receipt.discountAmount > 0) {
+      this.addTotalLine('NAAC DISCOUNT:', -receipt.discountAmount);
+    }
+    
+    if (receipt.discountType === 'solo_parent' && receipt.discountAmount > 0) {
+      this.addTotalLine('SOLO PARENT DISCOUNT:', -receipt.discountAmount);
     }
     
     // Net amount

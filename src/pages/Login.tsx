@@ -1,13 +1,13 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { getAppVersionDisplay } from "@/config/appVersion";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -126,6 +126,9 @@ export default function Login() {
             </Button>
           </form>
         </CardContent>
+        <CardFooter className="justify-center">
+          <span className="text-xs text-muted-foreground">{getAppVersionDisplay()}</span>
+        </CardFooter>
       </Card>
     </div>
   );

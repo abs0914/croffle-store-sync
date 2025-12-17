@@ -791,16 +791,40 @@ export class BluetoothPrinterService {
       `P${vatAmount.toFixed(2)}`
     );
 
-    // Discount breakdown (BIR compliance for PWD/Senior)
+    // Discount breakdown (BIR compliance for PWD/Senior/NAAC/Solo Parent)
     if (transaction.discount > 0) {
       receipt += ESCPOSFormatter.lineFeed();
       const discountType = transaction.discountType || 'regular';
       let discountLabel = 'Discount:';
       
-      if (discountType === 'senior') {
-        discountLabel = 'Senior Citizen Disc:';
-      } else if (discountType === 'pwd') {
-        discountLabel = 'PWD Discount:';
+      switch (discountType) {
+        case 'senior':
+          discountLabel = 'Senior Citizen Disc:';
+          break;
+        case 'pwd':
+          discountLabel = 'PWD Discount:';
+          break;
+        case 'naac':
+        case 'athletes_coaches':
+          discountLabel = 'NAAC Discount:';
+          break;
+        case 'solo_parent':
+          discountLabel = 'Solo Parent Disc:';
+          break;
+        case 'employee':
+          discountLabel = 'Employee Discount:';
+          break;
+        case 'loyalty':
+          discountLabel = 'Loyalty Discount:';
+          break;
+        case 'regular':
+          discountLabel = 'Regular Discount:';
+          break;
+        case 'custom':
+          discountLabel = 'Custom Discount:';
+          break;
+        default:
+          discountLabel = 'Discount:';
       }
       
       receipt += ESCPOSFormatter.formatLine(
@@ -808,6 +832,7 @@ export class BluetoothPrinterService {
         `-P${transaction.discount.toFixed(2)}`
       );
       
+      // BIR Requirement: Print ID number for eligible discounts
       if (transaction.discountIdNumber) {
         receipt += ESCPOSFormatter.formatLine(
           'ID Number:',
