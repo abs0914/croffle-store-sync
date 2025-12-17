@@ -15,6 +15,25 @@ export class PrinterTypeManager {
     return tin;
   }
 
+  // Helper to get discount label and percentage
+  private static getDiscountLabelAndPercent(discountType: string): { label: string; percent: string } {
+    switch (discountType) {
+      case 'senior': return { label: 'SENIOR CITIZEN', percent: '20%' };
+      case 'pwd': return { label: 'PWD', percent: '20%' };
+      case 'naac':
+      case 'athletes_coaches': return { label: 'NAAC', percent: '20%' };
+      case 'solo_parent': return { label: 'SOLO PARENT', percent: '20%' };
+      case 'employee': return { label: 'EMPLOYEE', percent: '15%' };
+      case 'loyalty': return { label: 'LOYALTY', percent: '10%' };
+      case 'regular': return { label: 'REGULAR', percent: '5%' };
+      case 'custom': return { label: 'CUSTOM', percent: '' };
+      case 'complimentary': return { label: 'COMPLIMENTARY', percent: '100%' };
+      case 'promo': return { label: 'PROMO', percent: '' };
+      case 'bogo': return { label: 'BOGO', percent: '' };
+      default: return { label: 'Discount', percent: '' };
+    }
+  }
+
   // Detect printer type based on device characteristics
   static detectPrinterType(printer: BluetoothPrinter): PrinterType {
     const name = printer.name.toLowerCase();
@@ -209,12 +228,32 @@ export class PrinterTypeManager {
     const discountType = transaction.discountType || '';
     const isVatExempt = ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(discountType);
     
+    // Parse discount_beneficiaries (may be string or array)
+    let parsedBeneficiaries: any[] = [];
+    const rawBeneficiaries = (transaction as any).discount_beneficiaries;
+    if (rawBeneficiaries) {
+      if (typeof rawBeneficiaries === 'string') {
+        try {
+          parsedBeneficiaries = JSON.parse(rawBeneficiaries);
+        } catch {
+          parsedBeneficiaries = [];
+        }
+      } else if (Array.isArray(rawBeneficiaries)) {
+        parsedBeneficiaries = rawBeneficiaries;
+      }
+    }
+    
+    // Check if any beneficiary has VAT-exempt discount type
+    const hasVatExemptBeneficiary = parsedBeneficiaries.some((b: any) => 
+      ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(b.type)
+    );
+    
     let vatableSales = 0;
     let vatExemptSales = 0;
     let zeroRatedSales = 0;
     let finalVat = vatAmount;
     
-    if (isVatExempt && totalDiscount > 0) {
+    if ((isVatExempt || hasVatExemptBeneficiary) && (totalDiscount > 0 || parsedBeneficiaries.length > 0)) {
       // For VAT-exempt discounts, the discounted portion becomes VAT-exempt
       vatExemptSales = netOfVat;
       vatableSales = 0;
@@ -229,32 +268,27 @@ export class PrinterTypeManager {
     receipt += formatter.formatLine('Less 12% VAT:', formatter.formatCurrencyWithSymbol(vatAmount), width);
     receipt += formatter.formatLine('Amt. Net of VAT:', formatter.formatCurrencyWithSymbol(netOfVat), width);
     
-    // Discount section with type and percentage
-    if (totalDiscount > 0) {
-      let discountLabel = 'Discount';
-      let discountPercent = '';
-      
-      switch (discountType) {
-        case 'senior': discountLabel = 'SENIOR CITIZEN'; discountPercent = '20%'; break;
-        case 'pwd': discountLabel = 'PWD'; discountPercent = '20%'; break;
-        case 'naac': 
-        case 'athletes_coaches': discountLabel = 'NAAC'; discountPercent = '20%'; break;
-        case 'solo_parent': discountLabel = 'SOLO PARENT'; discountPercent = '20%'; break;
-        case 'employee': discountLabel = 'EMPLOYEE'; discountPercent = '15%'; break;
-        case 'loyalty': discountLabel = 'LOYALTY'; discountPercent = '10%'; break;
-        case 'regular': discountLabel = 'REGULAR'; discountPercent = '5%'; break;
-        case 'custom': discountLabel = 'CUSTOM'; break;
-        case 'complimentary': discountLabel = 'COMPLIMENTARY'; discountPercent = '100%'; break;
-        case 'promo': discountLabel = 'PROMO'; break;
-        case 'bogo': discountLabel = 'BOGO'; break;
-      }
-      
-      const fullDiscountLabel = discountPercent ? `${discountLabel} ${discountPercent}:` : `${discountLabel}:`;
-      receipt += formatter.formatLine(fullDiscountLabel, formatter.formatCurrencyWithSymbol(-totalDiscount), width);
+    // Discount section - show each beneficiary's discount separately
+    if (parsedBeneficiaries.length > 0) {
+      // Multi-beneficiary: show each discount line
+      parsedBeneficiaries.forEach((beneficiary: any) => {
+        const discountAmount = beneficiary.discountAmount || beneficiary.discount_amount || 0;
+        if (discountAmount > 0) {
+          const { label, percent } = this.getDiscountLabelAndPercent(beneficiary.type);
+          const fullLabel = percent ? `${label} ${percent}:` : `${label}:`;
+          receipt += formatter.formatLine(fullLabel, formatter.formatCurrencyWithSymbol(-discountAmount), width);
+        }
+      });
+    } else if (totalDiscount > 0) {
+      // Single discount type fallback
+      const { label, percent } = this.getDiscountLabelAndPercent(discountType);
+      const fullLabel = percent ? `${label} ${percent}:` : `${label}:`;
+      receipt += formatter.formatLine(fullLabel, formatter.formatCurrencyWithSymbol(-totalDiscount), width);
     }
     
     // Add VAT (for non-exempt transactions)
-    if (!isVatExempt || totalDiscount === 0) {
+    const shouldShowAddVat = !isVatExempt && !hasVatExemptBeneficiary;
+    if (shouldShowAddVat || (totalDiscount === 0 && parsedBeneficiaries.length === 0)) {
       receipt += formatter.formatLine('Add VAT:', formatter.formatCurrencyWithSymbol(finalVat), width);
     }
     
