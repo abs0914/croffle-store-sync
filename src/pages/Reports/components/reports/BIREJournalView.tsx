@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, FileText, Printer, RefreshCw } from "lucide-react";
+import { Download, FileText, Printer, RefreshCw, XCircle, RotateCcw } from "lucide-react";
 import { BIREJournalService, EJournalData } from "@/services/reports/modules/birEJournalService";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -143,6 +143,8 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
       </Card>
     );
   }
+
+  const adjustedNetSales = data.netSales - data.totalVoidAmount - data.totalRefundAmount;
   
   return (
     <div className="space-y-4">
@@ -186,7 +188,7 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
         
         <CardContent className="space-y-6">
           {/* Summary Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Transaction Summary</CardTitle>
@@ -214,19 +216,85 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
               <CardContent className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">Gross Sales:</span>
-                  <span className="text-sm font-bold">₱{data.grossSales.toFixed(2)}</span>
+                  <span className="text-sm font-bold">P{data.grossSales.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Total Discounts:</span>
-                  <span className="text-sm text-red-600">₱{data.totalDiscounts.toFixed(2)}</span>
+                  <span className="text-sm text-red-600">P{data.totalDiscounts.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Net Sales:</span>
-                  <span className="text-sm font-bold">₱{data.netSales.toFixed(2)}</span>
+                  <span className="text-sm font-bold">P{data.netSales.toFixed(2)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Void Summary Card */}
+            <Card className="border-orange-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-orange-500" />
+                  Void Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm">Void Count:</span>
+                  <span className="text-sm font-bold">{data.totalVoidCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Void Amount:</span>
+                  <span className="text-sm text-orange-600 font-bold">P{data.totalVoidAmount.toFixed(2)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Refund Summary Card */}
+            <Card className="border-purple-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-purple-500" />
+                  Refund Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm">Refund Count:</span>
+                  <span className="text-sm font-bold">{data.totalRefundCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Refund Amount:</span>
+                  <span className="text-sm text-purple-600 font-bold">P{data.totalRefundAmount.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Adjusted Net Sales */}
+          {(data.totalVoidAmount > 0 || data.totalRefundAmount > 0) && (
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="py-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span>Net Sales:</span>
+                    <span className="font-medium">P{data.netSales.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-orange-600">
+                    <span>Less Voids:</span>
+                    <span className="font-medium">P{data.totalVoidAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-purple-600">
+                    <span>Less Refunds:</span>
+                    <span className="font-medium">P{data.totalRefundAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-blue-700">
+                    <span>Adjusted Net:</span>
+                    <span>P{adjustedNetSales.toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* VAT Analysis */}
           <Card>
@@ -237,21 +305,21 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">VATable Sales:</span>
-                  <span className="text-sm">₱{data.vatSales.toFixed(2)}</span>
+                  <span className="text-sm">P{data.vatSales.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">VAT Amount:</span>
-                  <span className="text-sm">₱{data.vatAmount.toFixed(2)}</span>
+                  <span className="text-sm">P{data.vatAmount.toFixed(2)}</span>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">VAT Exempt:</span>
-                  <span className="text-sm">₱{data.vatExemptSales.toFixed(2)}</span>
+                  <span className="text-sm">P{data.vatExemptSales.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Zero-Rated:</span>
-                  <span className="text-sm">₱{data.zeroRatedSales.toFixed(2)}</span>
+                  <span className="text-sm">P{data.zeroRatedSales.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>
@@ -265,16 +333,92 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="flex justify-between">
                 <span className="text-sm">Senior Citizen:</span>
-                <span className="text-sm">₱{data.seniorDiscounts.toFixed(2)}</span>
+                <span className="text-sm">P{data.seniorDiscounts.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">PWD:</span>
-                <span className="text-sm">₱{data.pwdDiscounts.toFixed(2)}</span>
+                <span className="text-sm">P{data.pwdDiscounts.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
 
           <Separator />
+
+          {/* Void Transactions Details */}
+          {data.voidTransactions.length > 0 && (
+            <>
+              <div>
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-orange-500" />
+                  Void Transactions
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {data.voidTransactions.map((v, index) => (
+                    <Card key={index} className="p-3 border-orange-100 bg-orange-50/30">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+                        <div>
+                          <span className="font-medium">Void No:</span> {v.voidReceiptNumber}
+                        </div>
+                        <div>
+                          <span className="font-medium">Orig SI:</span> {v.originalReceiptNumber}
+                        </div>
+                        <div>
+                          <span className="font-medium">Amount:</span> <span className="text-orange-600">P{v.originalAmount.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Date:</span> {format(new Date(v.voidDate), 'HH:mm:ss')}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        <span className="font-medium">Reason:</span> {v.voidReason} | 
+                        <span className="ml-2 font-medium">Voided by:</span> {v.voidedByName} | 
+                        <span className="ml-2 font-medium">Authorized:</span> {v.authorizedByName}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+              <Separator />
+            </>
+          )}
+
+          {/* Refund Transactions Details */}
+          {data.refundTransactions.length > 0 && (
+            <>
+              <div>
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-purple-500" />
+                  Refund Transactions
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {data.refundTransactions.map((r, index) => (
+                    <Card key={index} className="p-3 border-purple-100 bg-purple-50/30">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+                        <div>
+                          <span className="font-medium">Refund No:</span> {r.refundReceiptNumber}
+                        </div>
+                        <div>
+                          <span className="font-medium">Orig SI:</span> {r.originalReceiptNumber}
+                        </div>
+                        <div>
+                          <span className="font-medium">Amount:</span> <span className="text-purple-600">P{r.refundAmount.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Date:</span> {format(new Date(r.refundDate), 'HH:mm:ss')}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        <span className="font-medium">Reason:</span> {r.refundReason} | 
+                        <span className="ml-2 font-medium">VAT:</span> P{r.refundVatAmount.toFixed(2)} | 
+                        <span className="ml-2 font-medium">Processed by:</span> {r.processedByName}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+              <Separator />
+            </>
+          )}
 
           {/* Transaction Details */}
           <div>
@@ -290,7 +434,7 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
                       <span className="font-medium">Seq:</span> {tx.sequenceNumber}
                     </div>
                     <div>
-                      <span className="font-medium">Amount:</span> ₱{tx.netAmount.toFixed(2)}
+                      <span className="font-medium">Amount:</span> P{tx.netAmount.toFixed(2)}
                     </div>
                     <div>
                       <span className="font-medium">Payment:</span> {tx.paymentMethod}
@@ -298,7 +442,7 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
                   </div>
                   {tx.discountAmount > 0 && (
                     <div className="mt-2 text-xs text-orange-600">
-                      Discount: ₱{tx.discountAmount.toFixed(2)} ({tx.customerType})
+                      Discount: P{tx.discountAmount.toFixed(2)} ({tx.customerType})
                     </div>
                   )}
                 </Card>
