@@ -1,152 +1,285 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { BadgePercent, Plus, X, Users } from "lucide-react";
+import { BadgePercent, Plus, X, Users, User } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { Card, CardContent } from "@/components/ui/card";
-import { CartCalculationService, SeniorDiscount, OtherDiscount } from "@/services/cart/CartCalculationService";
-import { BOGOService } from "@/services/cart/BOGOService";
+import { 
+  CartCalculationService, 
+  SeniorDiscount, 
+  OtherDiscount, 
+  DiscountBeneficiary,
+  DiscountType,
+  getDiscountLabel,
+  isVATExemptDiscount,
+  requiresIdNumber
+} from "@/services/cart/CartCalculationService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useMemoizedCroffleCombo } from "@/hooks/pos/useMemoizedCroffleCombo";
 import { Coffee } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 interface MultipleSeniorDiscountSelectorProps {
   subtotal: number;
   onApplyDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: OtherDiscount | null, totalDiners?: number) => void;
+  onApplyBeneficiaryDiscounts?: (beneficiaries: DiscountBeneficiary[], totalDiners: number, customPercentage?: number) => void;
   currentSeniorDiscounts: SeniorDiscount[];
   currentOtherDiscount?: OtherDiscount | null;
   currentTotalDiners: number;
-  cartItems?: any[]; // For BOGO analysis
+  currentBeneficiaries?: DiscountBeneficiary[];
+  cartItems?: any[];
 }
+
+// Available discount types with their rates
+const DISCOUNT_TYPES: { value: DiscountType; label: string; rate: string }[] = [
+  { value: 'senior', label: 'Senior Citizen', rate: '20%' },
+  { value: 'pwd', label: 'PWD', rate: '20%' },
+  { value: 'athletes_coaches', label: 'NAAC (National Athletes & Coaches)', rate: '20%' },
+  { value: 'solo_parent', label: 'Solo Parent', rate: '20%' },
+  { value: 'employee', label: 'Employee', rate: '15%' },
+  { value: 'loyalty', label: 'Loyalty', rate: '10%' },
+  { value: 'regular', label: 'Regular', rate: '5%' },
+  { value: 'custom', label: 'Custom %', rate: 'Variable' },
+  { value: 'complimentary', label: 'Complimentary', rate: '100%' },
+];
+
 export default function MultipleSeniorDiscountSelector({
   subtotal,
   onApplyDiscounts,
+  onApplyBeneficiaryDiscounts,
   currentSeniorDiscounts,
   currentOtherDiscount,
   currentTotalDiners,
+  currentBeneficiaries = [],
   cartItems = []
 }: MultipleSeniorDiscountSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [discountMode, setDiscountMode] = useState<'senior' | 'other' | 'croffle-combo'>('senior');
-  
-  // Check for croffle combo eligibility
   const comboResult = useMemoizedCroffleCombo(cartItems);
-  const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
-  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent'>('regular');
-  const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
+  const { user } = useAuth();
+  
+  // State for beneficiaries
+  const [beneficiaries, setBeneficiaries] = useState<DiscountBeneficiary[]>(
+    currentBeneficiaries.length > 0 ? currentBeneficiaries : []
+  );
+  const [totalDiners, setTotalDiners] = useState<number>(
+    currentTotalDiners || Math.max(currentBeneficiaries.length, currentSeniorDiscounts.length, 1)
+  );
+  const [customPercentage, setCustomPercentage] = useState<number>(10);
   const [complimentaryReason, setComplimentaryReason] = useState('');
   const [approverName, setApproverName] = useState('');
-  const [customPercentage, setCustomPercentage] = useState<number>(10);
-  const [totalDiners, setTotalDiners] = useState<number>(currentTotalDiners || Math.max(currentSeniorDiscounts.length, 1));
-  const {
-    user
-  } = useAuth();
 
-  // BIR mandated discounts
-  const SENIOR_DISCOUNT_RATE = 0.20; // 20% for senior citizens
-  const PWD_DISCOUNT_RATE = 0.20; // 20% for PWDs
-  const REGULAR_DISCOUNT_RATE = 0.05; // 5% for regular discount
+  // Calculate regular diners (non-beneficiary)
+  const regularDiners = useMemo(() => 
+    Math.max(0, totalDiners - beneficiaries.length),
+    [totalDiners, beneficiaries.length]
+  );
 
-  const addSeniorDiscount = () => {
-    const newDiscount: SeniorDiscount = {
-      id: `senior-${Date.now()}`,
+  // Add a new beneficiary
+  const addBeneficiary = (type: DiscountType = 'senior') => {
+    if (beneficiaries.length >= totalDiners) {
+      return; // Can't exceed total diners
+    }
+    
+    const newBeneficiary: DiscountBeneficiary = {
+      id: `beneficiary-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
       idNumber: '',
-      name: `Senior Citizen ${seniorDiscounts.length + 1}`,
-      discountAmount: 0
+      name: '',
+      discountAmount: 0,
+      vatExemptionAmount: 0,
+      isVATExempt: isVATExemptDiscount(type),
+      discountRate: 0
     };
-    setSeniorDiscounts([...seniorDiscounts, newDiscount]);
-  };
-  const removeSeniorDiscount = (id: string) => {
-    setSeniorDiscounts(seniorDiscounts.filter(d => d.id !== id));
-  };
-  const updateSeniorDiscount = (id: string, field: keyof SeniorDiscount, value: string) => {
-    setSeniorDiscounts(seniorDiscounts.map(d => d.id === id ? {
-      ...d,
-      [field]: value
-    } : d));
+    setBeneficiaries([...beneficiaries, newBeneficiary]);
   };
 
-  // Use the calculation service
-  const getDiscountPreview = () => {
-    if (discountMode === 'senior') {
-      const validSeniors = seniorDiscounts.filter(d => d.idNumber.trim() !== '').length;
-      return CartCalculationService.calculateSeniorDiscountPreview(subtotal, validSeniors, totalDiners);
-    } else {
-      let otherDiscountObj: OtherDiscount = {
-        type: otherDiscountType,
-        amount: 0,
-        idNumber: (otherDiscountType === 'pwd' || otherDiscountType === 'athletes_coaches' || otherDiscountType === 'solo_parent') ? otherIdNumber : undefined
-      };
+  // Remove a beneficiary
+  const removeBeneficiary = (id: string) => {
+    setBeneficiaries(beneficiaries.filter(b => b.id !== id));
+  };
 
-      // Create a mock cart item to calculate discount properly
-      const mockCartItems = [{
-        price: subtotal,
-        quantity: 1,
-        productId: 'mock',
-        product: {} as any
-      }];
-      const calculations = CartCalculationService.calculateCartTotals(mockCartItems, [], otherDiscountObj, 1);
+  // Update a beneficiary field
+  const updateBeneficiary = (id: string, field: keyof DiscountBeneficiary, value: any) => {
+    setBeneficiaries(beneficiaries.map(b => {
+      if (b.id !== id) return b;
+      
+      const updated = { ...b, [field]: value };
+      
+      // Update isVATExempt when type changes
+      if (field === 'type') {
+        updated.isVATExempt = isVATExemptDiscount(value as DiscountType);
+      }
+      
+      return updated;
+    }));
+  };
+
+  // Calculate preview for each beneficiary
+  const getPreviewCalculations = useMemo(() => {
+    if (beneficiaries.length === 0 || totalDiners === 0) return null;
+    
+    const perPersonShare = subtotal / totalDiners;
+    
+    return beneficiaries.map(b => {
+      const preview = CartCalculationService.calculateDiscountPreview(
+        subtotal,
+        b.type,
+        totalDiners,
+        b.type === 'custom' ? customPercentage : undefined
+      );
       return {
-        perPersonGrossShare: 0,
-        perSeniorVATExemptSale: 0,
-        perSeniorDiscountAmount: 0,
-        totalSeniorDiscount: 0,
-        perSeniorPays: 0,
-        otherDiscountAmount: calculations.otherDiscountAmount
+        id: b.id,
+        type: b.type,
+        ...preview
       };
-    }
-  };
+    });
+  }, [beneficiaries, subtotal, totalDiners, customPercentage]);
+
+  // Calculate total discount preview
+  const totalDiscountPreview = useMemo(() => {
+    if (!getPreviewCalculations) return { totalDiscount: 0, totalVATExemption: 0 };
+    
+    return getPreviewCalculations.reduce((acc, calc) => ({
+      totalDiscount: acc.totalDiscount + calc.discountAmount,
+      totalVATExemption: acc.totalVATExemption + calc.vatExemption
+    }), { totalDiscount: 0, totalVATExemption: 0 });
+  }, [getPreviewCalculations]);
+
+  // Handle apply
   const handleApplyDiscounts = () => {
-    // Validate complimentary discount requirements
-    if (discountMode === 'other' && otherDiscountType === 'complimentary') {
-      if (!complimentaryReason.trim()) {
-        alert('Reason is required for complimentary discounts');
-        return;
-      }
-      if (!approverName.trim()) {
-        alert('Approver name is required for complimentary discounts');
+    // Validate complimentary requires reason and approver
+    const complimentaryBeneficiaries = beneficiaries.filter(b => b.type === 'complimentary');
+    if (complimentaryBeneficiaries.length > 0 && (!complimentaryReason.trim() || !approverName.trim())) {
+      alert('Reason and Approver name are required for complimentary discounts');
+      return;
+    }
+
+    // Validate BIR-mandated ID numbers
+    for (const b of beneficiaries) {
+      if (requiresIdNumber(b.type) && !b.idNumber.trim()) {
+        alert(`${getDiscountLabel(b.type)} requires an ID number`);
         return;
       }
     }
-    let finalSeniorDiscounts: SeniorDiscount[] = [];
-    let finalOtherDiscount: OtherDiscount | null = null;
-    if (discountMode === 'senior' && seniorDiscounts.length > 0) {
-      const validSeniorDiscounts = seniorDiscounts.filter(d => d.idNumber.trim() !== '');
-      if (validSeniorDiscounts.length > 0) {
-        const preview = CartCalculationService.calculateSeniorDiscountPreview(subtotal, validSeniorDiscounts.length, totalDiners);
-        finalSeniorDiscounts = CartCalculationService.distributeSeniorDiscounts(preview.totalSeniorDiscount, validSeniorDiscounts);
-      }
-    } else if (discountMode === 'croffle-combo') {
-      // Apply croffle combo as a promo discount
-      if (comboResult.hasEligiblePairs) {
-        finalOtherDiscount = {
-          type: 'promo',
-          amount: comboResult.discountAmount,
-          justification: 'Buy 1 Croffle, Get 1 Free Coffee Promotion'
-        };
-      }
-    } else if (discountMode === 'other') {
-      const justificationText = otherDiscountType === 'complimentary' ? `${complimentaryReason} | Approved by: ${approverName}` : undefined;
-      finalOtherDiscount = {
-        type: otherDiscountType,
+
+    // Use new beneficiary system if available
+    if (onApplyBeneficiaryDiscounts && beneficiaries.length > 0) {
+      const processedBeneficiaries = beneficiaries.map(b => ({
+        ...b,
+        name: b.type === 'complimentary' ? `${complimentaryReason} | Approved by: ${approverName}` : b.name
+      }));
+      onApplyBeneficiaryDiscounts(
+        processedBeneficiaries,
+        totalDiners,
+        customPercentage
+      );
+    } else {
+      // Fallback to legacy system
+      const seniors = beneficiaries
+        .filter(b => b.type === 'senior')
+        .map(b => ({
+          id: b.id,
+          idNumber: b.idNumber,
+          name: b.name,
+          discountAmount: 0
+        }));
+      
+      const other = beneficiaries.find(b => b.type !== 'senior');
+      const otherDiscount: OtherDiscount | null = other ? {
+        type: other.type,
         amount: 0,
-        // Will be calculated by the service
-        idNumber: (otherDiscountType === 'pwd' || otherDiscountType === 'athletes_coaches' || otherDiscountType === 'solo_parent') ? otherIdNumber : undefined,
-        justification: justificationText,
-        customPercentage: otherDiscountType === 'custom' ? customPercentage : undefined
-      };
+        idNumber: other.idNumber,
+        justification: other.type === 'complimentary' ? `${complimentaryReason} | Approved by: ${approverName}` : undefined,
+        customPercentage: other.type === 'custom' ? customPercentage : undefined
+      } : null;
+      
+      onApplyDiscounts(seniors, otherDiscount, totalDiners);
     }
-    onApplyDiscounts(finalSeniorDiscounts, finalOtherDiscount, totalDiners);
+    
     setIsOpen(false);
   };
-  const preview = getDiscountPreview();
-  const totalCurrentDiscounts = currentSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0) + (currentOtherDiscount?.amount || 0);
-  return <div className="mb-4">
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+
+  // Handle croffle combo apply
+  const handleApplyCroffleCombo = () => {
+    onApplyDiscounts([], {
+      type: 'promo',
+      amount: comboResult.discountAmount,
+      justification: 'Buy 1 Croffle, Get 1 Free Coffee Promotion'
+    }, 1);
+    setIsOpen(false);
+  };
+
+  // Get display for current discounts
+  const currentDiscountDisplay = useMemo(() => {
+    const allBeneficiaries = currentBeneficiaries.length > 0 ? currentBeneficiaries : [];
+    const legacySeniors = currentSeniorDiscounts.length > 0 ? currentSeniorDiscounts : [];
+    
+    const totalBeneficiaries = allBeneficiaries.length + legacySeniors.length + (currentOtherDiscount ? 1 : 0);
+    const totalAmount = 
+      allBeneficiaries.reduce((sum, b) => sum + b.discountAmount, 0) +
+      legacySeniors.reduce((sum, s) => sum + s.discountAmount, 0) +
+      (currentOtherDiscount?.amount || 0);
+    
+    return { count: totalBeneficiaries, amount: totalAmount };
+  }, [currentBeneficiaries, currentSeniorDiscounts, currentOtherDiscount]);
+
+  // Reset to current state when dialog opens
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      // Initialize from current state
+      if (currentBeneficiaries.length > 0) {
+        setBeneficiaries([...currentBeneficiaries]);
+      } else if (currentSeniorDiscounts.length > 0) {
+        // Convert legacy seniors to beneficiaries
+        setBeneficiaries(currentSeniorDiscounts.map(s => ({
+          id: s.id,
+          type: 'senior' as DiscountType,
+          idNumber: s.idNumber,
+          name: s.name,
+          discountAmount: s.discountAmount,
+          vatExemptionAmount: 0,
+          isVATExempt: true,
+          discountRate: 0.20
+        })));
+      } else if (currentOtherDiscount) {
+        setBeneficiaries([{
+          id: `other-${Date.now()}`,
+          type: currentOtherDiscount.type,
+          idNumber: currentOtherDiscount.idNumber || '',
+          name: '',
+          discountAmount: currentOtherDiscount.amount,
+          vatExemptionAmount: 0,
+          isVATExempt: isVATExemptDiscount(currentOtherDiscount.type),
+          discountRate: 0
+        }]);
+        if (currentOtherDiscount.customPercentage) {
+          setCustomPercentage(currentOtherDiscount.customPercentage);
+        }
+      } else {
+        setBeneficiaries([]);
+      }
+      setTotalDiners(currentTotalDiners || 1);
+    }
+    setIsOpen(open);
+  };
+
+  // Group beneficiaries by type for summary
+  const beneficiaryGroups = useMemo(() => {
+    const groups: Record<string, number> = {};
+    for (const b of beneficiaries) {
+      groups[b.type] = (groups[b.type] || 0) + 1;
+    }
+    return groups;
+  }, [beneficiaries]);
+
+  return (
+    <div className="mb-4">
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button variant="outline" className="w-full justify-between">
             <div className="flex items-center">
@@ -154,300 +287,378 @@ export default function MultipleSeniorDiscountSelector({
               Apply Discounts
             </div>
             <div className="flex items-center gap-2">
-              {currentSeniorDiscounts.length > 0 && <Badge variant="secondary" className="flex items-center gap-1">
+              {currentDiscountDisplay.count > 0 && (
+                <Badge variant="secondary" className="flex items-center gap-1">
                   <Users className="h-3 w-3" />
-                  {currentSeniorDiscounts.length}
-                </Badge>}
+                  {currentDiscountDisplay.count}
+                </Badge>
+              )}
               <span className="text-muted-foreground">
-                {totalCurrentDiscounts > 0 ? formatCurrency(totalCurrentDiscounts) : "None"}
+                {currentDiscountDisplay.amount > 0 ? formatCurrency(currentDiscountDisplay.amount) : "None"}
               </span>
             </div>
           </Button>
         </DialogTrigger>
         
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Apply Discounts</DialogTitle>
           </DialogHeader>
           
-          <div className="py-4 space-y-4">
-            <RadioGroup value={discountMode} onValueChange={(val: any) => setDiscountMode(val)} className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="senior" id="senior-mode" />
-                <Label htmlFor="senior-mode">Multiple Senior Citizens (20% each)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="other" id="other-mode" />
-                <Label htmlFor="other-mode">Single Discount (PWD/Employee/Loyalty/Promo)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="croffle-combo" id="croffle-combo-mode" disabled={!comboResult.hasEligiblePairs} />
-                <Label htmlFor="croffle-combo-mode" className={!comboResult.hasEligiblePairs ? "text-muted-foreground" : ""}>
-                  ☕ Buy 1 Croffle, Get 1 Free Coffee {!comboResult.hasEligiblePairs && "(Not eligible)"}
-                </Label>
-              </div>
-            </RadioGroup>
+          <ScrollArea className="flex-1 pr-4">
+            <div className="py-4 space-y-4">
+              {/* Total Diners Input */}
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="totalDiners" className="text-sm font-medium">Total Number of Diners *</Label>
+                      <Input
+                        id="totalDiners"
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={totalDiners}
+                        onChange={e => setTotalDiners(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="flex-1 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        <span>Beneficiaries: {beneficiaries.length}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground mt-1">
+                        <User className="h-4 w-4" />
+                        <span>Regular diners: {regularDiners}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {discountMode === 'senior' && <div className="space-y-4">
-                {/* Total Diners Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="totalDiners" className="text-sm font-medium">Total Number of Diners *</Label>
-                  <Input id="totalDiners" type="number" min="1" max="50" value={totalDiners} onChange={e => setTotalDiners(Math.max(1, parseInt(e.target.value) || 1))} placeholder="Enter total number of diners (including seniors and non-seniors)" className="text-sm" required />
-                  <p className="text-xs text-muted-foreground">
-                    This includes both senior citizens and non-senior diners sharing the bill
-                  </p>
-                </div>
-                
+              {/* Beneficiaries Section */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Senior Citizens</h4>
-                  <Button type="button" variant="outline" size="sm" onClick={addSeniorDiscount} className="flex items-center gap-1" disabled={seniorDiscounts.length >= totalDiners}>
+                  <h4 className="text-sm font-medium">Discount Beneficiaries</h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addBeneficiary('senior')}
+                    disabled={beneficiaries.length >= totalDiners}
+                    className="flex items-center gap-1"
+                  >
                     <Plus className="h-3 w-3" />
-                    Add Senior
+                    Add Beneficiary
                   </Button>
                 </div>
 
-                {seniorDiscounts.length >= totalDiners && <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                    Cannot add more seniors than total diners
-                  </div>}
-
-                {seniorDiscounts.map((senior, index) => <Card key={senior.id} className="p-3">
-                    <CardContent className="p-0 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">Senior Citizen {index + 1}</Label>
-                        {seniorDiscounts.length > 1 && <Button type="button" variant="ghost" size="sm" onClick={() => removeSeniorDiscount(senior.id)} className="h-6 w-6 p-0">
-                            <X className="h-3 w-3" />
-                          </Button>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`name-${senior.id}`} className="text-xs">Name (Optional)</Label>
-                        <Input id={`name-${senior.id}`} value={senior.name} onChange={e => updateSeniorDiscount(senior.id, 'name', e.target.value)} placeholder="Senior citizen name" className="text-sm" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`id-${senior.id}`} className="text-xs">Senior Citizen ID Number *</Label>
-                        <Input id={`id-${senior.id}`} value={senior.idNumber} onChange={e => updateSeniorDiscount(senior.id, 'idNumber', e.target.value)} placeholder="Enter Senior Citizen ID" className="text-sm" required />
-                      </div>
-                    </CardContent>
-                  </Card>)}
-
-                {seniorDiscounts.length === 0 && <div className="text-center py-4 text-muted-foreground">
-                    <p className="text-sm">No senior citizens added yet.</p>
-                    <Button type="button" variant="outline" size="sm" onClick={addSeniorDiscount} className="mt-2">
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add First Senior Citizen
-                    </Button>
-                  </div>}
-              </div>}
-
-            {discountMode === 'other' && <div className="space-y-4">
-                <RadioGroup value={otherDiscountType} onValueChange={(val: any) => setOtherDiscountType(val)} className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="regular" id="regular" />
-                    <Label htmlFor="regular">Regular (5%)</Label>
+                {beneficiaries.length >= totalDiners && (
+                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    Cannot add more beneficiaries than total diners
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pwd" id="pwd" />
-                    <Label htmlFor="pwd">PWD (20%)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="employee" id="employee" />
-                    <Label htmlFor="employee">Employee (15%)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="loyalty" id="loyalty" />
-                    <Label htmlFor="loyalty">Loyalty (10%)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="custom" id="custom" />
-                    <Label htmlFor="custom">Custom %</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="promo" id="promo" />
-                    <Label htmlFor="promo">Promo (Custom Amount)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="athletes_coaches" id="athletes_coaches" />
-                    <Label htmlFor="athletes_coaches">NAAC - National Athletes & Coaches (20%)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="solo_parent" id="solo_parent" />
-                    <Label htmlFor="solo_parent">Solo Parent (20%)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="complimentary" id="complimentary" />
-                    <Label htmlFor="complimentary">Complimentary (100%)</Label>
-                  </div>
-                </RadioGroup>
-
-                {otherDiscountType === 'custom' && <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Label htmlFor="customPercent">Discount Percentage</Label>
-                    <Input 
-                      id="customPercent" 
-                      type="number" 
-                      min="1" 
-                      max="100" 
-                      value={customPercentage} 
-                      onChange={e => setCustomPercentage(Math.min(100, Math.max(1, Number(e.target.value))))} 
-                      placeholder="Enter discount percentage" 
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Discount: {formatCurrency(subtotal * (customPercentage / 100))} ({customPercentage}%)
-                    </p>
-                  </div>}
-
-                {otherDiscountType === 'pwd' && <div className="space-y-2">
-                    <Label htmlFor="pwdId">PWD ID Number (Required)</Label>
-                    <Input id="pwdId" value={otherIdNumber} onChange={e => setOtherIdNumber(e.target.value)} placeholder="Enter PWD ID number" />
-                  </div>}
-
-                {otherDiscountType === 'athletes_coaches' && <div className="space-y-2">
-                    <Label htmlFor="naacId">NAAC ID Number (Required)</Label>
-                    <Input id="naacId" value={otherIdNumber} onChange={e => setOtherIdNumber(e.target.value)} placeholder="Enter NAAC ID number" />
-                  </div>}
-
-                {otherDiscountType === 'solo_parent' && <div className="space-y-2">
-                    <Label htmlFor="soloParentId">Solo Parent ID Number (Required)</Label>
-                    <Input id="soloParentId" value={otherIdNumber} onChange={e => setOtherIdNumber(e.target.value)} placeholder="Enter Solo Parent ID number" />
-                  </div>}
-
-                {otherDiscountType === 'complimentary' && <div className="space-y-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="space-y-2">
-                      <Label htmlFor="complimentaryReason">Reason (Required)</Label>
-                      <Textarea id="complimentaryReason" value={complimentaryReason} onChange={e => setComplimentaryReason(e.target.value)} placeholder="Enter reason for complimentary discount..." required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="approverName">Approver Name (Required)</Label>
-                      <Input id="approverName" value={approverName} onChange={e => setApproverName(e.target.value)} placeholder="Enter name of manager/supervisor who approved this" required />
-                    </div>
-                    <div className="text-sm text-red-600 font-medium">
-                      ⚠️ This will apply a 100% discount (no charge)
-                    </div>
-                  </div>}
-              </div>}
-
-            {discountMode === 'croffle-combo' && <div className="space-y-4">
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Coffee className="h-5 w-5 text-green-600" />
-                    <h4 className="font-medium text-green-700">Free Coffee Promotion</h4>
-                  </div>
-                  
-                  {comboResult.hasEligiblePairs ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-green-700">
-                        🎉 You qualify for {comboResult.pairedItems.length} free coffee{comboResult.pairedItems.length > 1 ? 's' : ''}!
-                      </p>
-                      
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-green-600">Promotion Details:</p>
-                        <ul className="text-xs space-y-1 text-muted-foreground">
-                          {comboResult.breakdown.map((item, idx) => (
-                            <li key={idx}>• {item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div className="pt-3 border-t border-green-200">
-                        <p className="text-sm font-medium text-green-700">
-                          Total Savings: {formatCurrency(comboResult.discountAmount)}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">
-                      <p>Add 1 Regular Croffle (₱125+) and 1 eligible coffee (Americano, Cappuccino, or Café Latte) to qualify.</p>
-                    </div>
-                  )}
-                </div>
-              </div>}
-            
-            {/* Manual BOGO Button - DISABLED */}
-            {/* {BOGOService.hasEligibleItems(cartItems) && <div className="p-3 bg-croffle-background rounded-lg border">
-...
-              </div>} */}
-            
-            <div className="mt-4 p-3 bg-muted rounded-lg">
-              <p className="text-sm">
-                Subtotal (with VAT): <span className="font-medium">{formatCurrency(subtotal)}</span>
-              </p>
-              {discountMode === 'croffle-combo' && comboResult.hasEligiblePairs && (
-                <p className="text-sm">
-                  Croffle Combo Discount: 
-                  <span className="font-medium text-green-600"> -{formatCurrency(comboResult.discountAmount)}</span>
-                </p>
-              )}
-              {discountMode === 'senior' && preview.totalSeniorDiscount > 0 && <>
-                  <div className="mt-2 space-y-1 text-xs">
-                    <p className="font-medium">BIR-Compliant Calculation:</p>
-                    <p>• Total diners: {totalDiners}</p>
-                    <p>• Senior citizens: {seniorDiscounts.filter(d => d.idNumber.trim() !== '').length}</p>
-                    <p>• Per-person gross share: {formatCurrency(preview.perPersonGrossShare)}</p>
-                    <p>• Per-senior VAT-exempt sale: {formatCurrency(preview.perSeniorVATExemptSale)}</p>
-                    <p>• Per-senior VAT exemption: {formatCurrency((preview as any).totalVATExemption / seniorDiscounts.filter(d => d.idNumber.trim() !== '').length || 0)}</p>
-                    <p>• Per-senior discount (20%): {formatCurrency(preview.perSeniorDiscountAmount)}</p>
-                    <p>• Senior pays per person: {formatCurrency((preview as any).perSeniorPays || 0)}</p>
-                  </div>
-                  <div className="mt-2 space-y-1 text-sm">
-                    <p>
-                      VAT Exemption: 
-                      <span className="font-medium text-blue-600"> -{formatCurrency((preview as any).totalVATExemption || 0)}</span>
-                    </p>
-                    <p>
-                      Senior Discount (20%): 
-                      <span className="font-medium text-green-600"> -{formatCurrency(preview.totalSeniorDiscount)}</span>
-                    </p>
-                  </div>
-                </>}
-              {discountMode === 'other' && <p className="text-sm">
-                  {otherDiscountType.toUpperCase()} Discount: 
-                  <span className="font-medium text-green-600"> -{formatCurrency(CartCalculationService.calculateCartTotals([{
-                  price: subtotal,
-                  quantity: 1,
-                  productId: 'mock',
-                  product: {} as any
-                }], [], {
-                  type: otherDiscountType,
-                  amount: 0,
-                  idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
-                }, 1).otherDiscountAmount)}</span>
-                </p>}
-              <p className="text-sm font-medium mt-2 pt-2 border-t">
-                Final Total: {formatCurrency(
-                  discountMode === 'senior' 
-                    ? subtotal - ((preview as any).totalVATExemption || 0) - preview.totalSeniorDiscount 
-                    : discountMode === 'croffle-combo'
-                    ? subtotal - comboResult.discountAmount
-                    : subtotal - CartCalculationService.calculateCartTotals([], [], {
-                        type: otherDiscountType,
-                        amount: 0,
-                        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
-                      }, 1).otherDiscountAmount
                 )}
-              </p>
+
+                {/* Beneficiary Cards */}
+                <div className="space-y-3">
+                  {beneficiaries.map((beneficiary, index) => (
+                    <Card key={beneficiary.id} className="relative">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-start justify-between mb-3">
+                          <Badge variant={isVATExemptDiscount(beneficiary.type) ? "default" : "secondary"}>
+                            #{index + 1} - {getDiscountLabel(beneficiary.type)}
+                            {isVATExemptDiscount(beneficiary.type) && " (VAT Exempt)"}
+                          </Badge>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeBeneficiary(beneficiary.id)}
+                            className="h-6 w-6 p-0 text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {/* Discount Type */}
+                          <div className="space-y-1">
+                            <Label className="text-xs">Discount Type</Label>
+                            <Select
+                              value={beneficiary.type}
+                              onValueChange={(val) => updateBeneficiary(beneficiary.id, 'type', val)}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DISCOUNT_TYPES.map(dt => (
+                                  <SelectItem key={dt.value} value={dt.value}>
+                                    {dt.label} ({dt.rate})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          {/* ID Number */}
+                          <div className="space-y-1">
+                            <Label className="text-xs">
+                              ID Number {requiresIdNumber(beneficiary.type) && '*'}
+                            </Label>
+                            <Input
+                              value={beneficiary.idNumber}
+                              onChange={e => updateBeneficiary(beneficiary.id, 'idNumber', e.target.value)}
+                              placeholder={requiresIdNumber(beneficiary.type) ? "Required" : "Optional"}
+                              className="h-9"
+                            />
+                          </div>
+                          
+                          {/* Name */}
+                          <div className="space-y-1">
+                            <Label className="text-xs">Name</Label>
+                            <Input
+                              value={beneficiary.name}
+                              onChange={e => updateBeneficiary(beneficiary.id, 'name', e.target.value)}
+                              placeholder="Optional"
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Custom percentage input */}
+                        {beneficiary.type === 'custom' && (
+                          <div className="mt-3 p-2 bg-blue-50 rounded">
+                            <Label className="text-xs">Custom Percentage</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={customPercentage}
+                                onChange={e => setCustomPercentage(Math.min(100, Math.max(1, Number(e.target.value))))}
+                                className="w-24 h-8"
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Preview for this beneficiary */}
+                        {getPreviewCalculations && (
+                          <div className="mt-3 pt-2 border-t text-xs text-muted-foreground">
+                            {(() => {
+                              const preview = getPreviewCalculations.find(p => p.id === beneficiary.id);
+                              if (!preview) return null;
+                              return (
+                                <div className="flex justify-between">
+                                  <span>
+                                    Share: {formatCurrency(preview.perPersonGrossShare)}
+                                    {preview.isVATExempt && ` → VAT Exempt: ${formatCurrency(preview.vatExemptSale)}`}
+                                  </span>
+                                  <span className="text-green-600 font-medium">
+                                    Discount: {formatCurrency(preview.discountAmount)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {beneficiaries.length === 0 && (
+                  <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <p className="text-sm">No discount beneficiaries added yet.</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addBeneficiary('senior')}
+                      className="mt-2"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add First Beneficiary
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Complimentary fields */}
+              {beneficiaries.some(b => b.type === 'complimentary') && (
+                <Card className="border-red-200 bg-red-50">
+                  <CardContent className="pt-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="complimentaryReason">Reason (Required) *</Label>
+                        <Textarea
+                          id="complimentaryReason"
+                          value={complimentaryReason}
+                          onChange={e => setComplimentaryReason(e.target.value)}
+                          placeholder="Enter reason for complimentary discount..."
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="approverName">Approver Name (Required) *</Label>
+                        <Input
+                          id="approverName"
+                          value={approverName}
+                          onChange={e => setApproverName(e.target.value)}
+                          placeholder="Manager/Supervisor name"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="text-sm text-red-600 font-medium">
+                        ⚠️ This will apply a 100% discount (no charge) for complimentary beneficiaries
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Croffle Combo Promotion */}
+              {comboResult.hasEligiblePairs && (
+                <Card className="border-green-200 bg-green-50">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Coffee className="h-5 w-5 text-green-600" />
+                      <h4 className="font-medium text-green-700">Free Coffee Promotion Available!</h4>
+                    </div>
+                    <p className="text-sm text-green-700 mb-2">
+                      You qualify for {comboResult.pairedItems.length} free coffee{comboResult.pairedItems.length > 1 ? 's' : ''}
+                    </p>
+                    <div className="text-sm font-medium text-green-700">
+                      Savings: {formatCurrency(comboResult.discountAmount)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleApplyCroffleCombo}
+                      className="mt-2 border-green-300 text-green-700 hover:bg-green-100"
+                    >
+                      Apply Croffle Combo
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Calculation Preview */}
+              {beneficiaries.length > 0 && (
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-4">
+                    <h4 className="text-sm font-medium mb-3">Calculation Preview</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Subtotal (with VAT):</span>
+                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Diners:</span>
+                        <span>{totalDiners} ({beneficiaries.length} beneficiaries + {regularDiners} regular)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Per-person share:</span>
+                        <span>{formatCurrency(subtotal / totalDiners)}</span>
+                      </div>
+                      
+                      {/* Beneficiary summary by type */}
+                      <div className="pt-2 border-t space-y-1">
+                        {Object.entries(beneficiaryGroups).map(([type, count]) => (
+                          <div key={type} className="flex justify-between text-xs">
+                            <span>{getDiscountLabel(type as DiscountType)} ({count}x):</span>
+                            <span>
+                              {isVATExemptDiscount(type as DiscountType) ? "VAT Exempt + 20%" : 
+                               type === 'complimentary' ? "100%" :
+                               type === 'custom' ? `${customPercentage}%` :
+                               `${DISCOUNT_TYPES.find(d => d.value === type)?.rate || ''}`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Totals */}
+                      <div className="pt-2 border-t">
+                        {totalDiscountPreview.totalVATExemption > 0 && (
+                          <div className="flex justify-between text-blue-600">
+                            <span>Total VAT Exemption:</span>
+                            <span>-{formatCurrency(totalDiscountPreview.totalVATExemption)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-green-600">
+                          <span>Total Discount:</span>
+                          <span>-{formatCurrency(totalDiscountPreview.totalDiscount)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold mt-2 pt-2 border-t">
+                          <span>Final Total:</span>
+                          <span>{formatCurrency(subtotal - totalDiscountPreview.totalVATExemption - totalDiscountPreview.totalDiscount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          </div>
+          </ScrollArea>
           
-          <DialogFooter>
-            {(currentSeniorDiscounts.length > 0 || currentOtherDiscount) && <Button variant="destructive" onClick={() => {
-            onApplyDiscounts([], undefined);
-            setIsOpen(false);
-          }}>
+          <DialogFooter className="pt-4 border-t">
+            {(currentDiscountDisplay.count > 0) && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (onApplyBeneficiaryDiscounts) {
+                    onApplyBeneficiaryDiscounts([], 1);
+                  }
+                  onApplyDiscounts([], null, 1);
+                  setIsOpen(false);
+                }}
+              >
                 Remove All Discounts
-              </Button>}
-            <Button onClick={handleApplyDiscounts}>Apply Discounts</Button>
+              </Button>
+            )}
+            <Button onClick={handleApplyDiscounts} disabled={beneficiaries.length === 0}>
+              Apply Discounts
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {currentSeniorDiscounts.length > 0 && <div className="mt-2 space-y-1">
-          {currentSeniorDiscounts.map((senior, index) => <div key={senior.id} className="text-xs text-muted-foreground flex justify-between">
+      {/* Current discount summary below button */}
+      {currentBeneficiaries.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {currentBeneficiaries.map((b, index) => (
+            <div key={b.id} className="text-xs text-muted-foreground flex justify-between">
+              <span>{getDiscountLabel(b.type)} #{index + 1}: {b.name || 'Unnamed'}</span>
+              <span>
+                {b.idNumber && `ID: ${b.idNumber} • `}
+                {formatCurrency(b.discountAmount)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Legacy display */}
+      {currentBeneficiaries.length === 0 && currentSeniorDiscounts.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {currentSeniorDiscounts.map((senior, index) => (
+            <div key={senior.id} className="text-xs text-muted-foreground flex justify-between">
               <span>Senior {index + 1}: {senior.name || 'Unnamed'}</span>
               <span>ID: {senior.idNumber} • {formatCurrency(senior.discountAmount)}</span>
-            </div>)}
-        </div>}
+            </div>
+          ))}
+        </div>
+      )}
       
-      {currentOtherDiscount && <div className="mt-1 text-xs text-muted-foreground">
-          {currentOtherDiscount.type.toUpperCase()} {formatCurrency(currentOtherDiscount.amount)}
+      {currentBeneficiaries.length === 0 && currentOtherDiscount && (
+        <div className="mt-1 text-xs text-muted-foreground">
+          {getDiscountLabel(currentOtherDiscount.type)} {formatCurrency(currentOtherDiscount.amount)}
           {currentOtherDiscount.idNumber && ` • ID: ${currentOtherDiscount.idNumber}`}
-        </div>}
-    </div>;
+        </div>
+      )}
+    </div>
+  );
 }
