@@ -11,7 +11,7 @@ import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
-import { ReceiptPdfGenerator, ReceiptData } from "@/services/reports/receiptPdfGenerator";
+import { ReceiptPdfGenerator, ReceiptData, ReceiptBeneficiary } from "@/services/reports/receiptPdfGenerator";
 
 interface ReceiptGeneratorProps {
   transaction: Transaction;
@@ -180,6 +180,54 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
 
   const handleDownload = async () => {
     try {
+      // Build discount beneficiaries from transaction data
+      const discountBeneficiaries: ReceiptBeneficiary[] = [];
+      const txData = transaction as any;
+      
+      // Check new unified format first
+      if (txData.discount_beneficiaries && Array.isArray(txData.discount_beneficiaries)) {
+        txData.discount_beneficiaries.forEach((b: any) => {
+          discountBeneficiaries.push({
+            type: b.type,
+            idNumber: b.idNumber || b.id_number || '',
+            name: b.name || '',
+            discountAmount: b.discountAmount || b.discount_amount || 0,
+            vatExemptionAmount: b.vatExemptionAmount || b.vat_exemption_amount || 0,
+            isVATExempt: ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(b.type)
+          });
+        });
+      }
+      
+      // Fallback to legacy senior_discounts_detail or seniorDiscounts
+      const seniorDiscounts = txData.senior_discounts_detail || txData.seniorDiscounts;
+      if (discountBeneficiaries.length === 0 && seniorDiscounts && Array.isArray(seniorDiscounts)) {
+        seniorDiscounts.forEach((s: any) => {
+          discountBeneficiaries.push({
+            type: 'senior',
+            idNumber: s.idNumber || s.id_number || '',
+            name: s.name || '',
+            discountAmount: s.discountAmount || s.discount_amount || 0,
+            vatExemptionAmount: 0,
+            isVATExempt: true
+          });
+        });
+      }
+      
+      // Fallback to legacy other_discount_detail or otherDiscount
+      const otherDiscount = txData.other_discount_detail || txData.otherDiscount;
+      if (otherDiscount && typeof otherDiscount === 'object') {
+        if (['pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(otherDiscount.type)) {
+          discountBeneficiaries.push({
+            type: otherDiscount.type,
+            idNumber: otherDiscount.idNumber || otherDiscount.id_number || '',
+            name: otherDiscount.name || '',
+            discountAmount: otherDiscount.discountAmount || otherDiscount.discount_amount || 0,
+            vatExemptionAmount: 0,
+            isVATExempt: true
+          });
+        }
+      }
+
       // Map transaction data to ReceiptData format
       const receiptData: ReceiptData = {
         receiptNumber: transaction.receiptNumber || 'N/A',
@@ -204,11 +252,12 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         netAmount: transaction.total || 0,
         vatAmount: transaction.tax || 0,
         paymentMethod: transaction.paymentMethod || 'Cash',
-        discountType: (transaction as any).discount_type || (transaction as any).discountType || '',
-        seniorDiscount: (transaction as any).senior_discount || 0,
-        pwdDiscount: (transaction as any).pwd_discount || 0,
+        discountType: txData.discount_type || txData.discountType || '',
+        seniorDiscount: txData.senior_discount || 0,
+        pwdDiscount: txData.pwd_discount || 0,
         amountTendered: transaction.amountTendered,
         change: transaction.change,
+        discountBeneficiaries: discountBeneficiaries.length > 0 ? discountBeneficiaries : undefined
       };
 
       const generator = new ReceiptPdfGenerator();
