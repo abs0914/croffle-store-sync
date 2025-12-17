@@ -39,7 +39,7 @@ export function BIRSalesSummaryView({ storeId, dateRange }: BIRSalesSummaryViewP
     loadReport();
   }, [storeId, dateRange]);
 
-  const formatCurrency = (amount: number) => `₱${amount.toFixed(2)}`;
+  const formatCurrency = (amount: number) => `P${amount.toFixed(2)}`;
 
   const handleExportPDF = () => {
     if (!report) return;
