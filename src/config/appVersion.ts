@@ -2,11 +2,11 @@
 // Update this when releasing new versions
 
 export const APP_VERSION = {
-  name: 'CROFFLE STORE SYNC POS',
+  name: 'PVOSyncPOS',
   version: '1.0.0',
-  fullName: 'CROFFLE STORE SYNC POS v1.0.0',
+  fullName: 'PVOSyncPOS v1.0.0',
   // BIR accreditation display format
-  birDisplayName: 'CROFFLE STORE SYNC POS',
+  birDisplayName: 'PVOSyncPOS',
   birVersion: 'Version 1.0.0',
 } as const;
 
