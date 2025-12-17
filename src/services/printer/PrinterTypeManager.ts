@@ -137,10 +137,19 @@ export class PrinterTypeManager {
       receipt += formatter.left();
     }
     
-    // Header
+    // Header - Show both Store Name and Business Name
     if (store) {
       receipt += formatter.center();
-      receipt += formatter.bold(store.business_name || store.name || 'Store') + '\n';
+      // Show Store Name (branch/location) first
+      if (store.name) {
+        receipt += formatter.bold(store.name) + '\n';
+      }
+      // Show Business Name (registered taxpayer name) second
+      if (store.business_name && store.business_name !== store.name) {
+        receipt += store.business_name + '\n';
+      } else if (!store.name && store.business_name) {
+        receipt += formatter.bold(store.business_name) + '\n';
+      }
       if (store.address) {
         receipt += store.address + '\n';
       }
@@ -279,30 +288,123 @@ export class PrinterTypeManager {
     }
     
     // Discount Beneficiary Info Section (for BIR-mandated discounts)
-    if (totalDiscount > 0 && isVatExempt) {
+    // Collect all beneficiaries from multiple data sources
+    const allBeneficiaries: Array<{type: string; name?: string; idNumber?: string; address?: string; tin?: string}> = [];
+    
+    // Check new unified discount_beneficiaries format first
+    const discountBeneficiaries = (transaction as any).discount_beneficiaries;
+    if (discountBeneficiaries && Array.isArray(discountBeneficiaries)) {
+      discountBeneficiaries.forEach((b: any) => {
+        if (['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(b.type)) {
+          allBeneficiaries.push({
+            type: b.type,
+            name: b.name,
+            idNumber: b.idNumber || b.id_number,
+            address: b.address,
+            tin: b.tin
+          });
+        }
+      });
+    }
+    
+    // Fallback to legacy senior_discounts_detail
+    const seniorDiscounts = (transaction as any).senior_discounts_detail || (transaction as any).seniorDiscounts;
+    if (seniorDiscounts && Array.isArray(seniorDiscounts)) {
+      seniorDiscounts.forEach((s: any) => {
+        // Avoid duplicates
+        if (!allBeneficiaries.some(b => b.type === 'senior' && b.idNumber === s.idNumber)) {
+          allBeneficiaries.push({
+            type: 'senior',
+            name: s.name,
+            idNumber: s.idNumber || s.id_number,
+            address: s.address,
+            tin: s.tin
+          });
+        }
+      });
+    }
+    
+    // Fallback to legacy other_discount_detail (PWD, NAAC, Solo Parent)
+    const otherDiscount = (transaction as any).other_discount_detail || (transaction as any).otherDiscount;
+    if (otherDiscount && typeof otherDiscount === 'object') {
+      const otherType = otherDiscount.type;
+      if (['pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(otherType)) {
+        // Avoid duplicates
+        if (!allBeneficiaries.some(b => b.type === otherType && b.idNumber === otherDiscount.idNumber)) {
+          allBeneficiaries.push({
+            type: otherType,
+            name: otherDiscount.name,
+            idNumber: otherDiscount.idNumber || otherDiscount.id_number,
+            address: otherDiscount.address,
+            tin: otherDiscount.tin
+          });
+        }
+      }
+    }
+    
+    // If no beneficiaries found but there's a discount, use the main discount info
+    if (allBeneficiaries.length === 0 && totalDiscount > 0 && isVatExempt) {
+      const discountDetails = (transaction as any).discount_details || (transaction as any).discountDetails;
+      allBeneficiaries.push({
+        type: discountType,
+        name: discountDetails?.name || discountDetails?.beneficiaryName || customer?.name,
+        idNumber: transaction.discountIdNumber || discountDetails?.idNumber,
+        address: discountDetails?.address || customer?.address,
+        tin: discountDetails?.tin || customer?.tin
+      });
+    }
+    
+    // Print each beneficiary with their info and signature line
+    if (allBeneficiaries.length > 0) {
       receipt += formatter.horizontalLine(width);
       
-      // Get beneficiary info from discount details
-      const discountDetails = (transaction as any).discount_details || (transaction as any).discountDetails;
-      const beneficiaryName = discountDetails?.name || discountDetails?.beneficiaryName || customer?.name || 'N/A';
-      const idNumber = transaction.discountIdNumber || discountDetails?.idNumber || 'N/A';
-      const address = discountDetails?.address || customer?.address || '';
-      const tin = discountDetails?.tin || customer?.tin || '';
-      
-      // Determine ID type based on discount type
-      let idType = 'ID No.';
-      switch (discountType) {
-        case 'senior': idType = 'OSCA ID No.'; break;
-        case 'pwd': idType = 'PWD ID No.'; break;
-        case 'naac': 
-        case 'athletes_coaches': idType = 'NAAC ID No.'; break;
-        case 'solo_parent': idType = 'Solo Parent ID No.'; break;
-      }
-      
-      receipt += formatter.formatBeneficiaryInfo(beneficiaryName, idType, idNumber, address, tin, width);
-      
-      // Signature line for discounted transactions
-      receipt += formatter.formatSignatureLine(width);
+      allBeneficiaries.forEach((beneficiary, index) => {
+        // Determine ID type and discount label based on type
+        let idType = 'ID No.';
+        let discountLabel = 'DISCOUNT';
+        switch (beneficiary.type) {
+          case 'senior': 
+            idType = 'OSCA ID No.'; 
+            discountLabel = 'SENIOR CITIZEN DISCOUNT';
+            break;
+          case 'pwd': 
+            idType = 'PWD ID No.'; 
+            discountLabel = 'PWD DISCOUNT';
+            break;
+          case 'naac': 
+          case 'athletes_coaches': 
+            idType = 'NAAC ID No.'; 
+            discountLabel = 'NAAC DISCOUNT';
+            break;
+          case 'solo_parent': 
+            idType = 'Solo Parent ID No.'; 
+            discountLabel = 'SOLO PARENT DISCOUNT';
+            break;
+        }
+        
+        // Discount type header
+        receipt += formatter.center();
+        receipt += formatter.bold(discountLabel) + '\n';
+        receipt += formatter.left();
+        
+        // Beneficiary info
+        receipt += formatter.formatLine('Name:', beneficiary.name || '___________________', width);
+        receipt += formatter.formatLine(idType, beneficiary.idNumber || '___________________', width);
+        if (beneficiary.address) {
+          receipt += formatter.formatLine('Address:', beneficiary.address, width);
+        }
+        if (beneficiary.tin) {
+          receipt += formatter.formatLine('TIN:', beneficiary.tin, width);
+        }
+        
+        // Signature line for each beneficiary
+        receipt += formatter.formatSignatureLine(width);
+        
+        // Add separator between multiple beneficiaries
+        if (index < allBeneficiaries.length - 1) {
+          receipt += '\n';
+        }
+      });
     }
     
     // Footer
@@ -313,15 +415,9 @@ export class PrinterTypeManager {
     receipt += formatter.bold('THIS SERVES AS YOUR INVOICE\n');
     receipt += '\nThank you for dining with us!\n';
     
-    // PTU Info (if available from store)
-    if (store?.permit_number || store?.accreditation_date) {
-      receipt += formatter.left();
-      receipt += formatter.formatPTUInfo(
-        store.permit_number,
-        store.accreditation_date ? new Date(store.accreditation_date).toLocaleDateString() : undefined,
-        width
-      );
-    }
+    // PTU Info - Use placeholder until official number is received
+    receipt += formatter.left();
+    receipt += formatter.formatPTUInfo('XXXXXXX', 'XXXXXXX', width);
     
     receipt += formatter.left();
     receipt += formatter.lineFeed(3);
