@@ -531,6 +531,10 @@ class StreamlinedTransactionService {
       discount_beneficiaries: safeParseJSON(dbTransaction.discount_beneficiaries),
       senior_discounts_detail: safeParseJSON(dbTransaction.senior_discounts_detail),
       other_discount_detail: safeParseJSON(dbTransaction.other_discount_detail),
+      // Order type and delivery information
+      orderType: dbTransaction.order_type as any,
+      deliveryPlatform: dbTransaction.delivery_platform as any,
+      deliveryOrderNumber: dbTransaction.delivery_order_number,
     };
   }
 
