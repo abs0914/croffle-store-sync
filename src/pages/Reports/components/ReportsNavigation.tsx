@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database, ShoppingBag, Users, HeartHandshake, Medal, UserCheck } from "lucide-react";
+import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database, ShoppingBag, Users, HeartHandshake, Medal, UserCheck, ScrollText } from "lucide-react";
 import { ReportType } from "..";
 import { useAuth } from "@/contexts/auth";
 
@@ -41,6 +41,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     { id: 'bir_backup' as ReportType, name: 'BIR Data Backup', icon: <Database className="h-4 w-4" />, roles: ['admin', 'owner'] },
     { id: 'void_report' as ReportType, name: 'Void Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'robinsons_compliance' as ReportType, name: 'Robinsons Compliance', icon: <FileBarChart className="h-4 w-4" />, roles: ['admin', 'owner'] },
+    { id: 'audit_trail' as ReportType, name: 'System Audit Trail', icon: <ScrollText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     
     // Separator for Discount Sales Books
     null,
