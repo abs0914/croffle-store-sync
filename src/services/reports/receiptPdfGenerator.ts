@@ -2,6 +2,16 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
 
+// Multi-discount beneficiary interface for PDF generation
+export interface ReceiptBeneficiary {
+  type: string;
+  idNumber: string;
+  name: string;
+  discountAmount: number;
+  vatExemptionAmount: number;
+  isVATExempt: boolean;
+}
+
 export interface ReceiptData {
   receiptNumber: string;
   businessDate: string;
@@ -29,6 +39,8 @@ export interface ReceiptData {
   promoDetails?: string;
   amountTendered?: number;
   change?: number;
+  // NEW: Multi-discount beneficiaries
+  discountBeneficiaries?: ReceiptBeneficiary[];
 }
 
 export class ReceiptPdfGenerator {
@@ -163,41 +175,88 @@ export class ReceiptPdfGenerator {
     // Gross amount
     this.addTotalLine('GROSS AMOUNT:', receipt.grossAmount);
     
-    // Discounts - avoid duplicating PWD/Senior/NAAC/Solo Parent which have dedicated lines
-    const isSpecialDiscount = ['pwd', 'senior', 'naac', 'athletes_coaches', 'solo_parent'].includes(receipt.discountType || '');
-    
-    if (receipt.discountAmount > 0 && !isSpecialDiscount) {
-      let discountLabel = 'DISCOUNT:';
-      if (receipt.discountType) {
-        const typeLabels: Record<string, string> = {
-          employee: 'EMPLOYEE DISCOUNT:',
-          loyalty: 'LOYALTY DISCOUNT:',
-          promo: 'PROMO DISCOUNT:',
-          complimentary: 'COMPLIMENTARY:',
-          regular: 'REGULAR DISCOUNT:',
-          custom: 'CUSTOM DISCOUNT:',
-          bogo: 'BOGO DISCOUNT:',
-        };
-        discountLabel = typeLabels[receipt.discountType] || `DISCOUNT (${receipt.discountType}):`;
+    // NEW: Multi-discount beneficiaries support
+    if (receipt.discountBeneficiaries && receipt.discountBeneficiaries.length > 0) {
+      const typeLabels: Record<string, string> = {
+        senior: 'SENIOR CITIZEN',
+        pwd: 'PWD',
+        athletes_coaches: 'NAAC',
+        solo_parent: 'SOLO PARENT',
+        employee: 'EMPLOYEE',
+        loyalty: 'LOYALTY',
+        custom: 'CUSTOM',
+        complimentary: 'COMPLIMENTARY'
+      };
+      
+      // Group beneficiaries by type
+      const grouped = receipt.discountBeneficiaries.reduce((acc: Record<string, ReceiptBeneficiary[]>, b) => {
+        if (!acc[b.type]) acc[b.type] = [];
+        acc[b.type].push(b);
+        return acc;
+      }, {});
+      
+      // Print each group
+      Object.entries(grouped).forEach(([type, items]) => {
+        const label = typeLabels[type] || type.toUpperCase();
+        this.doc.setFontSize(7);
+        this.addLeftText(`${label} DISCOUNT${items.length > 1 ? 'S' : ''}:`, this.currentY);
+        this.currentY += 3;
+        
+        items.forEach((b) => {
+          const name = b.name || 'Beneficiary';
+          const idText = b.idNumber ? ` (${b.idNumber})` : '';
+          this.addLeftText(`  ${name}${idText}`, this.currentY);
+          this.addRightText(`-P${b.discountAmount.toFixed(2)}`, this.currentY);
+          this.currentY += 3;
+        });
+      });
+      
+      // Total VAT Exemption
+      const totalVatExempt = receipt.discountBeneficiaries
+        .filter(b => b.isVATExempt)
+        .reduce((sum, b) => sum + (b.vatExemptionAmount || 0), 0);
+      
+      if (totalVatExempt > 0) {
+        this.doc.setFontSize(8);
+        this.addTotalLine('VAT EXEMPTION:', -totalVatExempt);
       }
-      this.addTotalLine(discountLabel, -receipt.discountAmount);
-    }
-    
-    if (receipt.seniorDiscount && receipt.seniorDiscount > 0) {
-      this.addTotalLine('SENIOR CITIZEN DISCOUNT:', -receipt.seniorDiscount);
-    }
-    
-    if (receipt.pwdDiscount && receipt.pwdDiscount > 0) {
-      this.addTotalLine('PWD DISCOUNT:', -receipt.pwdDiscount);
-    }
-    
-    // NAAC and Solo Parent discounts
-    if ((receipt.discountType === 'naac' || receipt.discountType === 'athletes_coaches') && receipt.discountAmount > 0) {
-      this.addTotalLine('NAAC DISCOUNT:', -receipt.discountAmount);
-    }
-    
-    if (receipt.discountType === 'solo_parent' && receipt.discountAmount > 0) {
-      this.addTotalLine('SOLO PARENT DISCOUNT:', -receipt.discountAmount);
+    } else {
+      // Legacy: Discounts - avoid duplicating PWD/Senior/NAAC/Solo Parent which have dedicated lines
+      const isSpecialDiscount = ['pwd', 'senior', 'naac', 'athletes_coaches', 'solo_parent'].includes(receipt.discountType || '');
+      
+      if (receipt.discountAmount > 0 && !isSpecialDiscount) {
+        let discountLabel = 'DISCOUNT:';
+        if (receipt.discountType) {
+          const typeLabels: Record<string, string> = {
+            employee: 'EMPLOYEE DISCOUNT:',
+            loyalty: 'LOYALTY DISCOUNT:',
+            promo: 'PROMO DISCOUNT:',
+            complimentary: 'COMPLIMENTARY:',
+            regular: 'REGULAR DISCOUNT:',
+            custom: 'CUSTOM DISCOUNT:',
+            bogo: 'BOGO DISCOUNT:',
+          };
+          discountLabel = typeLabels[receipt.discountType] || `DISCOUNT (${receipt.discountType}):`;
+        }
+        this.addTotalLine(discountLabel, -receipt.discountAmount);
+      }
+      
+      if (receipt.seniorDiscount && receipt.seniorDiscount > 0) {
+        this.addTotalLine('SENIOR CITIZEN DISCOUNT:', -receipt.seniorDiscount);
+      }
+      
+      if (receipt.pwdDiscount && receipt.pwdDiscount > 0) {
+        this.addTotalLine('PWD DISCOUNT:', -receipt.pwdDiscount);
+      }
+      
+      // NAAC and Solo Parent discounts
+      if ((receipt.discountType === 'naac' || receipt.discountType === 'athletes_coaches') && receipt.discountAmount > 0) {
+        this.addTotalLine('NAAC DISCOUNT:', -receipt.discountAmount);
+      }
+      
+      if (receipt.discountType === 'solo_parent' && receipt.discountAmount > 0) {
+        this.addTotalLine('SOLO PARENT DISCOUNT:', -receipt.discountAmount);
+      }
     }
     
     // Net amount

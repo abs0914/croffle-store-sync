@@ -436,69 +436,139 @@ Thank you!`;
               <span>{formatCurrency(transaction.tax)}</span>
             </div>
             
-            {/* BIR-compliant discount breakdown */}
-            {/* Multiple Senior Citizens */}
-            {transaction.senior_discounts_detail && transaction.senior_discounts_detail.length > 0 && (
-              <div className="space-y-1">
-                <div className="text-xs font-semibold">Senior Citizen Discounts:</div>
-                {transaction.senior_discounts_detail.map((senior, idx) => (
-                  <div key={idx} className="flex justify-between text-xs text-green-600">
-                    <span className="ml-2">{senior.name} ({senior.idNumber})</span>
-                    <span>-{formatCurrency(senior.discountAmount)}</span>
-                  </div>
-                ))}
+            {/* BIR-compliant discount breakdown - NEW Multi-Beneficiary Support */}
+            {(transaction as any).discount_beneficiaries && (transaction as any).discount_beneficiaries.length > 0 ? (
+              <div className="space-y-2">
+                {/* Group beneficiaries by type */}
+                {(() => {
+                  const beneficiaries = (transaction as any).discount_beneficiaries;
+                  const grouped = beneficiaries.reduce((acc: Record<string, any[]>, b: any) => {
+                    if (!acc[b.type]) acc[b.type] = [];
+                    acc[b.type].push(b);
+                    return acc;
+                  }, {});
+                  
+                  const typeLabels: Record<string, string> = {
+                    senior: 'Senior Citizen',
+                    pwd: 'PWD',
+                    athletes_coaches: 'NAAC',
+                    solo_parent: 'Solo Parent',
+                    employee: 'Employee',
+                    loyalty: 'Loyalty',
+                    custom: 'Custom',
+                    complimentary: 'Complimentary'
+                  };
+                  
+                  return Object.entries(grouped).map(([type, items]: [string, any[]]) => (
+                    <div key={type} className="space-y-1">
+                      <div className="text-xs font-semibold">
+                        {typeLabels[type] || type} Discount{items.length > 1 ? 's' : ''}:
+                      </div>
+                      {items.map((b: any, idx: number) => (
+                        <div key={idx} className="flex justify-between text-xs text-green-600">
+                          <span className="ml-2">
+                            {b.name || 'Beneficiary'} {b.idNumber && `(${b.idNumber})`}
+                          </span>
+                          <span>-{formatCurrency(b.discountAmount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ));
+                })()}
+                
+                {/* Total VAT Exemption */}
+                {(() => {
+                  const totalVatExempt = (transaction as any).discount_beneficiaries
+                    .filter((b: any) => b.isVATExempt)
+                    .reduce((sum: number, b: any) => sum + (b.vatExemptionAmount || 0), 0);
+                  return totalVatExempt > 0 ? (
+                    <div className="flex justify-between text-xs text-blue-600">
+                      <span>VAT Exemption:</span>
+                      <span>-{formatCurrency(totalVatExempt)}</span>
+                    </div>
+                  ) : null;
+                })()}
               </div>
-            )}
-
-            {/* VAT Exemption */}
-            {transaction.vat_exemption_amount && transaction.vat_exemption_amount > 0 && (
-              <div className="flex justify-between text-xs text-blue-600">
-                <span>VAT Exemption:</span>
-                <span>-{formatCurrency(transaction.vat_exemption_amount)}</span>
-              </div>
-            )}
-
-            {/* Other Discounts (PWD, Employee, etc.) */}
-            {transaction.other_discount_detail && (
-              <div className="flex justify-between text-xs text-green-600">
-                <span>
-                  {transaction.other_discount_detail.type === 'pwd' && 'PWD Discount'}
-                  {transaction.other_discount_detail.type === 'employee' && 'Employee Discount'}
-                  {transaction.other_discount_detail.type === 'loyalty' && 'Loyalty Discount'}
-                  {transaction.other_discount_detail.type === 'promo' && 'Promo Discount'}
-                  {transaction.other_discount_detail.type === 'complimentary' && 'Complimentary'}
-                  {transaction.other_discount_detail.idNumber && ` (${transaction.other_discount_detail.idNumber})`}:
-                </span>
-                <span>-{formatCurrency(transaction.other_discount_detail.amount)}</span>
-              </div>
-            )}
-
-            {/* Legacy fallback for old transactions without detailed breakdown */}
-            {transaction.discount > 0 && !transaction.senior_discounts_detail && !transaction.other_discount_detail && (
+            ) : (
               <>
-                {transaction.discountType === 'senior' && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Senior Citizen Discount:</span>
-                    <span>-{formatCurrency(transaction.discount)}</span>
+                {/* Legacy: Multiple Senior Citizens */}
+                {(transaction as any).senior_discounts_detail && (transaction as any).senior_discounts_detail.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold">Senior Citizen Discounts:</div>
+                    {(transaction as any).senior_discounts_detail.map((senior: any, idx: number) => (
+                      <div key={idx} className="flex justify-between text-xs text-green-600">
+                        <span className="ml-2">{senior.name} ({senior.idNumber})</span>
+                        <span>-{formatCurrency(senior.discountAmount)}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
-                {transaction.discountType === 'pwd' && (
-                  <div className="flex justify-between text-green-600">
-                    <span>PWD Discount:</span>
-                    <span>-{formatCurrency(transaction.discount)}</span>
+
+                {/* Legacy: VAT Exemption */}
+                {(transaction as any).vat_exemption_amount && (transaction as any).vat_exemption_amount > 0 && (
+                  <div className="flex justify-between text-xs text-blue-600">
+                    <span>VAT Exemption:</span>
+                    <span>-{formatCurrency((transaction as any).vat_exemption_amount)}</span>
                   </div>
                 )}
-                {transaction.discountType === 'employee' && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Employee Discount:</span>
-                    <span>-{formatCurrency(transaction.discount)}</span>
+
+                {/* Legacy: Other Discounts (PWD, Employee, etc.) */}
+                {(transaction as any).other_discount_detail && (
+                  <div className="flex justify-between text-xs text-green-600">
+                    <span>
+                      {(transaction as any).other_discount_detail.type === 'pwd' && 'PWD Discount'}
+                      {(transaction as any).other_discount_detail.type === 'employee' && 'Employee Discount'}
+                      {(transaction as any).other_discount_detail.type === 'loyalty' && 'Loyalty Discount'}
+                      {(transaction as any).other_discount_detail.type === 'promo' && 'Promo Discount'}
+                      {(transaction as any).other_discount_detail.type === 'complimentary' && 'Complimentary'}
+                      {(transaction as any).other_discount_detail.type === 'athletes_coaches' && 'NAAC Discount'}
+                      {(transaction as any).other_discount_detail.type === 'solo_parent' && 'Solo Parent Discount'}
+                      {(transaction as any).other_discount_detail.idNumber && ` (${(transaction as any).other_discount_detail.idNumber})`}:
+                    </span>
+                    <span>-{formatCurrency((transaction as any).other_discount_detail.amount)}</span>
                   </div>
                 )}
-                {(!transaction.discountType || !['senior', 'pwd', 'employee'].includes(transaction.discountType)) && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount:</span>
-                    <span>-{formatCurrency(transaction.discount)}</span>
-                  </div>
+
+                {/* Legacy fallback for old transactions without detailed breakdown */}
+                {transaction.discount > 0 && !(transaction as any).senior_discounts_detail && !(transaction as any).other_discount_detail && (
+                  <>
+                    {(transaction as any).discountType === 'senior' && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Senior Citizen Discount:</span>
+                        <span>-{formatCurrency(transaction.discount)}</span>
+                      </div>
+                    )}
+                    {(transaction as any).discountType === 'pwd' && (
+                      <div className="flex justify-between text-green-600">
+                        <span>PWD Discount:</span>
+                        <span>-{formatCurrency(transaction.discount)}</span>
+                      </div>
+                    )}
+                    {(transaction as any).discountType === 'athletes_coaches' && (
+                      <div className="flex justify-between text-green-600">
+                        <span>NAAC Discount:</span>
+                        <span>-{formatCurrency(transaction.discount)}</span>
+                      </div>
+                    )}
+                    {(transaction as any).discountType === 'solo_parent' && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Solo Parent Discount:</span>
+                        <span>-{formatCurrency(transaction.discount)}</span>
+                      </div>
+                    )}
+                    {(transaction as any).discountType === 'employee' && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Employee Discount:</span>
+                        <span>-{formatCurrency(transaction.discount)}</span>
+                      </div>
+                    )}
+                    {(!(transaction as any).discountType || !['senior', 'pwd', 'employee', 'athletes_coaches', 'solo_parent'].includes((transaction as any).discountType)) && transaction.discount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Discount:</span>
+                        <span>-{formatCurrency(transaction.discount)}</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
