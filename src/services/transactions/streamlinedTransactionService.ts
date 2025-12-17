@@ -487,6 +487,17 @@ class StreamlinedTransactionService {
       throw enhancedError;
     }
 
+    // Helper to safely parse JSONB fields that might be stored as strings
+    const safeParseJSON = (value: any) => {
+      if (!value) return null;
+      if (typeof value === 'object') return value; // Already parsed
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    };
+
     // Map database fields to Transaction interface
     return {
       id: dbTransaction.id,
@@ -507,7 +518,19 @@ class StreamlinedTransactionService {
       paymentDetails: dbTransaction.payment_details as any,
       status: dbTransaction.status as 'completed' | 'voided',
       createdAt: dbTransaction.created_at,
-      receiptNumber: dbTransaction.receipt_number
+      receiptNumber: dbTransaction.receipt_number,
+      // BIR compliance fields for discount signature sections
+      vat_sales: dbTransaction.vat_sales,
+      vat_exempt_sales: dbTransaction.vat_exempt_sales,
+      zero_rated_sales: dbTransaction.zero_rated_sales,
+      senior_citizen_discount: dbTransaction.senior_citizen_discount,
+      pwd_discount: dbTransaction.pwd_discount,
+      sequence_number: dbTransaction.sequence_number,
+      terminal_id: dbTransaction.terminal_id,
+      // Discount beneficiary data - safely parsed for thermal printing
+      discount_beneficiaries: safeParseJSON(dbTransaction.discount_beneficiaries),
+      senior_discounts_detail: safeParseJSON(dbTransaction.senior_discounts_detail),
+      other_discount_detail: safeParseJSON(dbTransaction.other_discount_detail),
     };
   }
 

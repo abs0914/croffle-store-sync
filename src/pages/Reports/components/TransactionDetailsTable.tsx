@@ -139,6 +139,17 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
     }
   };
 
+  // Helper to safely parse JSONB fields that might be stored as strings
+  const safeParseJSON = (value: any) => {
+    if (!value) return undefined;
+    if (typeof value === 'object') return value; // Already parsed
+    try {
+      return JSON.parse(value);
+    } catch {
+      return undefined;
+    }
+  };
+
   const handleReprintReceipt = async (transaction: Transaction) => {
     setIsReprinting(transaction.id);
     try {
@@ -236,10 +247,10 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
         sequence_number: txData.sequence_number,
         terminal_id: txData.terminal_id || 'TERMINAL-01',
         
-        // Discount beneficiary data for thermal printing signature sections
-        senior_discounts_detail: txData.senior_discounts_detail as any,
-        other_discount_detail: txData.other_discount_detail as any,
-        discount_beneficiaries: txData.discount_beneficiaries as any,
+        // Discount beneficiary data for thermal printing signature sections - safely parsed
+        senior_discounts_detail: safeParseJSON(txData.senior_discounts_detail),
+        other_discount_detail: safeParseJSON(txData.other_discount_detail),
+        discount_beneficiaries: safeParseJSON(txData.discount_beneficiaries),
       };
 
       // Transform store data - use only fields that exist in Store type
