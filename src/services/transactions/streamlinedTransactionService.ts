@@ -10,6 +10,7 @@ import { BatchedAtomicInventoryService, DeductionItem } from "@/services/invento
 import { AtomicInventoryService } from "@/services/inventory/atomicInventoryService";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
+import { logTransactionCompleted } from "@/services/bir/transactionAuditLogger";
 import { batchEnrichCartItems, DetailedTransactionItem } from "./batchedTransactionItemsService";
 import { insertTransactionItems } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
@@ -321,6 +322,25 @@ class StreamlinedTransactionService {
         inventorySuccess: inventoryResult?.success,
         nonCriticalFailures: parallelResult.nonCriticalFailures
       });
+
+      // ✅ Log completed transaction to audit trail (non-blocking)
+      logTransactionCompleted(
+        transactionData.storeId,
+        transaction.id,
+        transaction.receiptNumber || '',
+        transactionData.userId,
+        'Cashier', // Will be enriched by the audit service if needed
+        {
+          total: transactionData.total,
+          subtotal: transactionData.subtotal,
+          tax: transactionData.tax,
+          discount: transactionData.discount,
+          discountType: transactionData.discountType,
+          paymentMethod: transactionData.paymentMethod,
+          itemCount: transactionData.items.length,
+          orderType: transactionData.orderType,
+        }
+      ).catch(err => console.warn('Audit logging failed (non-critical):', err));
 
       console.log('🎉 Transaction processing completed - returning transaction for printing');
       

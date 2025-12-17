@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefundData, RefundedItem, RefundEligibility } from "@/types/refund";
+import { logRefundProcessed } from "@/services/bir/transactionAuditLogger";
 
 /**
  * Generate a unique refund receipt number
@@ -193,6 +194,24 @@ export const processRefund = async (
         }
       }
     }
+
+    // ✅ Log refund to audit trail (non-blocking)
+    logRefundProcessed(
+      refundData.storeId,
+      refundData.originalTransactionId,
+      refundData.originalReceiptNumber,
+      refundReceiptNumber,
+      refundData.processedByUserId,
+      refundData.processedByName,
+      {
+        refundAmount: refundData.refundAmount,
+        refundType: refundData.refundType,
+        reasonCategory: refundData.refundReasonCategory,
+        reason: refundData.refundReason,
+        itemsRefunded: refundData.refundedItems.length,
+        authorizedBy: refundData.authorizedByName,
+      }
+    ).catch(err => console.warn('Audit logging failed (non-critical):', err));
 
     toast.success(`Refund processed: ${refundReceiptNumber}`);
     
