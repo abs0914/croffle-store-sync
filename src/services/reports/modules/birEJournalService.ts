@@ -78,7 +78,13 @@ export class BIREJournalService {
       let pwdDiscounts = 0;
 
       const ejournalTransactions: EJournalTransaction[] = transactions.map(tx => {
-        const grossAmount = tx.subtotal;
+        // Calculate grossAmount with fallbacks for missing subtotal
+        let grossAmount = tx.subtotal;
+        if (!grossAmount || grossAmount <= 0) {
+          const itemsTotal = (tx.items as any[])?.reduce((sum: number, item: any) => 
+            sum + ((item.quantity || 1) * (item.unitPrice || item.unit_price || 0)), 0) || 0;
+          grossAmount = itemsTotal || ((tx.total || 0) + (tx.discount || 0));
+        }
         const discountAmount = tx.discount || 0;
         const netAmount = tx.total;
         const vatAmountTx = tx.tax || 0;
