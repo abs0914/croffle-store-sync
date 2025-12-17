@@ -24,6 +24,8 @@ import { format } from "date-fns";
 import { formatCurrency } from "@/utils/format";
 import { CategoryFilter } from "@/components/inventory/CategoryFilter";
 
+import { StockFilterType } from '../inventoryManagement/InventoryStats';
+
 interface InventoryStockListProps {
   stockItems: InventoryStock[];
   isLoading: boolean;
@@ -32,6 +34,7 @@ interface InventoryStockListProps {
   onStockTransfer?: (stockItem: InventoryStock) => void;
   onDelete: (stockItem: InventoryStock) => void;
   hasMultipleStores?: boolean;
+  stockFilter?: StockFilterType;
 }
 
 export const InventoryStockList = ({ 
@@ -41,7 +44,8 @@ export const InventoryStockList = ({
   onStockAdjust,
   onStockTransfer,
   onDelete,
-  hasMultipleStores = false
+  hasMultipleStores = false,
+  stockFilter = 'all'
 }: InventoryStockListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<InventoryItemCategory | 'all'>('all');
@@ -50,11 +54,20 @@ export const InventoryStockList = ({
     direction: 'asc'
   });
 
-  // Filter items based on search and category
+  // Filter items based on search, category, and stock filter
   const filteredItems = stockItems.filter(item => {
     const matchesSearch = item.item.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || item.item_category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    
+    // Apply stock filter
+    let matchesStockFilter = true;
+    if (stockFilter === 'low-stock') {
+      matchesStockFilter = item.stock_quantity < 10 && item.stock_quantity > 0;
+    } else if (stockFilter === 'out-of-stock') {
+      matchesStockFilter = item.stock_quantity === 0;
+    }
+    
+    return matchesSearch && matchesCategory && matchesStockFilter;
   });
 
   // Sort items based on the current sort configuration
