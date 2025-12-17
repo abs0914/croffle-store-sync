@@ -9,7 +9,7 @@ import { ZReadingView } from "./reports/ZReadingView";
 import { BIREJournalView } from "./reports/BIREJournalView";
 import { BIRDataBackupView } from "./reports/BIRDataBackupView";
 import RobinsonsCompliance from "../RobinsonsCompliance";
-import { VoidReportView } from "./reports/VoidReportView";
+import { SalesAdjustmentReportView } from "./reports/SalesAdjustmentReportView";
 import { CashierReportView } from "./reports/CashierReportView";
 import CashierShiftReportView from "./reports/CashierShiftReportView";
 import CashierInventoryReportView from "./reports/CashierInventoryReportView";
@@ -58,8 +58,8 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
       return <BIRSalesSummaryView storeId={effectiveStoreId} dateRange={dateRange} />;
     case 'robinsons_compliance':
       return <RobinsonsCompliance />;
-    case 'void_report':
-      return <VoidReportView storeId={effectiveStoreId} dateRange={dateRange} />;
+    case 'sales_adjustment':
+      return <SalesAdjustmentReportView storeId={effectiveStoreId} dateRange={dateRange} />;
     case 'cashier':
       return <CashierReportView 
         data={data} 

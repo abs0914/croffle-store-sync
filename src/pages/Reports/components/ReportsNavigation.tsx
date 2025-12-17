@@ -39,7 +39,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     { id: 'bir_ejournal' as ReportType, name: 'BIR E-Journal', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'bir_sales_summary' as ReportType, name: 'BIR Sales Summary', icon: <FileSpreadsheet className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'bir_backup' as ReportType, name: 'BIR Data Backup', icon: <Database className="h-4 w-4" />, roles: ['admin', 'owner'] },
-    { id: 'void_report' as ReportType, name: 'Void Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'sales_adjustment' as ReportType, name: 'Sales Adjustment Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'robinsons_compliance' as ReportType, name: 'Robinsons Compliance', icon: <FileBarChart className="h-4 w-4" />, roles: ['admin', 'owner'] },
     { id: 'audit_trail' as ReportType, name: 'System Audit Trail', icon: <ScrollText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     
