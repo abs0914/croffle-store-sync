@@ -235,6 +235,11 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
         pwd_discount: txData.pwd_discount || 0,
         sequence_number: txData.sequence_number,
         terminal_id: txData.terminal_id || 'TERMINAL-01',
+        
+        // Discount beneficiary data for thermal printing signature sections
+        senior_discounts_detail: txData.senior_discounts_detail as any,
+        other_discount_detail: txData.other_discount_detail as any,
+        discount_beneficiaries: txData.discount_beneficiaries as any,
       };
 
       // Transform store data - use only fields that exist in Store type

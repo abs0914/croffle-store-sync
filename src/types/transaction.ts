@@ -103,6 +103,16 @@ export interface Transaction {
     justification?: string;
   };
   vat_exemption_amount?: number;
+  // Unified discount beneficiaries array for multi-discount support
+  discount_beneficiaries?: Array<{
+    type: string;
+    idNumber?: string;
+    name?: string;
+    discountAmount: number;
+    vatExemptionAmount?: number;
+    isVATExempt?: boolean;
+    discountRate?: number;
+  }>;
 }
 
 export interface TransactionItem {
