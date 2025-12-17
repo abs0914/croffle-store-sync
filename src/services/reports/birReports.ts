@@ -5,3 +5,5 @@ export { fetchZReading } from './modules/zReadingReport';
 export { fetchDailySalesSummary } from './modules/dailySummaryReport';
 export { fetchVATReport } from './modules/vatReport';
 export { fetchVoidReport } from './modules/voidReport';
+export { fetchDiscountSalesReport, fetchBIRSalesSummary } from './modules/discountSalesReport';
+export type { DiscountType, DiscountSalesReport, BIRSalesSummary } from './modules/discountSalesReport';

@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database, ShoppingBag } from "lucide-react";
+import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database, ShoppingBag, Users, HeartHandshake, Medal, UserCheck } from "lucide-react";
 import { ReportType } from "..";
 import { useAuth } from "@/contexts/auth";
 
@@ -37,9 +37,19 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     { id: 'x_reading' as ReportType, name: 'X-Reading Report', icon: <Receipt className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
     { id: 'z_reading' as ReportType, name: 'Z-Reading Report', icon: <Receipt className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
     { id: 'bir_ejournal' as ReportType, name: 'BIR E-Journal', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'bir_sales_summary' as ReportType, name: 'BIR Sales Summary', icon: <FileSpreadsheet className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'bir_backup' as ReportType, name: 'BIR Data Backup', icon: <Database className="h-4 w-4" />, roles: ['admin', 'owner'] },
     { id: 'void_report' as ReportType, name: 'Void Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'robinsons_compliance' as ReportType, name: 'Robinsons Compliance', icon: <FileBarChart className="h-4 w-4" />, roles: ['admin', 'owner'] },
+    
+    // Separator for Discount Sales Books
+    null,
+    
+    // Discount Sales Books (BIR requirement)
+    { id: 'senior_citizen_sales' as ReportType, name: 'Senior Citizen Sales', icon: <Users className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'pwd_sales' as ReportType, name: 'PWD Sales', icon: <HeartHandshake className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'naac_sales' as ReportType, name: 'NAAC Sales', icon: <Medal className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'solo_parent_sales' as ReportType, name: 'Solo Parent Sales', icon: <UserCheck className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
   ];
 
   // Filter navigation items based on user role
@@ -49,6 +59,23 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     return item.roles.includes(user.role);
   });
 
+  // Track separator indices for labeling
+  const getSeparatorLabel = (index: number) => {
+    const separatorIndices = navItems
+      .map((item, i) => item === null ? i : -1)
+      .filter(i => i !== -1);
+    
+    const separatorPosition = separatorIndices.indexOf(index);
+    
+    if (separatorPosition === 0 && user?.role === 'cashier') {
+      return 'My Reports';
+    } else if (separatorPosition === 0 || (separatorPosition === 1 && user?.role === 'cashier')) {
+      return 'BIR Reports';
+    } else {
+      return 'Discount Sales Books';
+    }
+  };
+
   return (
     <Card className="p-2">
       <div className="space-y-1">
@@ -57,7 +84,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
             <div key={`separator-${index}`} className="my-2 px-2">
               <Separator />
               <p className="text-xs text-muted-foreground mt-2 font-medium">
-                {index === 1 && user?.role === 'cashier' ? 'My Reports' : 'BIR Reports'}
+                {getSeparatorLabel(index)}
               </p>
             </div>
           ) : (
