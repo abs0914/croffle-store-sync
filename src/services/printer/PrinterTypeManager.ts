@@ -222,27 +222,50 @@ export class PrinterTypeManager {
     const grossAmount = transaction.subtotal;
     const vatAmount = transaction.tax || (grossAmount / 1.12 * 0.12);
     const netOfVat = grossAmount - vatAmount;
-    const totalDiscount = transaction.discount || 0;
-    
+
+    // Discount amount can live in multiple fields depending on source (POS vs reports/reprint)
+    const discountAmountFromRecord =
+      transaction.discount ||
+      (transaction as any).discount_amount ||
+      transaction.senior_citizen_discount ||
+      transaction.pwd_discount ||
+      0;
+
     // Determine VAT-exempt and vatable amounts based on discount type
-    const discountType = transaction.discountType || '';
+    const discountType = transaction.discountType || (transaction as any).discount_type || '';
     const isVatExempt = ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(discountType);
-    
+
     // Parse discount_beneficiaries (may be string or array)
-    let parsedBeneficiaries: any[] = [];
-    const rawBeneficiaries = (transaction as any).discount_beneficiaries;
-    if (rawBeneficiaries) {
-      if (typeof rawBeneficiaries === 'string') {
+    const parseBeneficiaries = (value: any): any[] => {
+      if (!value) return [];
+      if (typeof value === 'string') {
         try {
-          parsedBeneficiaries = JSON.parse(rawBeneficiaries);
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
         } catch {
-          parsedBeneficiaries = [];
+          return [];
         }
-      } else if (Array.isArray(rawBeneficiaries)) {
-        parsedBeneficiaries = rawBeneficiaries;
       }
+      return Array.isArray(value) ? value : [];
+    };
+
+    const parsedBeneficiaries = parseBeneficiaries((transaction as any).discount_beneficiaries);
+
+    // Prefer beneficiary sums when available; otherwise fall back to record-level discount
+    const beneficiariesTotalDiscount = parsedBeneficiaries.reduce((sum: number, b: any) => {
+      const amt = b?.discountAmount ?? b?.discount_amount ?? 0;
+      return sum + (typeof amt === 'number' ? amt : 0);
+    }, 0);
+
+    let totalDiscount = beneficiariesTotalDiscount > 0 ? beneficiariesTotalDiscount : discountAmountFromRecord;
+
+    // Last-resort: infer discount impact from totals when record fields are missing
+    // (common on some historical transactions/reprints)
+    if (totalDiscount === 0) {
+      const inferred = Math.max(0, grossAmount - transaction.total);
+      if (inferred > 0) totalDiscount = inferred;
     }
-    
+
     // Check if any beneficiary has VAT-exempt discount type
     const hasVatExemptBeneficiary = parsedBeneficiaries.some((b: any) => 
       ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(b.type)
@@ -325,9 +348,9 @@ export class PrinterTypeManager {
     // Collect all beneficiaries from multiple data sources
     const allBeneficiaries: Array<{type: string; name?: string; idNumber?: string; address?: string; tin?: string}> = [];
     
-    // Check new unified discount_beneficiaries format first
-    const discountBeneficiaries = (transaction as any).discount_beneficiaries;
-    if (discountBeneficiaries && Array.isArray(discountBeneficiaries)) {
+    // Check new unified discount_beneficiaries format first (may be string or array)
+    const discountBeneficiaries = parsedBeneficiaries;
+    if (discountBeneficiaries.length > 0) {
       discountBeneficiaries.forEach((b: any) => {
         if (['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'].includes(b.type)) {
           allBeneficiaries.push({
@@ -335,7 +358,7 @@ export class PrinterTypeManager {
             name: b.name,
             idNumber: b.idNumber || b.id_number,
             address: b.address,
-            tin: b.tin
+            tin: b.tin,
           });
         }
       });
