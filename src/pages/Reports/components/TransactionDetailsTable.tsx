@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/auth";
 import { VoidTransactionDialog } from "@/components/pos/void/VoidTransactionDialog";
 import { RefundDialog } from "@/components/pos/refund/RefundDialog";
 import { voidTransaction, VoidRequestData } from "@/services/transactions/voidTransactionService";
+import { printVoidReceipt, VoidReceiptData } from "@/services/receipt/voidReceiptGenerator";
 import { toast } from "sonner";
 import { hasPermission } from "@/types/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -120,8 +121,49 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
     try {
       const result = await voidTransaction(voidData);
       
-      if (result.success) {
+      if (result.success && result.voidTransaction) {
         toast.success('Transaction voided successfully');
+        
+        // Print void receipt
+        if (currentStore) {
+          // Ensure original_items is an array
+          let parsedItems: any[] = [];
+          if (result.voidTransaction.original_items) {
+            if (Array.isArray(result.voidTransaction.original_items)) {
+              parsedItems = result.voidTransaction.original_items;
+            } else if (typeof result.voidTransaction.original_items === 'string') {
+              try {
+                parsedItems = JSON.parse(result.voidTransaction.original_items);
+              } catch { parsedItems = []; }
+            }
+          }
+          
+          const voidReceiptData: VoidReceiptData = {
+            voidReceiptNumber: result.voidReceiptNumber || '',
+            originalReceiptNumber: result.voidTransaction.original_receipt_number,
+            originalTransactionDate: result.voidTransaction.original_transaction_date,
+            originalTotal: result.voidTransaction.original_total,
+            originalVatAmount: result.voidTransaction.original_vat_amount || 0,
+            originalDiscountAmount: result.voidTransaction.original_discount_amount || 0,
+            originalItems: parsedItems,
+            voidReasonCategory: result.voidTransaction.void_reason_category,
+            voidReason: result.voidTransaction.void_reason,
+            voidNotes: result.voidTransaction.void_notes,
+            voidedByCashierName: result.voidTransaction.voided_by_cashier_name,
+            authorizedByName: result.voidTransaction.authorized_by_name,
+            voidDate: result.voidTransaction.void_date || new Date().toISOString(),
+            terminalId: result.voidTransaction.terminal_id || 'TERMINAL-01',
+          };
+          
+          const storeInfo = {
+            name: currentStore.name || '',
+            address: currentStore.address || '',
+            tin: currentStore.tin || '',
+          };
+          
+          printVoidReceipt(voidReceiptData, storeInfo);
+        }
+        
         setVoidDialogOpen(false);
         setSelectedTransaction(null);
         // Call the callback to refresh transactions
