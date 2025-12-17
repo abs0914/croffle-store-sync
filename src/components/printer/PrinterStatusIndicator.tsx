@@ -1,12 +1,14 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Printer, Bluetooth, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Printer, Bluetooth, AlertCircle, RefreshCw, RotateCcw } from 'lucide-react';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import { useBluetoothReconnection } from '@/hooks/useBluetoothReconnection';
+import { PrinterStorageService } from '@/services/printer/PrinterStorageService';
 
 export function PrinterStatusIndicator() {
-  const { isAvailable, isConnected, connectedPrinter, isPrinting } = useThermalPrinter();
+  const { isAvailable, isConnected, connectedPrinter, isPrinting, storedPrinter, quickReconnect, isQuickReconnecting } = useThermalPrinter();
   const { isReconnecting, reconnectFailed } = useBluetoothReconnection();
 
   if (!isAvailable) {
@@ -22,7 +24,7 @@ export function PrinterStatusIndicator() {
 
   const getStatusColor = () => {
     if (isPrinting) return "bg-orange-500 animate-pulse";
-    if (isReconnecting) return "bg-yellow-500 animate-pulse";
+    if (isReconnecting || isQuickReconnecting) return "bg-yellow-500 animate-pulse";
     if (reconnectFailed) return "bg-red-500";
     if (isConnected) return "bg-green-500";
     return "bg-muted";
@@ -30,14 +32,14 @@ export function PrinterStatusIndicator() {
 
   const getStatusText = () => {
     if (isPrinting) return 'Printing...';
-    if (isReconnecting) return 'Reconnecting...';
+    if (isReconnecting || isQuickReconnecting) return 'Reconnecting...';
     if (reconnectFailed) return 'Reconnect Failed';
     if (isConnected) return connectedPrinter?.name || 'Connected';
     return 'No Printer';
   };
 
   const getStatusIcon = () => {
-    if (isReconnecting) {
+    if (isReconnecting || isQuickReconnecting) {
       return <RefreshCw className="h-4 w-4 text-yellow-500 animate-spin" />;
     }
     if (reconnectFailed) {
@@ -45,6 +47,10 @@ export function PrinterStatusIndicator() {
     }
     return <Bluetooth className={`h-4 w-4 ${isConnected ? 'text-blue-500' : 'text-muted-foreground'}`} />;
   };
+
+  // Show reconnect button if not connected but has stored printer
+  const showReconnectButton = !isConnected && storedPrinter && !isQuickReconnecting;
+  const lastConnectedAgo = PrinterStorageService.getLastConnectedTimeAgo();
 
   return (
     <div className="flex items-center gap-2">
@@ -55,6 +61,18 @@ export function PrinterStatusIndicator() {
       >
         {getStatusText()}
       </Badge>
+      {showReconnectButton && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-xs"
+          onClick={quickReconnect}
+          title={`Reconnect to ${storedPrinter.name} (${lastConnectedAgo})`}
+        >
+          <RotateCcw className="h-3 w-3 mr-1" />
+          Reconnect
+        </Button>
+      )}
     </div>
   );
 }
