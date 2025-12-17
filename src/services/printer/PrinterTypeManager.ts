@@ -405,16 +405,10 @@ export class PrinterTypeManager {
     // Footer with BIR Compliance
     receipt += formatter.horizontalLine(width);
     
-    // BIR: Compliance Footer
-    if (store?.is_bir_accredited) {
-      receipt += formatter.center();
-      receipt += formatter.bold('THIS SERVES AS AN OFFICIAL RECEIPT') + '\n';
-      receipt += formatter.left();
-    } else {
-      receipt += formatter.center();
-      receipt += formatter.bold('THIS IS NOT AN OFFICIAL RECEIPT') + '\n';
-      receipt += formatter.left();
-    }
+    // BIR: Compliance Footer - Invoice statement
+    receipt += formatter.center();
+    receipt += formatter.bold('THIS SERVES AS YOUR INVOICE') + '\n';
+    receipt += formatter.left();
     
     // BIR: NON-VAT Disclaimer
     if (!store?.is_vat_registered && store?.non_vat_disclaimer) {
