@@ -49,6 +49,8 @@ export class CartCalculationService {
   private static readonly VAT_RATE = 0.12;
   private static readonly SENIOR_DISCOUNT_RATE = 0.20;
   private static readonly PWD_DISCOUNT_RATE = 0.20;
+  private static readonly NAAC_DISCOUNT_RATE = 0.20; // National Athletes & Coaches
+  private static readonly SOLO_PARENT_DISCOUNT_RATE = 0.20;
   private static readonly EMPLOYEE_DISCOUNT_RATE = 0.15;
   private static readonly LOYALTY_DISCOUNT_RATE = 0.10;
   private static readonly REGULAR_DISCOUNT_RATE = 0.05;
@@ -176,6 +178,24 @@ export class CartCalculationService {
           break;
         case 'regular':
           otherDiscountAmount = discountSubtotal * this.REGULAR_DISCOUNT_RATE;
+          break;
+        case 'athletes_coaches':
+          // NAAC discount: Calculate on VAT-exclusive amount (BIR compliance - same as PWD/Senior)
+          const naacNetAmount = discountSubtotal / (1 + this.VAT_RATE);
+          otherDiscountAmount = naacNetAmount * this.NAAC_DISCOUNT_RATE;
+          vatExemption = discountSubtotal - naacNetAmount;
+          vatExemptSales = naacNetAmount;
+          vatableSales = 0;
+          netAmount = naacNetAmount;
+          break;
+        case 'solo_parent':
+          // Solo Parent discount: Calculate on VAT-exclusive amount (BIR compliance - same as PWD/Senior)
+          const soloParentNetAmount = discountSubtotal / (1 + this.VAT_RATE);
+          otherDiscountAmount = soloParentNetAmount * this.SOLO_PARENT_DISCOUNT_RATE;
+          vatExemption = discountSubtotal - soloParentNetAmount;
+          vatExemptSales = soloParentNetAmount;
+          vatableSales = 0;
+          netAmount = soloParentNetAmount;
           break;
         case 'custom':
           const customRate = (otherDiscount.customPercentage || 0) / 100;

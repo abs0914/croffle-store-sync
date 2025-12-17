@@ -36,7 +36,7 @@ export default function MultipleSeniorDiscountSelector({
   // Check for croffle combo eligibility
   const comboResult = useMemoizedCroffleCombo(cartItems);
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
-  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom'>('regular');
+  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent'>('regular');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
   const [complimentaryReason, setComplimentaryReason] = useState('');
   const [approverName, setApproverName] = useState('');
@@ -79,7 +79,7 @@ export default function MultipleSeniorDiscountSelector({
       let otherDiscountObj: OtherDiscount = {
         type: otherDiscountType,
         amount: 0,
-        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
+        idNumber: (otherDiscountType === 'pwd' || otherDiscountType === 'athletes_coaches' || otherDiscountType === 'solo_parent') ? otherIdNumber : undefined
       };
 
       // Create a mock cart item to calculate discount properly
@@ -135,7 +135,7 @@ export default function MultipleSeniorDiscountSelector({
         type: otherDiscountType,
         amount: 0,
         // Will be calculated by the service
-        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined,
+        idNumber: (otherDiscountType === 'pwd' || otherDiscountType === 'athletes_coaches' || otherDiscountType === 'solo_parent') ? otherIdNumber : undefined,
         justification: justificationText,
         customPercentage: otherDiscountType === 'custom' ? customPercentage : undefined
       };
@@ -265,6 +265,14 @@ export default function MultipleSeniorDiscountSelector({
                     <Label htmlFor="promo">Promo (Custom Amount)</Label>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="athletes_coaches" id="athletes_coaches" />
+                    <Label htmlFor="athletes_coaches">NAAC - National Athletes & Coaches (20%)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="solo_parent" id="solo_parent" />
+                    <Label htmlFor="solo_parent">Solo Parent (20%)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <RadioGroupItem value="complimentary" id="complimentary" />
                     <Label htmlFor="complimentary">Complimentary (100%)</Label>
                   </div>
@@ -289,6 +297,16 @@ export default function MultipleSeniorDiscountSelector({
                 {otherDiscountType === 'pwd' && <div className="space-y-2">
                     <Label htmlFor="pwdId">PWD ID Number (Required)</Label>
                     <Input id="pwdId" value={otherIdNumber} onChange={e => setOtherIdNumber(e.target.value)} placeholder="Enter PWD ID number" />
+                  </div>}
+
+                {otherDiscountType === 'athletes_coaches' && <div className="space-y-2">
+                    <Label htmlFor="naacId">NAAC ID Number (Required)</Label>
+                    <Input id="naacId" value={otherIdNumber} onChange={e => setOtherIdNumber(e.target.value)} placeholder="Enter NAAC ID number" />
+                  </div>}
+
+                {otherDiscountType === 'solo_parent' && <div className="space-y-2">
+                    <Label htmlFor="soloParentId">Solo Parent ID Number (Required)</Label>
+                    <Input id="soloParentId" value={otherIdNumber} onChange={e => setOtherIdNumber(e.target.value)} placeholder="Enter Solo Parent ID number" />
                   </div>}
 
                 {otherDiscountType === 'complimentary' && <div className="space-y-4 p-3 bg-red-50 border border-red-200 rounded-lg">
