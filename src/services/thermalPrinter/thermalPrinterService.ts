@@ -176,8 +176,8 @@ export class ThermalPrinterService {
     
     // Footer
     receipt += ESC_POS.ALIGN_CENTER;
-    receipt += 'Thank you for your business!\n';
-    receipt += 'This serves as your Official Receipt\n';
+    receipt += 'THIS SERVES AS YOUR INVOICE\n';
+    receipt += '\nThank you for dining with us!\n';
     receipt += ESC_POS.LINE_FEED;
     receipt += ESC_POS.LINE_FEED;
     receipt += ESC_POS.LINE_FEED;

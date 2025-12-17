@@ -125,11 +125,12 @@ export class ESCPOSFormatter {
   // Format item line (special formatting for product items)
   static formatItemLine(name: string, price: string, quantity: number, total: string, width: number = 32): string {
     // Format: "Product Name"
-    //         "  P10.00 x 2        P20.00"
+    //         "  P125.00 x 1        P125.00"
+    // Note: price and total already have "P" prefix from formatCurrencyWithSymbol
     let result = name + this.lineFeed();
 
-    const qtyLine = `  P${price} x ${quantity}`;
-    const totalFormatted = `P${total}`;
+    const qtyLine = `  ${price} x ${quantity}`;
+    const totalFormatted = total;
 
     const padding = Math.max(1, width - qtyLine.length - totalFormatted.length);
     result += qtyLine + ' '.repeat(padding) + totalFormatted + this.lineFeed();

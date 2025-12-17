@@ -184,14 +184,20 @@ export class PrinterTypeManager {
         if (store.accreditation_date) {
           receipt += `Accredited: ${new Date(store.accreditation_date).toLocaleDateString()}\n`;
         }
-        receipt += formatter.horizontalLine(width);
+      receipt += formatter.horizontalLine(width);
       }
       
       receipt += formatter.left();
     }
     
-    // Receipt info
-    receipt += formatter.formatLine('Receipt #:', transaction.receiptNumber || 'N/A', width);
+    // BIR: SALES INVOICE header
+    receipt += formatter.center();
+    receipt += formatter.bold('SALES INVOICE') + '\n';
+    receipt += formatter.left();
+    receipt += formatter.horizontalLine(width);
+    
+    // Receipt info - SI No instead of Receipt #
+    receipt += formatter.formatLine('SI No:', transaction.receiptNumber || 'N/A', width);
     receipt += formatter.formatLine('Cashier:', cashierName || 'Unknown', width);
     receipt += formatter.formatLine('Date:', new Date(transaction.createdAt).toLocaleDateString(), width);
     receipt += formatter.formatLine('Time:', new Date(transaction.createdAt).toLocaleTimeString(), width);
@@ -206,8 +212,7 @@ export class PrinterTypeManager {
       receipt += formatter.horizontalLine(width);
     }
     
-    // Items
-    receipt += formatter.bold('ITEMS:') + '\n';
+    // Items - no header, directly list items
     transaction.items.forEach(item => {
       const itemTotal = item.quantity * item.unitPrice;
       receipt += formatter.formatItemLine(
@@ -219,13 +224,9 @@ export class PrinterTypeManager {
       );
     });
     
-    // Totals
+    // Totals - BIR format
     receipt += formatter.horizontalLine(width);
-    receipt += formatter.formatLine('Subtotal:', formatter.formatCurrencyWithSymbol(transaction.subtotal), width);
-    
-    if (transaction.tax > 0) {
-      receipt += formatter.formatLine('Tax:', formatter.formatCurrencyWithSymbol(transaction.tax), width);
-    }
+    receipt += formatter.formatLine('GROSS AMOUNT:', formatter.formatCurrencyWithSymbol(transaction.subtotal), width);
     
     // NEW: Multi-discount beneficiaries support
     if ((transaction as any).discount_beneficiaries && (transaction as any).discount_beneficiaries.length > 0) {
@@ -296,7 +297,13 @@ export class PrinterTypeManager {
       }
     }
     
-    receipt += formatter.formatLine('TOTAL:', formatter.bold(formatter.formatCurrencyWithSymbol(transaction.total)), width);
+    // NET AMOUNT and VAT
+    receipt += formatter.horizontalLine(width);
+    receipt += formatter.bold(formatter.formatLine('NET AMOUNT:', formatter.formatCurrencyWithSymbol(transaction.total), width));
+    
+    if (transaction.tax > 0) {
+      receipt += formatter.formatLine('VAT (12%):', formatter.formatCurrencyWithSymbol(transaction.tax), width);
+    }
     
     // Payment
     receipt += formatter.horizontalLine(width);
@@ -311,19 +318,15 @@ export class PrinterTypeManager {
     receipt += formatter.horizontalLine(width);
     receipt += formatter.center();
     
-    // BIR: Compliance Footer
-    if (store?.is_bir_accredited) {
-      receipt += formatter.bold('THIS SERVES AS AN\nOFFICIAL RECEIPT\n');
-    } else {
-      receipt += formatter.bold('THIS IS NOT AN\nOFFICIAL RECEIPT\n');
-    }
+    // BIR: Compliance Footer - always "THIS SERVES AS YOUR INVOICE"
+    receipt += formatter.bold('THIS SERVES AS YOUR INVOICE\n');
     
     // BIR: NON-VAT Disclaimer
     if (!store?.is_vat_registered && store?.non_vat_disclaimer) {
       receipt += '\n' + store.non_vat_disclaimer + '\n';
     }
     
-    receipt += '\nThank you for your business!\n';
+    receipt += '\nThank you for dining with us!\n';
     receipt += formatter.left();
     receipt += formatter.lineFeed(3);
     receipt += formatter.cut();
