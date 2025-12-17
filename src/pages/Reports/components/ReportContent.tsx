@@ -57,6 +57,9 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   // Check if this is a BIR report that handles its own data fetching
   const isBIRReport = ['x_reading', 'z_reading', 'bir_ejournal', 'void_report'].includes(reportType);
 
+  // Check if this is a discount sales report that handles its own data fetching
+  const isDiscountSalesReport = ['bir_sales_summary', 'senior_citizen_sales', 'pwd_sales', 'naac_sales', 'solo_parent_sales'].includes(reportType);
+
   // Check if this is a compliance report that handles its own rendering
   const isComplianceReport = reportType === 'robinsons_compliance' || reportType === 'bir_backup' || reportType === 'audit_trail';
 
@@ -87,7 +90,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
 
   // Display toast notifications for success/failure (only for standard reports that use centralized data fetching)
   useEffect(() => {
-    if (!isSpecialCashierReport && !isBIRReport && !isComplianceReport) {
+    if (!isSpecialCashierReport && !isBIRReport && !isComplianceReport && !isDiscountSalesReport) {
       if (error) {
         toast.error("Failed to load report data", {
           description: "Please check your connection and try again",
@@ -108,7 +111,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
         }
       }
     }
-  }, [data, error, isLoading, dataSource, isMobile, isSpecialCashierReport, isBIRReport, isComplianceReport]);
+  }, [data, error, isLoading, dataSource, isMobile, isSpecialCashierReport, isBIRReport, isComplianceReport, isDiscountSalesReport]);
 
   // Handle compliance reports that handle their own rendering
   if (isComplianceReport) {
@@ -140,6 +143,22 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
             dateRange={dateRange}
           />
         </CashierReportGuard>
+      </div>
+    );
+  }
+
+  // Handle discount sales reports that handle their own data fetching
+  if (isDiscountSalesReport) {
+    return (
+      <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring space-y-4" tabIndex={0}>
+        <ReportView
+          reportType={reportType}
+          data={null}
+          storeId={storeId}
+          selectedStoreId={effectiveStoreId}
+          isAllStores={effectiveStoreId === 'all'}
+          dateRange={dateRange}
+        />
       </div>
     );
   }
