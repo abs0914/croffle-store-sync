@@ -25,7 +25,9 @@ export function ReportErrorState({
   
   // Determine error type and appropriate icon
   const getErrorInfo = () => {
-    if (errorMessage.toLowerCase().includes('authentication') || errorMessage.toLowerCase().includes('session')) {
+    const lowerMessage = errorMessage.toLowerCase();
+    
+    if (lowerMessage.includes('authentication') || lowerMessage.includes('session')) {
       return {
         icon: AlertTriangle,
         variant: "destructive" as const,
@@ -34,13 +36,23 @@ export function ReportErrorState({
         suggestion: "Please refresh the page and log in again"
       };
     }
-    if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('connection')) {
+    if (lowerMessage.includes('network') || lowerMessage.includes('connection')) {
       return {
         icon: Wifi,
         variant: "secondary" as const,
         bgColor: "bg-blue-50",
         title: "Connection Error", 
         suggestion: "Check your internet connection and try again"
+      };
+    }
+    // Check for "no data" scenarios - show friendlier message
+    if (lowerMessage.includes('no data') || lowerMessage.includes('no transactions') || lowerMessage.includes('empty') || lowerMessage.includes('not found')) {
+      return {
+        icon: FileX,
+        variant: "outline" as const,
+        bgColor: "bg-muted",
+        title: "No Transactions Found",
+        suggestion: "No transactions were recorded for this date range and store. Try selecting a different date range or store."
       };
     }
     return {
