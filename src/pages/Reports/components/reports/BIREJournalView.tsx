@@ -9,6 +9,7 @@ import { Download, FileText, Printer, RefreshCw } from "lucide-react";
 import { BIREJournalService, EJournalData } from "@/services/reports/modules/birEJournalService";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BIREJournalViewProps {
   storeId: string;
@@ -24,6 +25,31 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
     queryFn: () => BIREJournalService.generateEJournal(storeId, formattedDate),
     enabled: !!storeId
   });
+
+  // Fetch store info for TXT export
+  const { data: storeInfo } = useQuery({
+    queryKey: ['store-info', storeId],
+    queryFn: async () => {
+      const { data: store } = await supabase
+        .from('stores')
+        .select('name, address')
+        .eq('id', storeId)
+        .single();
+      
+      const { data: birConfig } = await supabase
+        .from('bir_store_config')
+        .select('tin')
+        .eq('store_id', storeId)
+        .single();
+      
+      return {
+        name: store?.name || '',
+        address: store?.address || '',
+        tin: birConfig?.tin || ''
+      };
+    },
+    enabled: !!storeId
+  });
   
   const handleExportJSON = async () => {
     if (!data) return;
@@ -31,7 +57,26 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
     setIsExporting(true);
     try {
       BIREJournalService.downloadJSON(data);
-      toast.success("E-Journal exported successfully");
+      toast.success("E-Journal exported as JSON");
+    } catch (error) {
+      toast.error("Failed to export e-Journal");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportTXT = async () => {
+    if (!data) return;
+    
+    setIsExporting(true);
+    try {
+      BIREJournalService.downloadTXT(
+        data, 
+        storeInfo?.name || '', 
+        storeInfo?.address || '', 
+        storeInfo?.tin || ''
+      );
+      toast.success("E-Journal exported as TXT");
     } catch (error) {
       toast.error("Failed to export e-Journal");
     } finally {
@@ -105,15 +150,24 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
         <Button 
           variant="outline" 
           size="sm" 
+          onClick={handleExportTXT}
+          disabled={isExporting}
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          Export TXT
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
           onClick={handleExportJSON}
           disabled={isExporting}
         >
           <Download className="mr-2 h-4 w-4" />
-          {isExporting ? "Exporting..." : "Export JSON"}
+          Export JSON
         </Button>
         <Button variant="outline" size="sm" onClick={handlePrint}>
           <Printer className="mr-2 h-4 w-4" />
-          Print E-Journal
+          Print
         </Button>
       </div>
       
