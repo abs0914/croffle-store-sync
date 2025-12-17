@@ -367,9 +367,9 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
         change: txData.change
       };
 
-      // Generate PDF
+      // Generate PDF with reprint watermark (downloading from Reports is always a reprint)
       const generator = new ReceiptPdfGenerator();
-      const pdfDataUri = await generator.generateReceipt(receiptData);
+      const pdfDataUri = await generator.generateReceipt(receiptData, true);
       
       // Trigger download
       const link = document.createElement('a');

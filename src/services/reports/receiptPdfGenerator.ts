@@ -48,13 +48,30 @@ export class ReceiptPdfGenerator {
     this.currentY = 10;
   }
 
-  async generateReceipt(receipt: ReceiptData): Promise<string> {
+  async generateReceipt(receipt: ReceiptData, isReprint: boolean = false): Promise<string> {
+    // Add reprint watermark if this is a reprint (BIR compliance)
+    if (isReprint) {
+      this.addReprintHeader();
+    }
+    
     this.addHeader(receipt);
     this.addItems(receipt.items);
     this.addTotals(receipt);
-    await this.addFooter(receipt);
+    await this.addFooter(receipt, isReprint);
     
     return this.doc.output('datauristring');
+  }
+  
+  private addReprintHeader(): void {
+    this.doc.setFontSize(10);
+    this.doc.setFont('helvetica', 'bold');
+    this.addCenteredText('*** REPRINT ***', this.currentY);
+    this.currentY += 4;
+    this.doc.setFontSize(7);
+    this.doc.setFont('helvetica', 'normal');
+    this.addCenteredText(`Reprinted: ${format(new Date(), 'MM/dd/yyyy HH:mm:ss')}`, this.currentY);
+    this.currentY += 5;
+    this.addSeparator();
   }
 
   async generateBatchReceipts(receipts: ReceiptData[]): Promise<string> {
@@ -208,7 +225,7 @@ export class ReceiptPdfGenerator {
     }
   }
 
-  private async addFooter(receipt: ReceiptData): Promise<void> {
+  private async addFooter(receipt: ReceiptData, isReprint: boolean = false): Promise<void> {
     this.doc.setFontSize(6);
     this.doc.setFont('helvetica', 'normal');
     
@@ -217,6 +234,13 @@ export class ReceiptPdfGenerator {
     this.currentY += 4;
     this.addCenteredText('THIS SERVES AS YOUR INVOICE', this.currentY);
     this.currentY += 3;
+    
+    // Show reprint indicator in footer as well for BIR compliance
+    if (isReprint) {
+      this.addCenteredText('*** THIS IS A REPRINT ***', this.currentY);
+      this.currentY += 3;
+    }
+    
     this.addCenteredText(`Generated: ${format(new Date(), 'MM/dd/yyyy HH:mm:ss')}`, this.currentY);
     
     // Generate QR code with readable transaction text
