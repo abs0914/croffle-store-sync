@@ -40,7 +40,7 @@ export function DiscountSalesBookView({ storeId, discountType, dateRange }: Disc
     loadReport();
   }, [storeId, discountType, dateRange]);
 
-  const formatCurrency = (amount: number) => `₱${amount.toFixed(2)}`;
+  const formatCurrency = (amount: number) => `P${amount.toFixed(2)}`;
 
   const handleExportPDF = () => {
     if (!report) return;
