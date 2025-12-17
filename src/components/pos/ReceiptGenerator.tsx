@@ -247,7 +247,9 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           itemDiscount: 0,
           vatExemptFlag: false,
         })),
-        grossAmount: transaction.subtotal || 0,
+        grossAmount: transaction.subtotal || 
+          (transaction.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)) || 
+          ((transaction.total || 0) + (transaction.discount || 0)) || 0,
         discountAmount: transaction.discount || 0,
         netAmount: transaction.total || 0,
         vatAmount: transaction.tax || 0,

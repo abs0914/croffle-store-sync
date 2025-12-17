@@ -239,10 +239,26 @@ export class PrinterTypeManager {
     // BIR Totals Section
     receipt += formatter.horizontalLine(width);
     
-    // Calculate VAT values
-    const grossAmount = transaction.subtotal;
-    const vatAmount = transaction.tax || (grossAmount / 1.12 * 0.12);
-    const netOfVat = grossAmount - vatAmount;
+    // Calculate VAT values - with robust fallbacks for missing subtotal
+    // Priority: 1) transaction.subtotal 2) sum from items 3) infer from total + discount
+    let grossAmount = transaction.subtotal;
+    
+    // Fallback: calculate from items if subtotal is missing
+    if (!grossAmount || grossAmount <= 0) {
+      grossAmount = transaction.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
+    }
+    
+    // Fallback: infer from total + discount if still missing
+    if (!grossAmount || grossAmount <= 0) {
+      const totalDiscount = transaction.discount || 
+        (transaction as any).discount_amount || 
+        transaction.senior_citizen_discount || 
+        transaction.pwd_discount || 0;
+      grossAmount = (transaction.total || 0) + totalDiscount;
+    }
+    
+    const vatAmount = transaction.tax || (grossAmount > 0 ? grossAmount / 1.12 * 0.12 : 0);
+    const netOfVat = grossAmount > 0 ? grossAmount - vatAmount : 0;
 
     // Discount amount can live in multiple fields depending on source (POS vs reports/reprint)
     const discountAmountFromRecord =
@@ -615,9 +631,19 @@ export class PrinterTypeManager {
       );
     });
     
+    // Calculate subtotal with fallbacks (same pattern as thermal)
+    let subtotalAmount = transaction.subtotal;
+    if (!subtotalAmount || subtotalAmount <= 0) {
+      subtotalAmount = transaction.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
+    }
+    if (!subtotalAmount || subtotalAmount <= 0) {
+      const totalDiscount = transaction.discount || 0;
+      subtotalAmount = (transaction.total || 0) + totalDiscount;
+    }
+    
     // Totals
     receipt += formatter.formatTotals(
-      transaction.subtotal,
+      subtotalAmount,
       transaction.tax,
       transaction.total,
       width
