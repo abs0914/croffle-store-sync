@@ -108,20 +108,36 @@ export function VoidReportView({ storeId, dateRange }: VoidReportViewProps) {
 
   const { data: voidData, metadata } = reportData;
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 void-report-print">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <div>
           <h2 className="text-2xl font-bold">BIR Void Report</h2>
           <p className="text-muted-foreground">
             {voidData.storeName} • {formatDateTime(voidData.dateRange.from)} to {formatDateTime(voidData.dateRange.to)}
           </p>
         </div>
-        <Button onClick={handleExportCSV} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Export for BIR
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Print
+          </Button>
+          <Button onClick={handleExportCSV} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Export for BIR
+          </Button>
+        </div>
+      </div>
+      {/* Print Header */}
+      <div className="hidden print:block text-center mb-4">
+        <h2 className="text-xl font-bold">BIR Void Report</h2>
+        <p>{voidData.storeName}</p>
+        <p>{formatDateTime(voidData.dateRange.from)} to {formatDateTime(voidData.dateRange.to)}</p>
       </div>
 
       {/* Summary Cards */}

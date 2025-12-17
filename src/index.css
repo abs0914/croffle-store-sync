@@ -273,7 +273,15 @@
   .receipt-content,
   .receipt-content *,
   .z-reading-print,
-  .z-reading-print * {
+  .z-reading-print *,
+  .x-reading-print,
+  .x-reading-print *,
+  .ejournal-print,
+  .ejournal-print *,
+  .void-report-print,
+  .void-report-print *,
+  .bir-report-print,
+  .bir-report-print * {
     visibility: visible !important;
   }
   
@@ -292,14 +300,18 @@
   }
 
   /* Z-Reading print styles */
-  .z-reading-print {
+  .z-reading-print,
+  .x-reading-print,
+  .ejournal-print,
+  .void-report-print,
+  .bir-report-print {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
-    width: 80mm !important;
+    width: 100% !important;
     margin: 0 !important;
-    padding: 5mm !important;
-    font-family: 'Courier New', Courier, monospace !important;
+    padding: 10mm !important;
+    font-family: Arial, sans-serif !important;
     font-size: 10px !important;
     color: #000 !important;
     background: #fff !important;

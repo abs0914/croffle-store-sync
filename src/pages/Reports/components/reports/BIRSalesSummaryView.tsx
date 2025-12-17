@@ -203,11 +203,13 @@ export function BIRSalesSummaryView({ storeId, dateRange }: BIRSalesSummaryViewP
     );
   }
 
-  if (!report) {
+  if (!report || report.transactionCount === 0) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
-          Unable to load report. Please try again.
+          <p className="text-lg font-medium mb-2">No Transactions Found</p>
+          <p className="text-sm">No completed transactions for the selected date range.</p>
+          <p className="text-xs mt-2">Try selecting a different date range or check if transactions have been recorded.</p>
         </CardContent>
       </Card>
     );

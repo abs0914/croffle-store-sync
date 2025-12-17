@@ -134,8 +134,8 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
         </Button>
       </div>
       
-      <Card className="bg-white">
-        <CardContent className="p-8">
+      <Card className="bg-white x-reading-print">
+        <CardContent className="p-8 x-reading-print">
           <div className="text-center mb-6">
             <h2 className="text-lg font-bold uppercase">{data.storeName}</h2>
             <p className="text-sm">{data.storeAddress}</p>

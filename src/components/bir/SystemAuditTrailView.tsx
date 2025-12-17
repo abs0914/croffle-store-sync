@@ -24,8 +24,14 @@ import { AuditTrailExportService } from '@/services/bir/auditTrailExportService'
 import { format, subDays } from 'date-fns';
 import { toast } from 'sonner';
 
-export default function SystemAuditTrailView() {
+interface SystemAuditTrailViewProps {
+  storeId?: string;
+}
+
+export default function SystemAuditTrailView({ storeId }: SystemAuditTrailViewProps) {
   const { currentStore } = useStore();
+  const effectiveStoreId = storeId || currentStore?.id;
+  
   const [entries, setEntries] = useState<UnifiedAuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -36,18 +42,18 @@ export default function SystemAuditTrailView() {
   const [activityType, setActivityType] = useState('all');
 
   useEffect(() => {
-    if (currentStore?.id) {
+    if (effectiveStoreId) {
       loadAuditTrail();
     }
-  }, [currentStore?.id]);
+  }, [effectiveStoreId]);
 
   const loadAuditTrail = async () => {
-    if (!currentStore?.id) return;
+    if (!effectiveStoreId) return;
     
     setIsLoading(true);
     try {
       const data = await SystemAuditTrailService.getUnifiedAuditTrail({
-        storeId: currentStore.id,
+        storeId: effectiveStoreId,
         startDate,
         endDate,
         activityType: activityType === 'all' ? undefined : activityType,

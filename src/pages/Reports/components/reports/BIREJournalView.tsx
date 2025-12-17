@@ -171,7 +171,7 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
         </Button>
       </div>
       
-      <Card className="bg-white">
+      <Card className="bg-white ejournal-print">
         <CardHeader>
           <CardTitle className="text-center">
             <div className="space-y-2">

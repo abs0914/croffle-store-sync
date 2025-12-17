@@ -82,7 +82,7 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
     case 'solo_parent_sales':
       return <DiscountSalesBookView storeId={effectiveStoreId} discountType="solo_parent" dateRange={dateRange} />;
     case 'audit_trail':
-      return <SystemAuditTrailView />;
+      return <SystemAuditTrailView storeId={effectiveStoreId} />;
     default:
       return null;
   }
