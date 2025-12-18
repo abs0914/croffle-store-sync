@@ -7058,6 +7058,7 @@ export type Database = {
         Row: {
           accreditation_date: string | null
           accreditation_number: string | null
+          accreditation_valid_until: string | null
           address: string
           bir_final_permit_number: string | null
           business_name: string | null
@@ -7092,6 +7093,7 @@ export type Database = {
           phone: string | null
           pos_version: string | null
           region: string | null
+          reset_counter: number | null
           robinsons_enabled: boolean | null
           robinsons_eod_counter: number | null
           robinsons_sftp_host: string | null
@@ -7101,6 +7103,8 @@ export type Database = {
           robinsons_tenant_id: string | null
           state: string | null
           store_location_photo_url: string | null
+          supplier_accreditation_date: string | null
+          supplier_accreditation_valid_until: string | null
           supplier_address: string | null
           supplier_name: string | null
           supplier_tin: string | null
@@ -7114,6 +7118,7 @@ export type Database = {
         Insert: {
           accreditation_date?: string | null
           accreditation_number?: string | null
+          accreditation_valid_until?: string | null
           address: string
           bir_final_permit_number?: string | null
           business_name?: string | null
@@ -7148,6 +7153,7 @@ export type Database = {
           phone?: string | null
           pos_version?: string | null
           region?: string | null
+          reset_counter?: number | null
           robinsons_enabled?: boolean | null
           robinsons_eod_counter?: number | null
           robinsons_sftp_host?: string | null
@@ -7157,6 +7163,8 @@ export type Database = {
           robinsons_tenant_id?: string | null
           state?: string | null
           store_location_photo_url?: string | null
+          supplier_accreditation_date?: string | null
+          supplier_accreditation_valid_until?: string | null
           supplier_address?: string | null
           supplier_name?: string | null
           supplier_tin?: string | null
@@ -7170,6 +7178,7 @@ export type Database = {
         Update: {
           accreditation_date?: string | null
           accreditation_number?: string | null
+          accreditation_valid_until?: string | null
           address?: string
           bir_final_permit_number?: string | null
           business_name?: string | null
@@ -7204,6 +7213,7 @@ export type Database = {
           phone?: string | null
           pos_version?: string | null
           region?: string | null
+          reset_counter?: number | null
           robinsons_enabled?: boolean | null
           robinsons_eod_counter?: number | null
           robinsons_sftp_host?: string | null
@@ -7213,6 +7223,8 @@ export type Database = {
           robinsons_tenant_id?: string | null
           state?: string | null
           store_location_photo_url?: string | null
+          supplier_accreditation_date?: string | null
+          supplier_accreditation_valid_until?: string | null
           supplier_address?: string | null
           supplier_name?: string | null
           supplier_tin?: string | null

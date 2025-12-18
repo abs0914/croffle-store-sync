@@ -41,6 +41,20 @@ export interface ReceiptData {
   change?: number;
   // NEW: Multi-discount beneficiaries
   discountBeneficiaries?: ReceiptBeneficiary[];
+  // BIR Compliance Fields
+  machineIdentificationNumber?: string;
+  machineSerialNumber?: string;
+  isVatRegistered?: boolean;
+  // Supplier/POS Provider Info
+  supplierName?: string;
+  supplierAddress?: string;
+  supplierTin?: string;
+  accreditationNumber?: string;
+  supplierAccreditationDate?: string;
+  supplierAccreditationValidUntil?: string;
+  ptuNumber?: string;
+  ptuDateIssued?: string;
+  ptuValidUntil?: string;
 }
 
 export class ReceiptPdfGenerator {
@@ -114,9 +128,24 @@ export class ReceiptPdfGenerator {
     this.doc.setFont('helvetica', 'normal');
     this.addWrappedCenteredText(receipt.storeAddress, this.currentY);
     
-    // TIN
-    this.addCenteredText(`TIN: ${receipt.storeTin}`, this.currentY);
-    this.currentY += 5;
+    // TIN with VAT status
+    const tinLabel = receipt.isVatRegistered ? 'VAT REG TIN' : 'NON-VAT TIN';
+    this.addCenteredText(`${tinLabel}: ${receipt.storeTin}`, this.currentY);
+    this.currentY += 3;
+    
+    // BIR: Machine Identification Number (MIN)
+    if (receipt.machineIdentificationNumber) {
+      this.addCenteredText(`MIN: ${receipt.machineIdentificationNumber}`, this.currentY);
+      this.currentY += 3;
+    }
+    
+    // BIR: Serial Number
+    if (receipt.machineSerialNumber) {
+      this.addCenteredText(`S/N: ${receipt.machineSerialNumber}`, this.currentY);
+      this.currentY += 3;
+    }
+    
+    this.currentY += 2;
     
     // SALES INVOICE title
     this.doc.setFontSize(10);
@@ -352,6 +381,46 @@ export class ReceiptPdfGenerator {
       this.addCenteredText('*** THIS IS A REPRINT ***', this.currentY);
       this.currentY += 3;
     }
+    
+    // BIR: Software Supplier/POS Provider Footer Section
+    this.addSeparator();
+    
+    if (receipt.supplierName) {
+      this.addLeftText(`POS Provider: ${receipt.supplierName}`, this.currentY);
+      this.currentY += 3;
+    }
+    if (receipt.supplierAddress) {
+      this.addLeftText(receipt.supplierAddress, this.currentY);
+      this.currentY += 3;
+    }
+    if (receipt.supplierTin) {
+      this.addLeftText(`VAT REG TIN: ${receipt.supplierTin}`, this.currentY);
+      this.currentY += 3;
+    }
+    if (receipt.accreditationNumber) {
+      this.addLeftText(`Accreditation No: ${receipt.accreditationNumber}`, this.currentY);
+      this.currentY += 3;
+    }
+    if (receipt.supplierAccreditationDate) {
+      this.addLeftText(`Date Issued: ${receipt.supplierAccreditationDate}`, this.currentY);
+      this.currentY += 3;
+    }
+    if (receipt.supplierAccreditationValidUntil) {
+      this.addLeftText(`Valid Until: ${receipt.supplierAccreditationValidUntil}`, this.currentY);
+      this.currentY += 3;
+    }
+    
+    // PTU Info
+    const ptuNumber = receipt.ptuNumber || 'XXXXXXX';
+    const ptuDateIssued = receipt.ptuDateIssued || 'XXXXXXX';
+    const ptuValidUntil = receipt.ptuValidUntil || 'XXXXXXX';
+    
+    this.addLeftText(`PTU No: ${ptuNumber}`, this.currentY);
+    this.currentY += 3;
+    this.addLeftText(`Date Issued: ${ptuDateIssued}`, this.currentY);
+    this.currentY += 3;
+    this.addLeftText(`Valid Until: ${ptuValidUntil}`, this.currentY);
+    this.currentY += 4;
     
     this.addCenteredText(`Generated: ${format(new Date(), 'MM/dd/yyyy HH:mm:ss')}`, this.currentY);
     
