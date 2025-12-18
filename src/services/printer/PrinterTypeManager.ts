@@ -183,6 +183,16 @@ export class PrinterTypeManager {
         receipt += `NON-VAT REG. TIN: ${this.formatTIN(store.tin)}\n`;
       }
       
+      // BIR: Machine Identification Number (MIN)
+      if (store.machine_accreditation_number) {
+        receipt += `MIN: ${store.machine_accreditation_number}\n`;
+      }
+      
+      // BIR: Serial Number of sales machine
+      if (store.machine_serial_number) {
+        receipt += `S/N: ${store.machine_serial_number}\n`;
+      }
+      
       receipt += formatter.left();
     }
     
@@ -522,10 +532,52 @@ export class PrinterTypeManager {
     // BIR: Compliance Footer
     receipt += formatter.bold('THIS SERVES AS YOUR INVOICE\n');
     receipt += '\nThank you for dining with us!\n';
-    
-    // PTU Info - Use placeholder until official number is received
     receipt += formatter.left();
-    receipt += formatter.formatPTUInfo('XXXXXXX', 'XXXXXXX', width);
+    
+    // BIR: Software Supplier/POS Provider Footer Section
+    if (store) {
+      receipt += formatter.horizontalLine(width);
+      
+      // POS Provider Name & Address
+      if (store.supplier_name) {
+        receipt += `POS Provider: ${store.supplier_name}\n`;
+      }
+      if (store.supplier_address) {
+        receipt += `${store.supplier_address}\n`;
+      }
+      
+      // Supplier VAT REG TIN
+      if (store.supplier_tin) {
+        receipt += `VAT REG TIN: ${this.formatTIN(store.supplier_tin)}\n`;
+      }
+      
+      // Supplier Accreditation Info
+      if (store.accreditation_number) {
+        receipt += `Accreditation No: ${store.accreditation_number}\n`;
+      }
+      if (store.supplier_accreditation_date) {
+        receipt += `Date Issued: ${new Date(store.supplier_accreditation_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}\n`;
+      }
+      if (store.supplier_accreditation_valid_until) {
+        receipt += `Valid Until: ${new Date(store.supplier_accreditation_valid_until).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}\n`;
+      }
+      
+      // PTU Info
+      const ptuNumber = store.permit_number || 'XXXXXXX';
+      const ptuDateIssued = store.date_issued 
+        ? new Date(store.date_issued).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+        : 'XXXXXXX';
+      const ptuValidUntil = store.valid_until
+        ? new Date(store.valid_until).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+        : 'XXXXXXX';
+      
+      receipt += `PTU No: ${ptuNumber}\n`;
+      receipt += `Date Issued: ${ptuDateIssued}\n`;
+      receipt += `Valid Until: ${ptuValidUntil}\n`;
+    } else {
+      // Fallback PTU Info placeholder
+      receipt += formatter.formatPTUInfo('XXXXXXX', 'XXXXXXX', width);
+    }
     
     receipt += formatter.left();
     receipt += formatter.lineFeed(3);
@@ -669,6 +721,48 @@ export class PrinterTypeManager {
     if (!store?.is_vat_registered && store?.non_vat_disclaimer) {
       receipt += formatter.horizontalLine(width);
       receipt += store.non_vat_disclaimer + '\n';
+    }
+    
+    // BIR: Software Supplier/POS Provider Footer Section
+    if (store) {
+      receipt += formatter.horizontalLine(width);
+      
+      // POS Provider Name & Address
+      if (store.supplier_name) {
+        receipt += formatter.formatLine('POS Provider:', store.supplier_name, width);
+      }
+      if (store.supplier_address) {
+        receipt += store.supplier_address + '\n';
+      }
+      
+      // Supplier VAT REG TIN
+      if (store.supplier_tin) {
+        receipt += formatter.formatLine('VAT REG TIN:', this.formatTIN(store.supplier_tin), width);
+      }
+      
+      // Supplier Accreditation Info
+      if (store.accreditation_number) {
+        receipt += formatter.formatLine('Accreditation No:', store.accreditation_number, width);
+      }
+      if (store.supplier_accreditation_date) {
+        receipt += formatter.formatLine('Date Issued:', new Date(store.supplier_accreditation_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }), width);
+      }
+      if (store.supplier_accreditation_valid_until) {
+        receipt += formatter.formatLine('Valid Until:', new Date(store.supplier_accreditation_valid_until).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }), width);
+      }
+      
+      // PTU Info
+      const ptuNumber = store.permit_number || 'XXXXXXX';
+      const ptuDateIssued = store.date_issued 
+        ? new Date(store.date_issued).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+        : 'XXXXXXX';
+      const ptuValidUntil = store.valid_until
+        ? new Date(store.valid_until).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+        : 'XXXXXXX';
+      
+      receipt += formatter.formatLine('PTU No:', ptuNumber, width);
+      receipt += formatter.formatLine('Date Issued:', ptuDateIssued, width);
+      receipt += formatter.formatLine('Valid Until:', ptuValidUntil, width);
     }
     
     receipt += formatter.formatFooter(width);

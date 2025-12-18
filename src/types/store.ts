@@ -52,10 +52,16 @@ export interface Store {
   supplier_tin?: string;
   accreditation_number?: string;
   accreditation_date?: string;
+  accreditation_valid_until?: string;
   bir_final_permit_number?: string;
   is_vat_registered?: boolean;
   non_vat_disclaimer?: string;
   validity_statement?: string;
+  // Supplier Accreditation Fields
+  supplier_accreditation_date?: string;
+  supplier_accreditation_valid_until?: string;
+  // BIR Z-Counter Reset
+  reset_counter?: number;
 }
 
 export interface StoreSettings {
