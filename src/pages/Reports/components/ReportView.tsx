@@ -20,6 +20,7 @@ import { XReadingThermalWrapper } from "./reports/XReadingThermalWrapper";
 import { DiscountSalesBookView } from "./reports/DiscountSalesBookView";
 import { BIRSalesSummaryView } from "./reports/BIRSalesSummaryView";
 import SystemAuditTrailView from "@/components/bir/SystemAuditTrailView";
+import { ESalesMonthlyReportView } from "./reports/ESalesMonthlyReportView";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -83,6 +84,8 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
       return <DiscountSalesBookView storeId={effectiveStoreId} discountType="solo_parent" dateRange={dateRange} />;
     case 'audit_trail':
       return <SystemAuditTrailView storeId={effectiveStoreId} />;
+    case 'esales_monthly':
+      return <ESalesMonthlyReportView storeId={effectiveStoreId} />;
     default:
       return null;
   }

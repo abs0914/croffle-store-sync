@@ -58,7 +58,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   const isBIRReport = ['x_reading', 'z_reading', 'bir_ejournal', 'sales_adjustment'].includes(reportType);
 
   // Check if this is a discount sales report that handles its own data fetching
-  const isDiscountSalesReport = ['bir_sales_summary', 'senior_citizen_sales', 'pwd_sales', 'naac_sales', 'solo_parent_sales'].includes(reportType);
+  const isDiscountSalesReport = ['bir_sales_summary', 'senior_citizen_sales', 'pwd_sales', 'naac_sales', 'solo_parent_sales', 'esales_monthly'].includes(reportType);
 
   // Check if this is a compliance report that handles its own rendering
   const isComplianceReport = reportType === 'robinsons_compliance' || reportType === 'bir_backup' || reportType === 'audit_trail';

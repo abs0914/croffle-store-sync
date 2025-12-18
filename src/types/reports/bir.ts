@@ -78,3 +78,29 @@ export interface VATReport {
     vatZeroRatedSales: number;
   };
 }
+
+export interface ESalesMonthlyReport {
+  storeId: string;
+  storeName: string;
+  storeAddress: string;
+  tin: string;
+  machineIdentificationNumber: string;
+  reportingMonth: string;
+  reportingYear: number;
+  reportingMonthNumber: number;
+  vatableSales: number;
+  vatAmount: number;
+  vatZeroRatedSales: number;
+  vatExemptSales: number;
+  otherPercentageTaxSales: number;
+  grossSales: number;
+  netSales: number;
+  totalDiscounts: number;
+  totalTransactions: number;
+  firstReceiptNumber: string | null;
+  lastReceiptNumber: string | null;
+  submissionStatus: 'draft' | 'submitted' | 'amended';
+  amendmentCount: number;
+  salesReportNumber: string | null;
+  submittedAt: string | null;
+}

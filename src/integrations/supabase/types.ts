@@ -625,6 +625,102 @@ export type Database = {
           },
         ]
       }
+      bir_esales_reports: {
+        Row: {
+          amendment_count: number
+          created_at: string
+          first_receipt_number: string | null
+          gross_sales: number
+          id: string
+          last_receipt_number: string | null
+          machine_identification_number: string
+          net_sales: number
+          other_percentage_tax_sales: number
+          reporting_month: string
+          reporting_month_number: number
+          reporting_year: number
+          sales_report_number: string | null
+          store_id: string
+          submission_status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          total_discounts: number
+          total_transactions: number
+          updated_at: string
+          vat_amount: number
+          vat_exempt_sales: number
+          vat_zero_rated_sales: number
+          vatable_sales: number
+        }
+        Insert: {
+          amendment_count?: number
+          created_at?: string
+          first_receipt_number?: string | null
+          gross_sales?: number
+          id?: string
+          last_receipt_number?: string | null
+          machine_identification_number: string
+          net_sales?: number
+          other_percentage_tax_sales?: number
+          reporting_month: string
+          reporting_month_number: number
+          reporting_year: number
+          sales_report_number?: string | null
+          store_id: string
+          submission_status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_discounts?: number
+          total_transactions?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_exempt_sales?: number
+          vat_zero_rated_sales?: number
+          vatable_sales?: number
+        }
+        Update: {
+          amendment_count?: number
+          created_at?: string
+          first_receipt_number?: string | null
+          gross_sales?: number
+          id?: string
+          last_receipt_number?: string | null
+          machine_identification_number?: string
+          net_sales?: number
+          other_percentage_tax_sales?: number
+          reporting_month?: string
+          reporting_month_number?: number
+          reporting_year?: number
+          sales_report_number?: string | null
+          store_id?: string
+          submission_status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_discounts?: number
+          total_transactions?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_exempt_sales?: number
+          vat_zero_rated_sales?: number
+          vatable_sales?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_esales_reports_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "bir_esales_reports_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bir_readings: {
         Row: {
           accumulated_gross_sales: number | null
