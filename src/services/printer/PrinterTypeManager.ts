@@ -145,17 +145,6 @@ export class PrinterTypeManager {
     
     let receipt = formatter.init();
     
-    // BIR Requirement: REPRINT watermark with date/time
-    if (isReprint) {
-      receipt += formatter.center();
-      receipt += formatter.doubleSize();
-      receipt += formatter.bold('*** REPRINT ***') + '\n';
-      receipt += formatter.normalSize();
-      receipt += `Reprinted: ${new Date().toLocaleString()}\n`;
-      receipt += formatter.horizontalLine(width);
-      receipt += formatter.left();
-    }
-    
     // Header - Show both Store Name and Business Name
     if (store) {
       receipt += formatter.center();
@@ -229,6 +218,17 @@ export class PrinterTypeManager {
     }
     
     receipt += formatter.horizontalLine(width);
+    
+    // BIR Requirement: REPRINT watermark with date/time - placed above item header
+    if (isReprint) {
+      receipt += formatter.center();
+      receipt += formatter.doubleSize();
+      receipt += formatter.bold('*** REPRINT ***') + '\n';
+      receipt += formatter.normalSize();
+      receipt += `Reprinted: ${new Date().toLocaleString()}\n`;
+      receipt += formatter.horizontalLine(width);
+      receipt += formatter.left();
+    }
     
     // BIR: Item Table Header
     receipt += formatter.formatItemHeader(width);
