@@ -454,7 +454,11 @@ class StreamlinedTransactionService {
       delivery_platform: data.deliveryPlatform,
       delivery_order_number: data.deliveryOrderNumber,
       vat_sales: vatableSales,
-      vat_exempt_sales: data.discountType === 'senior' || data.discountType === 'pwd' ? discountAmount : 0,
+      // VAT-exempt sales: Include all VAT-exempt discount types (Senior, PWD, NAAC, Solo Parent)
+      // When VAT-exempt discount applies, the net of VAT (vatableSales) becomes VAT-exempt
+      vat_exempt_sales: ['senior', 'pwd', 'athletes_coaches', 'solo_parent'].includes(data.discountType || '') 
+        ? vatableSales // The entire net-of-VAT amount becomes VAT-exempt for these discount types
+        : (beneficiaries.filter(b => b.isVATExempt).reduce((sum, b) => sum + b.vatExemptionAmount, 0) || 0),
       zero_rated_sales: 0,
       senior_citizen_discount: totalSeniorDiscount,
       pwd_discount: totalPwdDiscount,
