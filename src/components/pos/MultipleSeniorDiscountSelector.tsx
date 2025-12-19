@@ -167,7 +167,7 @@ export default function MultipleSeniorDiscountSelector({
       }
     }
 
-    // Use new beneficiary system if available
+    // Use new beneficiary system if available - MUTUALLY EXCLUSIVE with legacy
     if (onApplyBeneficiaryDiscounts && beneficiaries.length > 0) {
       const processedBeneficiaries = beneficiaries.map(b => ({
         ...b,
@@ -178,29 +178,32 @@ export default function MultipleSeniorDiscountSelector({
         totalDiners,
         customPercentage
       );
-    } else {
-      // Fallback to legacy system
-      const seniors = beneficiaries
-        .filter(b => b.type === 'senior')
-        .map(b => ({
-          id: b.id,
-          idNumber: b.idNumber,
-          name: b.name,
-          discountAmount: 0
-        }));
-      
-      const other = beneficiaries.find(b => b.type !== 'senior');
-      const otherDiscount: OtherDiscount | null = other ? {
-        type: other.type,
-        amount: 0,
-        idNumber: other.idNumber,
-        justification: other.type === 'complimentary' ? `${complimentaryReason} | Approved by: ${approverName}` : undefined,
-        customPercentage: other.type === 'custom' ? customPercentage : undefined
-      } : null;
-      
-      onApplyDiscounts(seniors, otherDiscount, totalDiners);
+      // IMPORTANT: Close and return early - do NOT call legacy onApplyDiscounts
+      // This prevents the race condition where legacy system clears beneficiaries
+      setIsOpen(false);
+      return;
     }
     
+    // Fallback to legacy system ONLY when beneficiary system is not available
+    const seniors = beneficiaries
+      .filter(b => b.type === 'senior')
+      .map(b => ({
+        id: b.id,
+        idNumber: b.idNumber,
+        name: b.name,
+        discountAmount: 0
+      }));
+    
+    const other = beneficiaries.find(b => b.type !== 'senior');
+    const otherDiscount: OtherDiscount | null = other ? {
+      type: other.type,
+      amount: 0,
+      idNumber: other.idNumber,
+      justification: other.type === 'complimentary' ? `${complimentaryReason} | Approved by: ${approverName}` : undefined,
+      customPercentage: other.type === 'custom' ? customPercentage : undefined
+    } : null;
+    
+    onApplyDiscounts(seniors, otherDiscount, totalDiners);
     setIsOpen(false);
   };
 
