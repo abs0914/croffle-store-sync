@@ -465,27 +465,53 @@ Thank you!`;
               <span>{formatCurrency(transaction.subtotal)}</span>
             </div>
             
-            {/* BIR-compliant VAT breakdown */}
-            <div className="flex justify-between">
-              <span>VATable Sales:</span>
-              <span>{formatCurrency((transaction.vat_sales || transaction.subtotal) - (transaction.discount || 0))}</span>
-            </div>
-            {transaction.vat_exempt_sales && transaction.vat_exempt_sales > 0 && (
-              <div className="flex justify-between">
-                <span>VAT-Exempt Sales:</span>
-                <span>{formatCurrency(transaction.vat_exempt_sales)}</span>
-              </div>
-            )}
-            {transaction.zero_rated_sales && transaction.zero_rated_sales > 0 && (
-              <div className="flex justify-between">
-                <span>Zero-Rated Sales:</span>
-                <span>{formatCurrency(transaction.zero_rated_sales)}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>VAT Amount (12%):</span>
-              <span>{formatCurrency(transaction.tax)}</span>
-            </div>
+            {/* BIR-compliant VAT breakdown - correctly handle VAT-exempt transactions */}
+            {(() => {
+              const txData = transaction as any;
+              const discountType = txData.discountType || txData.discount_type || '';
+              const discountBeneficiaries = txData.discount_beneficiaries || [];
+              
+              // Check if this is a VAT-exempt transaction
+              const vatExemptTypes = ['senior', 'pwd', 'athletes_coaches', 'solo_parent'];
+              const isVatExemptDiscount = vatExemptTypes.includes(discountType);
+              const hasVatExemptBeneficiary = Array.isArray(discountBeneficiaries) && 
+                discountBeneficiaries.some((b: any) => vatExemptTypes.includes(b.type));
+              const isVatExemptTransaction = (isVatExemptDiscount || hasVatExemptBeneficiary) && 
+                (transaction.discount > 0 || discountBeneficiaries.length > 0);
+              
+              // Calculate proper VAT breakdown
+              const grossAmount = transaction.subtotal || 0;
+              const discountAmount = transaction.discount || 0;
+              const netAmount = grossAmount - discountAmount;
+              const vatAmount = isVatExemptTransaction ? 0 : (transaction.tax || (netAmount / 1.12 * 0.12));
+              const netOfVat = netAmount - vatAmount;
+              
+              // For VAT-exempt transactions: entire net becomes VAT-exempt, VATable = 0
+              const vatableSales = isVatExemptTransaction ? 0 : netOfVat;
+              const vatExemptSales = isVatExemptTransaction ? netOfVat : (transaction.vat_exempt_sales || 0);
+              const zeroRatedSales = transaction.zero_rated_sales || 0;
+              
+              return (
+                <>
+                  <div className="flex justify-between">
+                    <span>VATable Sales:</span>
+                    <span>{formatCurrency(vatableSales)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>VAT-Exempt Sales:</span>
+                    <span>{formatCurrency(vatExemptSales)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Zero-Rated Sales:</span>
+                    <span>{formatCurrency(zeroRatedSales)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>VAT Amount (12%):</span>
+                    <span>{formatCurrency(vatAmount)}</span>
+                  </div>
+                </>
+              );
+            })()}
             
             {/* BIR-compliant discount breakdown - NEW Multi-Beneficiary Support */}
             {(transaction as any).discount_beneficiaries && (transaction as any).discount_beneficiaries.length > 0 ? (

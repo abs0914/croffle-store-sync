@@ -293,9 +293,31 @@ export class ReceiptPdfGenerator {
     this.doc.setFont('helvetica', 'bold');
     this.addTotalLine('NET AMOUNT:', receipt.netAmount);
     
-    // VAT
+    // BIR-compliant VAT breakdown section
     this.doc.setFont('helvetica', 'normal');
-    this.addTotalLine('VAT (12%):', receipt.vatAmount);
+    this.addSeparator();
+    
+    // Determine if VAT-exempt transaction
+    const vatExemptTypes = ['senior', 'pwd', 'naac', 'athletes_coaches', 'solo_parent'];
+    const isVatExemptDiscount = vatExemptTypes.includes(receipt.discountType || '');
+    const hasVatExemptBeneficiary = receipt.discountBeneficiaries?.some(b => 
+      vatExemptTypes.includes(b.type) && b.isVATExempt
+    );
+    const isVatExemptTransaction = (isVatExemptDiscount || hasVatExemptBeneficiary) && receipt.discountAmount > 0;
+    
+    // Calculate proper VAT breakdown
+    const netOfVat = receipt.netAmount / 1.12;
+    const calculatedVat = receipt.netAmount - netOfVat;
+    
+    const vatableSales = isVatExemptTransaction ? 0 : netOfVat;
+    const vatExemptSales = isVatExemptTransaction ? netOfVat : 0;
+    const zeroRatedSales = 0; // Always show, per BIR requirement
+    const displayVat = isVatExemptTransaction ? 0 : calculatedVat;
+    
+    this.addTotalLine('VATable Sales:', vatableSales);
+    this.addTotalLine('VAT-Exempt Sales:', vatExemptSales);
+    this.addTotalLine('Zero-Rated Sales:', zeroRatedSales);
+    this.addTotalLine('VAT Amount (12%):', displayVat);
     
     this.currentY += 3;
     
