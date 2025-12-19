@@ -300,7 +300,7 @@ export default function MultipleSeniorDiscountSelector({
           </Button>
         </DialogTrigger>
         
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto flex flex-col">
           <DialogHeader>
             <DialogTitle>Apply Discounts</DialogTitle>
           </DialogHeader>
