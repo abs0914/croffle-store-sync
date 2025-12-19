@@ -51,6 +51,8 @@ const CartView = memo(function CartView({
     items: cartItems,
     seniorDiscounts,
     otherDiscount,
+    discountBeneficiaries,
+    applyBeneficiaryDiscounts,
     orderType,
     setOrderType,
     deliveryPlatform,
@@ -256,7 +258,7 @@ const CartView = memo(function CartView({
           <CartSummary calculations={calculations} seniorDiscounts={seniorDiscounts} otherDiscount={otherDiscount} cartItems={cartItems} />
 
           {/* Multiple Discount Selector */}
-          <MultipleSeniorDiscountSelector subtotal={calculations.grossSubtotal} onApplyDiscounts={handleApplyMultipleDiscounts} currentSeniorDiscounts={seniorDiscounts} currentOtherDiscount={otherDiscount} currentTotalDiners={calculations.totalDiners} cartItems={cartItems} />
+          <MultipleSeniorDiscountSelector subtotal={calculations.grossSubtotal} onApplyDiscounts={handleApplyMultipleDiscounts} onApplyBeneficiaryDiscounts={applyBeneficiaryDiscounts} currentSeniorDiscounts={seniorDiscounts} currentOtherDiscount={otherDiscount} currentTotalDiners={calculations.totalDiners} currentBeneficiaries={discountBeneficiaries} cartItems={cartItems} />
 
           {/* Action Buttons */}
           <CartActions canCheckout={Boolean(canCheckout)} isShiftActive={isShiftActive} isValidating={isValidating} validationMessage={validationMessage} orderType={orderType} deliveryPlatform={deliveryPlatform} deliveryOrderNumber={deliveryOrderNumber} onCheckout={() => {
