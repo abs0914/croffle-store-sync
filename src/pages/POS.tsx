@@ -394,7 +394,8 @@ export default function POS() {
         deliveryOrderNumber,
         seniorDiscountsParam ?? seniorDiscounts,        // ✅ Use passed or fallback
         effectiveOtherDiscount as any,                  // ✅ Use passed or fallback
-        effectiveCalculations?.vatExemption             // ✅ Pass VAT exemption amount
+        effectiveCalculations?.vatExemption,            // ✅ Pass VAT exemption amount
+        effectiveCalculations                           // ✅ NEW: Pass full calculations with beneficiaryBreakdown
       );
 
       return success;
