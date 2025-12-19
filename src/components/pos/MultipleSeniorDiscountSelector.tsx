@@ -300,19 +300,18 @@ export default function MultipleSeniorDiscountSelector({
           </Button>
         </DialogTrigger>
         
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto flex flex-col">
+        <DialogContent className="max-w-2xl h-[85vh] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Apply Discounts</DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 pr-4 max-h-[calc(85vh-120px)]">
+          <ScrollArea className="flex-1 min-h-0 pr-4">
             <div className="py-4 space-y-4">
               {/* Total Diners Input */}
               <Card className="bg-muted/50">
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-4">
                     <div className="flex-1">
-                      <Label htmlFor="totalDiners" className="text-sm font-medium">Total Number of Diners *</Label>
                       <Input
                         id="totalDiners"
                         type="number"
