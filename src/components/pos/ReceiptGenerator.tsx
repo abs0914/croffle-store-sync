@@ -476,12 +476,17 @@ Thank you!`;
               const isVatExemptDiscount = vatExemptTypes.includes(discountType);
               const hasVatExemptBeneficiary = Array.isArray(discountBeneficiaries) && 
                 discountBeneficiaries.some((b: any) => vatExemptTypes.includes(b.type));
-              const isVatExemptTransaction = (isVatExemptDiscount || hasVatExemptBeneficiary) && 
-                (transaction.discount > 0 || discountBeneficiaries.length > 0);
+              
+              // Fallback: check vat_exemption_amount for legacy transactions missing discount data
+              const hasVatExemption = (txData.vat_exemption_amount || 0) > 0;
+              const isVatExemptTransaction = hasVatExemption || 
+                ((isVatExemptDiscount || hasVatExemptBeneficiary) && 
+                 (transaction.discount > 0 || discountBeneficiaries.length > 0));
               
               // Calculate proper VAT breakdown
               const grossAmount = transaction.subtotal || 0;
-              const discountAmount = transaction.discount || 0;
+              // Use vat_exemption_amount as fallback for legacy transactions
+              const discountAmount = transaction.discount || txData.vat_exemption_amount || 0;
               const netAmount = grossAmount - discountAmount;
               const vatAmount = isVatExemptTransaction ? 0 : (transaction.tax || (netAmount / 1.12 * 0.12));
               const netOfVat = netAmount - vatAmount;
