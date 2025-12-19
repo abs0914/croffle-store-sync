@@ -182,7 +182,8 @@ export function useTransactionHandler(storeId: string) {
     deliveryOrderNumber?: string,
     seniorDiscountsParam?: SeniorDiscount[],
     otherDiscountParam?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'regular' | 'custom' | 'athletes_coaches' | 'solo_parent', amount: number, idNumber?: string, justification?: string, customPercentage?: number },
-    vatExemption?: number
+    vatExemption?: number,
+    cartCalculations?: typeof calculations  // NEW: Accept cart calculations with beneficiaryBreakdown
   ) => {
     try {
       console.log('🎯 [TRANSACTION START] Payment processing initiated', {
@@ -272,14 +273,28 @@ export function useTransactionHandler(storeId: string) {
     const activeSeniorDiscounts = seniorDiscountsParam || seniorDiscounts;
     const activeOtherDiscount = otherDiscountParam || otherDiscount;
     
-    // Use cart calculations for accurate discount total (beneficiaryBreakdown has calculated amounts)
-    const calculatedTotalDiscount = calculations.totalDiscountAmount || (
+    // ✅ FIX: Use passed cartCalculations (with beneficiaryBreakdown), fallback to context
+    const effectiveCalcs = cartCalculations || calculations;
+    
+    console.log('💰 DISCOUNT DATA in handlePaymentComplete:', {
+      hasCartCalculations: !!cartCalculations,
+      beneficiaryBreakdownLength: effectiveCalcs.beneficiaryBreakdown?.length || 0,
+      totalDiscountAmount: effectiveCalcs.totalDiscountAmount,
+      beneficiaries: effectiveCalcs.beneficiaryBreakdown
+    });
+    
+    // Use passed calculations for accurate discount total (beneficiaryBreakdown has calculated amounts)
+    const calculatedTotalDiscount = effectiveCalcs.totalDiscountAmount || (
       activeSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0) +
       (activeOtherDiscount?.amount || 0)
     );
 
-    // Determine the discount type based on what discounts are present
+    // Determine the discount type based on beneficiaries first, then fallback
     const determinedDiscountType = (() => {
+      // Check beneficiaryBreakdown first for accurate type
+      if (effectiveCalcs.beneficiaryBreakdown && effectiveCalcs.beneficiaryBreakdown.length > 0) {
+        return effectiveCalcs.beneficiaryBreakdown[0].type;
+      }
       if (activeSeniorDiscounts.length > 0) return 'senior';
       if (activeOtherDiscount) return activeOtherDiscount.type;
       return undefined;
@@ -287,19 +302,22 @@ export function useTransactionHandler(storeId: string) {
 
     // Get the first ID number for backwards compatibility
     const determinedIdNumber = (() => {
+      if (effectiveCalcs.beneficiaryBreakdown && effectiveCalcs.beneficiaryBreakdown.length > 0) {
+        return effectiveCalcs.beneficiaryBreakdown[0].idNumber;
+      }
       if (activeSeniorDiscounts.length > 0) return activeSeniorDiscounts[0].idNumber;
       if (activeOtherDiscount?.idNumber) return activeOtherDiscount.idNumber;
       return undefined;
     })();
     
-    // Use calculated beneficiaries from CartCalculationService (has correct discount amounts)
-    const calculatedBeneficiaries = calculations.beneficiaryBreakdown || [];
+    // ✅ FIX: Use beneficiaries from passed calculations (has correct discount amounts)
+    const calculatedBeneficiaries = effectiveCalcs.beneficiaryBreakdown || [];
     const transactionBeneficiaries: DiscountBeneficiaryData[] = calculatedBeneficiaries.map(b => ({
       id: b.id,
       type: b.type,
       idNumber: b.idNumber,
       name: b.name,
-      discountAmount: b.discountAmount,  // Now correctly calculated!
+      discountAmount: b.discountAmount,  // Now correctly from passed calculations!
       vatExemptionAmount: b.vatExemptionAmount,
       isVATExempt: b.isVATExempt,
       discountRate: b.discountRate
