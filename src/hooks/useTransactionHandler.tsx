@@ -92,25 +92,31 @@ export function useTransactionHandler(storeId: string) {
       setDiscountIdNumber(otherDiscountValue.idNumber);
     }
     
-    // Sync with cart context - convert formats if needed
-    const cartSeniorDiscounts: CartSeniorDiscount[] = seniorDiscountsArray.map(discount => ({
-      id: discount.id,
-      idNumber: discount.idNumber,
-      name: discount.name,
-      discountAmount: discount.discountAmount
-    }));
-    
-    const cartOtherDiscount: CartOtherDiscount | undefined = otherDiscountValue ? {
-      type: otherDiscountValue.type,
-      amount: otherDiscountValue.amount,
-      idNumber: otherDiscountValue.idNumber,
-      justification: otherDiscountValue.justification
-    } : undefined;
-    
-    // Calculate total diners based on senior discounts
-    const totalDiners = Math.max(1, seniorDiscountsArray.length);
-    
-    applyCartDiscounts(cartSeniorDiscounts, cartOtherDiscount, totalDiners);
+    // IMPORTANT: Only sync with legacy cart if discountBeneficiaries is empty
+    // When MultipleSeniorDiscountSelector uses the new beneficiary system,
+    // it calls applyBeneficiaryDiscounts first, so we skip the legacy sync
+    // to prevent clearing the beneficiary data
+    if (discountBeneficiaries.length === 0) {
+      // Sync with cart context - convert formats if needed
+      const cartSeniorDiscounts: CartSeniorDiscount[] = seniorDiscountsArray.map(discount => ({
+        id: discount.id,
+        idNumber: discount.idNumber,
+        name: discount.name,
+        discountAmount: discount.discountAmount
+      }));
+      
+      const cartOtherDiscount: CartOtherDiscount | undefined = otherDiscountValue ? {
+        type: otherDiscountValue.type,
+        amount: otherDiscountValue.amount,
+        idNumber: otherDiscountValue.idNumber,
+        justification: otherDiscountValue.justification
+      } : undefined;
+      
+      // Calculate total diners based on senior discounts
+      const totalDiners = Math.max(1, seniorDiscountsArray.length);
+      
+      applyCartDiscounts(cartSeniorDiscounts, cartOtherDiscount, totalDiners);
+    }
   };
   
   const [isProcessing, setIsProcessing] = useState(false);
